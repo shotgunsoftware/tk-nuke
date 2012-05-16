@@ -1,0 +1,33 @@
+#
+# Copyright (c) 2012 Shotgun Software, Inc
+# ----------------------------------------------------
+#
+# Metadata defining the behaviour and requirements for this app
+
+
+# General items
+display_name: Launch Revolver from the current Nuke session
+author: Shotgun Software
+description: Adds a menu item which lets you jump from Nuke straight to revolver. The app will 
+             search shotgun for versions published for the current shot or asset, and if it finds any, it will 
+             start up revolver with the most recent version focused. If no versions are found,
+             revolver will be started centered around the current Shot or Asset that is being
+             worked on.
+version: 0.1.1
+maturity: dev # dev, beta, testing, mature
+
+# expected fields in the configuration file for this app
+configuration:
+    rv_path_windows:       
+        type: str
+        description: The path to the Rv executable on Windows.  
+    rv_path_linux:       
+        type: str
+        description: The path to the Rv executable on Linux.  
+    rv_path_mac:       
+        type: str
+        description: The path to the Rv executable on Macosx.                  
+
+# the Shotgun fields that this app needs in order to operate correctly
+requires_shotgun_fields:
+

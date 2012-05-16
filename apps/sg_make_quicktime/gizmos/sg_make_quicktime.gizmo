@@ -1,0 +1,111 @@
+#! /Applications/Nuke6.3v4/Nuke6.3v4.app/Contents/MacOS/Nuke6.3v4 -nx
+version 6.3
+Gizmo {
+}
+ Input {
+  inputs 0
+  name Input1
+  xpos 389
+  ypos 94
+ }
+ Text {
+  message "\{top_left\}"
+  size 48
+  yjustify top
+  Transform 1
+  box {{40 40} {"\[value root.height]-40" 1516} 840 1310}
+  name top_left_text
+  xpos 389
+  ypos 212
+ }
+ Text {
+  message "\[format %04d \[frame]]"
+  size 48
+  xjustify right
+  yjustify bottom
+  Transform 1
+  box {{"\[value root.width]-40" i 2008} {40 i 40} 1208 240}
+  name framecounter
+  xpos 389
+  ypos 236
+ }
+ Text {
+  message "\{top_right\}\n"
+  size 48
+  xjustify right
+  yjustify top
+  Transform 1
+  box {{"\[value root.width]-40" i 2008} {"\[value root.height]-40" i 1516} 1200 1280}
+  name top_right_text
+  xpos 389
+  ypos 262
+ }
+ Text {
+  message ""
+  size 48
+  yjustify bottom
+  Transform 1
+  box {40 40 850 240}
+  name bottom_left_text
+  xpos 389
+  ypos 288
+ }
+ Read {
+  inputs 0
+  origset true
+  premultiplied true
+  name logo
+  xpos 260
+  ypos 138
+ }
+ Reformat {
+  type "to box"
+  box_width 400
+  name Reformat1
+  xpos 260
+  ypos 236
+ }
+ Transform {
+  translate {100 {100}}
+  name Transform
+  xpos 260
+  ypos 277
+ }
+ Constant {
+  inputs 0
+  name slate_base
+  xpos 171
+  ypos 137
+ }
+ Text {
+  message ""
+  size 100
+  leading 0.3
+  yjustify center
+  Transform 1
+  box {300 {"(\[value root.height]/2)-500"} 1800 1389}
+  name slate_info
+  selected true
+  xpos 171
+  ypos 252
+ }
+ Merge {
+  inputs 2
+  name slate_merge
+  xpos 215
+  ypos 328
+ }
+ Switch {
+  inputs 2
+  which {{"\[python -execlocal first_frame\\ =\\ nuke.root()\\\[\\\"first_frame\\\"\\].value()\\ncurr_frame\\ =\\ nuke.root()\\\[\\\"frame\\\"\\].value()\\n\\nif\\ curr_frame\\ <\\ first_frame:\\n\\ \\ #\\ frames\\ before\\ the\\ start\\ of\\ the\\ sequence\\n\\ \\ #\\ switch\\ to\\ slate\\n\\ \\ ret\\ =\\ 0\\nelse:\\n\\ \\ #\\ play\\ back\\ sequence\\ with\\ burnins\\n\\ \\ ret\\ =\\ 1\\n\\n]" x4 0 x1004 0 x1005 1}}
+  name slate_or_burnin_chooser
+  label "Switches to the slate if curr_frame < start_frame for the current scene."
+  xpos 389
+  ypos 347
+ }
+ Output {
+  name Output1
+  xpos 389
+  ypos 473
+ }
+end_group

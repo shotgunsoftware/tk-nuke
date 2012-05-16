@@ -1,0 +1,29 @@
+#
+# Copyright (c) 2012 Shotgun Software, Inc
+# ----------------------------------------------------
+#
+# Metadata defining the behaviour and requirements for this app
+
+
+# General items
+display_name: Nuke Scene Breakdown
+author: Shotgun Software
+description: Shows what is out of date in the scene and lets you update it.
+version: 0.1.1
+maturity: dev # dev, beta, testing, mature
+
+# expected fields in the configuration file for this app
+configuration:
+    # tank write node paths
+    templates_to_look_for:
+        type: list
+        description: List of templates to look for when scanning the scene for inputs. 
+                     A template listed here needs to have a field called version. This field
+                     will be used in the comparison to determine what is out of date.
+        values:
+            type: template
+            required_fields: [version]
+
+# the Shotgun fields that this app needs in order to operate correctly
+requires_shotgun_fields:
+

@@ -1,0 +1,156 @@
+#
+# Copyright (c) 2012 Shotgun Software, Inc
+# ----------------------------------------------------
+#
+# Metadata defining the behaviour and requirements for this app
+
+
+# General items
+display_name: Nuke Snapshot and Publish
+author: Shotgun Software
+description: Publishing, snapshotting and a custom Tank Write node for Nuke.
+version: 0.1.4
+maturity: beta # dev, beta, testing, mature
+
+# expected fields in the configuration file for this app
+configuration:
+
+    # tank write nodes paths
+    write_nodes:
+        type: list
+        description: "A list of dictionaries in which you define the Tank write nodes that 
+                     are supported in this configuration. Each dictionary entry needs to have
+                     the following keys: name - a descriptive name for this node. file_type -
+                     the file type to use for the renders (exr, cin, dpx etc). This will be 
+                     passed to the Nuke write node when rendering. settings - configuration
+                     settings for the given file type, as a dictionary. This too will be 
+                     passed to the write node when rendering. Lastly, you need two entries 
+                     named render_template and publish_template 
+                     - these control the locations where data is written to at various stages 
+                     of the workflow. These templates need to include the fields 
+                     name, channel and version, and can optionally include the fields width and
+                     height which reflect the image resolution of the render. If you are doing
+                     stereo rendering and want to use Nuke's %V flag, include an eye field. 
+                     This will be replaced by %V in the paths when the tank write node 
+                     computes them."
+        values:
+            type: dict
+            items:
+                name: { type: str }
+                file_type: { type: str }
+                settings: { type: dict }
+                render_template:
+                    type: template
+                    required_fields: [name,channel,version]
+                    optional_fields: [width,height,eye]
+                publish_template:
+                    type: template
+                    required_fields: [name,channel,version]
+                    optional_fields: [width,height,eye]
+        
+    movies:
+        type: list
+        description: list of dictionaries. This list should contain one entry for every type
+                     of movies that needs to be rendered at publish time. Each list item
+                     should be a dictionary with the keys type and template, defining the name
+                     of the movies to make and the template to base its path on. This template
+                     should have a subset of the fields available to the render template.
+        values:
+            type: dict
+            items:
+                type: { type: str }
+                template:
+                    type: template
+                    required_fields: [name,channel,version]
+                    optional_fields: [width,height,eye]
+        
+    template_render_name:
+        type: template
+        description: This template defines the name that will be given to the TankPublishedFile
+                     entity which is created in Shotgun for a published render. No fields are 
+                     required, however the fields name, version and channel are available. 
+        required_fields: []
+        optional_fields: [name, version, channel]
+    
+    template_version_name:
+        type: template
+        description: This template defines the name that will be given to the Version
+                     entity which is created in Shotgun for a published render. No fields are 
+                     required, however the fields name, version and channel are available. 
+        required_fields: []
+        optional_fields: [name, version, channel]
+        validate_context: False
+        
+
+    # snapshot paths            
+    template_work: 
+        type: template
+        description: A reference to a template which locates a work file on disk. 
+        required_fields: [name, version]
+    template_snapshot:
+        type: template
+        description: A reference to a template which defines the location where snapshot
+                     backups will end up on disk.
+        required_fields: [name, version, timestamp]
+
+    # publish paths
+    template_publish: 
+        type: template
+        required_fields: [name, version]
+        description: Defines where publishes should go on disk.
+    
+    template_publish_name: 
+        type: template
+        required_fields: []
+        optional_fields: [name, version]
+        description: This template defines the name that will be given to the TankPublishedFile
+                     entity which is created in Shotgun for a publish. No fields are required,
+                     however the fields name and version are available and are typically used.
+    
+    
+    tank_types:
+        type: dict
+        description: A dictionary where the key is the type of publish and the value is a list of valid TankTypes.
+                      Currently the key 'script' is used when publishing a Nuke script and the key 'renders' is used when publishing images.
+        items:
+            script:
+                type: list
+                values: { type: tank_type }
+            renders:
+                type: list
+                values: { type: tank_type }
+    
+    input_templates_to_look_for:
+        type: list
+        description: List of templates to look for when scanning the scene for inputs. 
+                    A template listed here needs to have a field called version. This field
+                    will be used in the comparison to determine what is out of date. 
+
+    # hooks    
+    hook_publish_file:
+        type: hook
+        description: Called when a file is published, e.g. copied from a work area to a publish area.
+        parameters: [source_path, target_path]
+        
+    hook_generate_movie:
+        type: hook
+        description: "Called when movies should be generated for a publish. Multiple movies
+                     may be generated for a single publish. The hook takes two parameters, the 
+                     path to the source image sequence and a dict of targets. Each target value
+                     is the path to the movie to generate. For example, the targets dictionary 
+                     may look like this: {full_res: /path/to/full.mov, half_res: /path/to/half.mov}" 
+        parameters: [source_path, targets]
+        returns:    "Returns a dictionary with an item per target (keyed by type). Each item consists
+                    of a dictionary with values to pass to the version creation method. So if you
+                    are for example generating two targets, half and full, and want to push the 
+                    start frames back to shotgun, return 
+                    { half:{ sg_first_frame:1 }, full:{ sg_first_frame:1 } }. If you want to indicate
+                    that creation of a particular target failed, return None for that profile. For
+                    example { half: None, full: {} }."
+
+
+# the Shotgun fields that this app needs in order to operate correctly
+requires_shotgun_fields:
+    Version:
+        - { "system_name": "sg_movie_type", "type": "text" }
+
