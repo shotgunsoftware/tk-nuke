@@ -99,10 +99,9 @@ class NukeEngine(tank.system.Engine):
         sg_nuke.tank_ensure_callbacks_registered()
         
         # iterate over all apps, if there is a gizmo folder, add it to nuke path
-        apps_root = os.path.abspath(os.path.join( os.path.dirname(__file__), "apps"))
-        for app_name in self.apps:
+        for app in self.apps.values():
             # add gizmo to nuke path
-            app_gizmo_folder = os.path.join(apps_root, app_name, "gizmos")
+            app_gizmo_folder = os.path.join(app.disk_location, "gizmos")
             if os.path.exists(app_gizmo_folder):
                 self.log_debug("Adding %s to nuke node path" % app_gizmo_folder)
                 nuke.pluginAddPath(app_gizmo_folder)
