@@ -11,6 +11,7 @@ import platform
 import nuke
 import os
 import pickle
+import unicodedata
 
 class TankProgressWrapper(object):
     """
@@ -213,6 +214,10 @@ class NukeEngine(tank.system.Engine):
         # add doc urls  
         for d in self.documentation:
             doc_url = self.documentation[d]
+            # make sure that the documentation url is not unicode, 
+            # otherwise nuke goes nuts.
+            if doc_url.__class__ == unicode:
+                doc_url = unicodedata.normalize('NFKD', doc_url).encode('ascii','ignore')
             cmd = "import nukescripts.openurl; nukescripts.openurl.start('%s')" % doc_url
             help_menu.addCommand(d, cmd)
 
