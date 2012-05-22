@@ -202,25 +202,6 @@ class NukeEngine(tank.system.Engine):
     ##########################################################################################
     # managing the menu            
     
-    def __add_doc_command_to_menu(self, mode, parent):
-        """
-        Adds documentation to menu, helper 
-        """        
-        # engine
-        docs = self.documentation["engine"]
-        doc_url = docs[mode]
-        if doc_url:
-            cmd = "import nukescripts.openurl; nukescripts.openurl.start('%s')" % doc_url.replace("\\", "/")
-            parent.addCommand(docs["display_name"], cmd)            
-        
-        # now apps
-        for app_doc in docs["apps"].values():
-            doc_url = app_doc[mode]
-            if doc_url:
-                cmd = "import nukescripts.openurl; nukescripts.openurl.start('%s')" % doc_url.replace("\\", "/")
-                parent.addCommand(app_doc["display_name"], cmd)            
-
-        
     def __add_documentation_to_menu(self):
         """
         Adds documentation items to menu based on what docs are available. 
@@ -230,35 +211,11 @@ class NukeEngine(tank.system.Engine):
         self._menu_handle.addSeparator()
         help_menu = self._menu_handle.addMenu("Help")
 
-        # add index  
-        main_url = self.documentation["index"]
-        if main_url:
-            cmd = "import nukescripts.openurl; nukescripts.openurl.start('%s')" % main_url.replace("\\", "/")
-            help_menu.addCommand("Complete Tank Documentation", cmd)
-            help_menu.addSeparator()
-
-        # engine
-        docs = self.documentation["engine"]
-        doc_url = docs["user"]
-        if doc_url:
-            cmd = "import nukescripts.openurl; nukescripts.openurl.start('%s')" % doc_url.replace("\\", "/")
-            help_menu.addCommand(docs["display_name"], cmd)            
-        
-        # now apps
-        for app_doc in docs["apps"].values():
-            doc_url = app_doc["user"]
-            if doc_url:
-                cmd = "import nukescripts.openurl; nukescripts.openurl.start('%s')" % doc_url.replace("\\", "/")
-                help_menu.addCommand(app_doc["display_name"], cmd)            
-
-        # add developer docs under developer menu
-        help_menu.addSeparator()
-        
-        engine_docs = self.documentation["engine"]
-        doc_url = engine_docs.get("developer")
-        if doc_url:
-            cmd = "import nukescripts.openurl; nukescripts.openurl.start('%s')" % doc_url.replace("\\", "/")
-            help_menu.addCommand("Developer Documentation", cmd)
+        # add doc urls  
+        for d in self.documentation:
+            doc_url = self.documentation[d]
+            cmd = "import nukescripts.openurl; nukescripts.openurl.start('%s')" % doc_url
+            help_menu.addCommand(d, cmd)
 
     def __launch_context_in_fs(self):
         
@@ -325,24 +282,23 @@ class NukeEngine(tank.system.Engine):
         self._menu_handle.addSeparator()
     
     
-    def _add_command_to_menu(self, cmd):
+    def _add_command_to_menu(self, name, callback, properties):
         """
         Adds an app command to the menu
         """
-        properties = cmd["properties"]
-        
         if properties.get("type") == "node":
             # this should go on the custom node menu!
             
             # get icon if specified - default to tank icon if not specified
             icon = properties.get("icon", self._tk2_logo)
-            self._node_menu_handle.addCommand(cmd["name"], cmd["callback"], icon=icon)
+            self._node_menu_handle.addCommand(name, callback, icon=icon)
 
         elif properties.get("type") == "context_menu":
-            self._ctx_menu_handle.addCommand(cmd["name"], cmd["callback"] )
+            self._ctx_menu_handle.addCommand(name, callback)
+            
         else:
             # std shotgun menu
-            self._menu_handle.addCommand(cmd["name"], cmd["callback"] ) 
+            self._menu_handle.addCommand(name, callback) 
             
         
     
@@ -365,8 +321,8 @@ class NukeEngine(tank.system.Engine):
     
         self.__add_context_menu()
         
-        for cmd in self._get_commands():
-            self._add_command_to_menu(cmd)
+        for (cmd_name, cmd_details) in self.commands.items():
+            self._add_command_to_menu(cmd_name, cmd_details["callback"], cmd_details["properties"])
             
         self.__add_documentation_to_menu()
             
