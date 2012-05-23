@@ -295,10 +295,17 @@ class NukeEngine(tank.system.Engine):
             
             # get icon if specified - default to tank icon if not specified
             icon = properties.get("icon", self._tk2_logo)
+
             self._node_menu_handle.addCommand(name, callback, icon=icon)
 
         elif properties.get("type") == "context_menu":
-            self._ctx_menu_handle.addCommand(name, callback)
+            
+            # get icon if specified - don't show icon if not specified
+            icon = properties.get("icon")
+            if icon is None:
+                self._ctx_menu_handle.addCommand(name, callback)
+            else:
+                self._ctx_menu_handle.addCommand(name, callback, icon=icon)
             
         else:
             # std shotgun menu
