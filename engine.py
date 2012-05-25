@@ -38,7 +38,7 @@ class TankProgressWrapper(object):
 
 
 
-class NukeEngine(tank.system.Engine):
+class NukeEngine(tank.platform.Engine):
     
     
     ##########################################################################################
@@ -54,7 +54,7 @@ class NukeEngine(tank.system.Engine):
         # for the maya engine (because it for example sets the maya project)
         if len(self.context.entity_locations) == 0:
             # Try to create path for the context.
-            tank.system.schema.create_filesystem_structure(self.shotgun,
+            tank.platform.schema.create_filesystem_structure(self.shotgun,
                                                            self.context.project_root,
                                                            self.context.entity["type"],
                                                            self.context.entity["id"])

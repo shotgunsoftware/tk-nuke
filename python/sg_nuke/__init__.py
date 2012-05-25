@@ -73,7 +73,7 @@ def __engine_refresh(new_context):
         
     # try to create new engine
     try:
-        tank.system.start_engine(engine_name, new_context)
+        tank.platform.start_engine(engine_name, new_context)
     except tank.TankEngineInitError, e:
         # context was not sufficient! - disable tank!
         __create_tank_disabled_menu(e)
@@ -89,9 +89,9 @@ def __tank_on_save_callback():
     # get the new file name
     file_name = nuke.root().name()
     try:
-        new_ctx = tank.system.Context.from_path(file_name)
+        new_ctx = tank.platform.Context.from_path(file_name)
     except:
-        new_ctx = tank.system.Context.create_empty()
+        new_ctx = tank.platform.Context.create_empty()
     
     # now restart the engine with the new context
     try:
@@ -121,16 +121,16 @@ def __tank_startup_node_callback():
                 try:
                     new_ctx = pickle.loads(ctx_pickled)
                 except:
-                    new_ctx = tank.system.Context.create_empty()
+                    new_ctx = tank.platform.Context.create_empty()
             else:
-                new_ctx = tank.system.Context.create_empty()
+                new_ctx = tank.platform.Context.create_empty()
         
         else:
             # file->open
             try:
-                new_ctx = tank.system.Context.from_path(nuke.root().name())
+                new_ctx = tank.platform.Context.from_path(nuke.root().name())
             except:
-                new_ctx = tank.system.Context.create_empty()
+                new_ctx = tank.platform.Context.create_empty()
         
         # now restart the engine with the new context
         try:
