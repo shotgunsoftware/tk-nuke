@@ -132,12 +132,9 @@ def __tank_startup_node_callback():
     
         else:
             # file->open
-            try:
-                file_name = nuke.root().name()
-                tk = tank.tank_from_path(file_name)
-                new_ctx = tk.context_from_path(nuke.root().name())
-            except:
-                new_ctx = tank.platform.Context.create_empty()
+            file_name = nuke.root().name()
+            tk = tank.tank_from_path(file_name)
+            new_ctx = tk.context_from_path(file_name)
     
         # now restart the engine with the new context
         __engine_refresh(tk, new_ctx)
