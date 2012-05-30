@@ -77,7 +77,7 @@ class NukeEngine(tank.platform.Engine):
         # created by file->new or file->open.
             
         # Store data needed for bootstrapping Tank in env vars. Used in startup/menu.py
-        os.environ["TANK_NUKE_ENGINE_INIT_NAME"] = self.name
+        os.environ["TANK_NUKE_ENGINE_INIT_NAME"] = self.instance_name
         os.environ["TANK_NUKE_ENGINE_INIT_CONTEXT"] = pickle.dumps(self.context)
         
         
