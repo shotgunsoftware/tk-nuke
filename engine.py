@@ -202,6 +202,18 @@ class NukeEngine(tank.platform.Engine):
     ##########################################################################################
     # managing the menu            
     
+    def __add_documentation_item(self, menu, caption, url):
+        """
+        Helper that adds a single doc item to the menu
+        """
+        # deal with nuke's inability to handle unicode. #fail
+        if url.__class__ == unicode:
+            url = unicodedata.normalize('NFKD', url).encode('ascii', 'ignore')
+        cmd = "import nukescripts.openurl; nukescripts.openurl.start('%s')" % url
+        if caption.__class__ == unicode:
+            caption = unicodedata.normalize('NFKD', caption).encode('ascii', 'ignore')
+        menu.addCommand(caption, cmd)
+    
     def __add_documentation_to_menu(self):
         """
         Adds documentation items to menu based on what docs are available. 
@@ -211,15 +223,18 @@ class NukeEngine(tank.platform.Engine):
         self._menu_handle.addSeparator()
         help_menu = self._menu_handle.addMenu("Help")
 
-        # add doc urls  
-        for d in self.documentation:
-            doc_url = self.documentation[d]
-            # make sure that the documentation url is not unicode, 
-            # otherwise nuke goes nuts.
-            if doc_url.__class__ == unicode:
-                doc_url = unicodedata.normalize('NFKD', doc_url).encode('ascii','ignore')
-            cmd = "import nukescripts.openurl; nukescripts.openurl.start('%s')" % doc_url
-            help_menu.addCommand(d, cmd)
+        if self.documentation_url:
+            self.__add_documentation_item(help_menu, "Engine Documentation", self.documentation_url)
+
+        for app in self.apps.values():
+            if app.documentation_url:
+                self.__add_documentation_item(help_menu, 
+                                              "%s Documentation" % app.display_name, 
+                                              app.documentation_url)
+                
+        if self.tank.documentation_url:
+            self.__add_documentation_item(help_menu, "Tank Core Documentation", self.tank.documentation_url)
+
 
     def __launch_context_in_fs(self):
         
