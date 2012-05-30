@@ -61,7 +61,7 @@ def __engine_refresh(new_context):
     
     engine_name = os.environ.get("TANK_NUKE_ENGINE_INIT_NAME")
     
-    curr_engine = tank.engine()
+    curr_engine = tank.platform.current_engine()
     if curr_engine:
         # an old engine is running. 
         if new_context == curr_engine.context:
