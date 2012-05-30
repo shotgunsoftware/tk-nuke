@@ -54,7 +54,7 @@ def __create_tank_error_menu():
     sg_menu.addCommand("[Tank Error - Click for details]", cmd)
 
     
-def __engine_refresh(new_context):
+def __engine_refresh(tk, new_context):
     """
     Checks the the tank engine should be 
     """
@@ -73,7 +73,7 @@ def __engine_refresh(new_context):
         
     # try to create new engine
     try:
-        tank.platform.start_engine(engine_name, new_context)
+        tank.platform.start_engine(engine_name, tk, new_context)
     except tank.TankEngineInitError, e:
         # context was not sufficient! - disable tank!
         __create_tank_disabled_menu(e)
@@ -88,14 +88,15 @@ def __tank_on_save_callback():
     """
     # get the new file name
     file_name = nuke.root().name()
-    try:
-        new_ctx = tank.platform.Context.from_path(file_name)
-    except:
-        new_ctx = tank.platform.Context.create_empty()
     
-    # now restart the engine with the new context
     try:
-        __engine_refresh(new_ctx)
+        # this file could be in another project altogether, so create a new Tank
+        # API instance.
+        tk = tank.tank_from_path(file_name)
+        new_ctx = tk.context_from_path(file_name)
+        
+        # now restart the engine with the new context
+        __engine_refresh(tk, new_ctx)
     except Exception, e:
         __create_tank_error_menu()
 
@@ -107,36 +108,41 @@ def __tank_startup_node_callback():
     Carefully manage exceptions here so that a bug in Tank never
     interrupts the normal workflows in Nuke.    
     """    
-    tn = nuke.thisNode()
-
-    # look for the root node - this is created only when a new or existing file is opened.
-    if tn == nuke.root():
-                
+    try:
+        # look for the root node - this is created only when a new or existing file is opened.
+        tn = nuke.thisNode()
+        if tn != nuke.root():
+            return
+            
         if nuke.root().name() == "Root":
             # file->new
             # base it on the context we 'inherited' from the prev session
             # get the context from the previous session - this is helpful if user does file->new
+            project_root = os.environ.get("TANK_NUKE_ENGINE_INIT_PROJECT_ROOT")
+            tk = tank.Tank(project_root)
+            
             ctx_pickled = os.environ.get("TANK_NUKE_ENGINE_INIT_CONTEXT")
             if ctx_pickled:
                 try:
                     new_ctx = pickle.loads(ctx_pickled)
                 except:
-                    new_ctx = tank.platform.Context.create_empty()
+                    new_ctx = tk.context_empty()
             else:
-                new_ctx = tank.platform.Context.create_empty()
-        
+                new_ctx = tk.context_empty()
+    
         else:
             # file->open
             try:
-                new_ctx = tank.platform.Context.from_path(nuke.root().name())
+                file_name = nuke.root().name()
+                tk = tank.tank_from_path(file_name)
+                new_ctx = tk.context_from_path(nuke.root().name())
             except:
                 new_ctx = tank.platform.Context.create_empty()
-        
+    
         # now restart the engine with the new context
-        try:
-            __engine_refresh(new_ctx)
-        except Exception, e:
-            __create_tank_error_menu()
+        __engine_refresh(tk, new_ctx)
+    except Exception, e:
+        __create_tank_error_menu()
         
 g_tank_callbacks_registered = False
 

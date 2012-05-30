@@ -53,10 +53,8 @@ class NukeEngine(tank.platform.Engine):
         # for the maya engine (because it for example sets the maya project)
         if len(self.context.entity_locations) == 0:
             # Try to create path for the context.
-            tank.platform.schema.create_filesystem_structure(self.shotgun,
-                                                           self.context.project_root,
-                                                           self.context.entity["type"],
-                                                           self.context.entity["id"])
+            self.tank.create_filesystem_structure(self.context.entity["type"], self.context.entity["id"])
+            
             if len(self.context.entity_locations) == 0:
                 raise tank.TankError("No folders on disk are associated with the current context. The Nuke "
                                 "engine requires a context which exists on disk in order to run "
@@ -79,7 +77,7 @@ class NukeEngine(tank.platform.Engine):
         # Store data needed for bootstrapping Tank in env vars. Used in startup/menu.py
         os.environ["TANK_NUKE_ENGINE_INIT_NAME"] = self.instance_name
         os.environ["TANK_NUKE_ENGINE_INIT_CONTEXT"] = pickle.dumps(self.context)
-        
+        os.environ["TANK_NUKE_ENGINE_INIT_PROJECT_ROOT"] = self.tank.project_path
         
         # add our startup path to the nuke init path
         startup_path = os.path.abspath(os.path.join( os.path.dirname(__file__), "startup"))
@@ -174,7 +172,7 @@ class NukeEngine(tank.platform.Engine):
             if sg_et not in supported_entity_types:
                 # don't know how to remove this, so don't add it!
                 continue
-            paths = tank.get_paths_for_entity(self.context.project_root, x)
+            paths = self.tank.get_paths_for_entity(x)
             if len(paths) > 0:
                 # for now just pick the first path associated with this entity
                 # todo: later on present multiple ones? or decide on a single path to choose?
