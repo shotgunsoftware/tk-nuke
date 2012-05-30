@@ -37,7 +37,6 @@ class TankProgressWrapper(object):
             self.__p = None
 
 
-
 class NukeEngine(tank.platform.Engine):
     
     
