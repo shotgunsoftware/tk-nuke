@@ -16,8 +16,8 @@ import os
 import sys
 
 def handle_new_tank_session():
-    import sg_nuke
-    sg_nuke.tank_ensure_callbacks_registered()
+    import tk_nuke
+    tk_nuke.tank_ensure_callbacks_registered()
 
 # now we need to add our callback module to the pythonpath manually.
 # note! __file__ does not work for this file, so the engine passes

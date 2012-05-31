@@ -11,9 +11,9 @@ import unittest2 as unittest
 
 # add Engine root to the python path
 #sys.path.insert(0, os.path.dirname(os.path.dirname(nuke.frame.f_globals["__file__"])))
-# For Nuke __file__ is not available, so must be run from root of sg_nuke
+# For Nuke __file__ is not available, so must be run from root of tk_nuke
 CWD = os.getcwd()
-if os.path.basename(CWD) != "sg_nuke":
+if os.path.basename(CWD) != "tk_nuke":
     raise Exception("Nuke tests must be run from nuke engine root directory.")
 sys.path.insert(0, CWD)
 
