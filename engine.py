@@ -45,7 +45,7 @@ class NukeEngine(tank.platform.Engine):
     
     def init_engine(self):
         
-        import sg_nuke
+        import tk_nuke
         
         self.log_debug("%s: Initializing..." % self)
         
@@ -94,7 +94,7 @@ class NukeEngine(tank.platform.Engine):
             self.__setup_favourite_dirs()
         
         # make sure callbacks tracking the context switching are active
-        sg_nuke.tank_ensure_callbacks_registered()
+        tk_nuke.tank_ensure_callbacks_registered()
         
         # iterate over all apps, if there is a gizmo folder, add it to nuke path
         for app in self.apps.values():
