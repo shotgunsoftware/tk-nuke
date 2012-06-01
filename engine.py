@@ -173,7 +173,7 @@ class NukeEngine(tank.platform.Engine):
                 # don't know how to remove this, so don't add it!
                 continue
             
-            paths = self.tank.find_paths_for_entity(x["type"], x["id"])
+            paths = self.tank.paths_from_entity(x["type"], x["id"])
             if len(paths) > 0:
                 # for now just pick the first path associated with this entity
                 # todo: later on present multiple ones? or decide on a single path to choose?
