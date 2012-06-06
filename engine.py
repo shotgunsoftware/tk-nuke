@@ -13,6 +13,8 @@ import os
 import unicodedata
 from tank_vendor import yaml
 
+import nukescripts
+
 class TankProgressWrapper(object):
     """
     A progressbar wrapper for nuke.
@@ -311,6 +313,14 @@ class NukeEngine(tank.platform.Engine):
 
             self._node_menu_handle.addCommand(name, callback, icon=icon)
 
+        elif properties.get("type") == "custom_pane":
+            # add to the std pane menu in nuke
+            self._pane_menu.addCommand(name, callback)
+            # also register the panel so that a panel restore command will
+            # properly register it on startup or panel profile restore.
+            nukescripts.registerPanel(properties.get("panel_id", "undefined"),
+                                      callback)
+
         elif properties.get("type") == "context_menu":
             
             # get icon if specified - don't show icon if not specified
@@ -333,6 +343,9 @@ class NukeEngine(tank.platform.Engine):
         # create main menu
         nuke_menu = nuke.menu("Nuke")
         self._menu_handle = nuke_menu.addMenu("Tank") 
+
+        # the right click menu that is displayed when clicking on a pane 
+        self._pane_menu = nuke.menu("Pane") 
         
         # slight hack here but first ensure that the menu is empty
         self._menu_handle.clearMenu()
