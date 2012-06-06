@@ -10,8 +10,8 @@ import tank
 import platform
 import nuke
 import os
-import pickle
 import unicodedata
+from tank_vendor import yaml
 
 class TankProgressWrapper(object):
     """
@@ -76,7 +76,7 @@ class NukeEngine(tank.platform.Engine):
             
         # Store data needed for bootstrapping Tank in env vars. Used in startup/menu.py
         os.environ["TANK_NUKE_ENGINE_INIT_NAME"] = self.instance_name
-        os.environ["TANK_NUKE_ENGINE_INIT_CONTEXT"] = pickle.dumps(self.context)
+        os.environ["TANK_NUKE_ENGINE_INIT_CONTEXT"] = yaml.dump(self.context)
         os.environ["TANK_NUKE_ENGINE_INIT_PROJECT_ROOT"] = self.tank.project_path
         
         # add our startup path to the nuke init path

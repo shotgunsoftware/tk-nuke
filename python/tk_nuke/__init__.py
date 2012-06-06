@@ -9,10 +9,9 @@ import os
 import textwrap
 import nuke
 import tank
-import pickle
 import sys
 import traceback
-
+from tank_vendor import yaml
 
 def __show_tank_disabled_message(details):
     """
@@ -121,10 +120,10 @@ def __tank_startup_node_callback():
             project_root = os.environ.get("TANK_NUKE_ENGINE_INIT_PROJECT_ROOT")
             tk = tank.Tank(project_root)
             
-            ctx_pickled = os.environ.get("TANK_NUKE_ENGINE_INIT_CONTEXT")
-            if ctx_pickled:
+            ctx_yaml = os.environ.get("TANK_NUKE_ENGINE_INIT_CONTEXT")
+            if ctx_yaml:
                 try:
-                    new_ctx = pickle.loads(ctx_pickled)
+                    new_ctx = yaml.load(ctx_yaml)
                 except:
                     new_ctx = tk.context_empty()
             else:
