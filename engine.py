@@ -395,8 +395,7 @@ class NukeEngine(tank.platform.Engine):
         while len(self._queue) > 0:
             
             # take one item off
-            self._current_queue_item = self._queue[0]
-            self._queue = self._queue[1:]
+            self._current_queue_item = self._queue.pop(0)
             
             # process it
             try:
