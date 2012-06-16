@@ -38,10 +38,8 @@ class TankProgressWrapper(object):
         if self.__ui:
             self.__p = None
 
-
 class NukeEngine(tank.platform.Engine):
-    
-    
+
     ##########################################################################################
     # init
     
@@ -54,13 +52,9 @@ class NukeEngine(tank.platform.Engine):
         # now check that there is a location on disk which corresponds to the context
         # for the maya engine (because it for example sets the maya project)
         if len(self.context.entity_locations) == 0:
-            # Try to create path for the context.
-            self.tank.create_filesystem_structure(self.context.entity["type"], self.context.entity["id"])
-            
-            if len(self.context.entity_locations) == 0:
-                raise tank.TankError("No folders on disk are associated with the current context. The Nuke "
-                                "engine requires a context which exists on disk in order to run "
-                                "correctly.")
+            raise tank.TankError("No folders on disk are associated with the current context. The Nuke "
+                            "engine requires a context which exists on disk in order to run "
+                            "correctly.")
         
         # make sure we are not running that bloody nuke PLE!
         if nuke.env.get("ple") == True:
@@ -109,16 +103,13 @@ class NukeEngine(tank.platform.Engine):
                 # new processes spawned from this one will have access too.
                 # (for example if you do file->open or file->new)
                 tank.util.append_path_to_env_var("NUKE_PATH", app_gizmo_folder)
-
-        
-                
+       
     def destroy_engine(self):
         self.log_debug("%s: Destroying..." % self)
         if self._ui_enabled:
             self._menu_handle.clearMenu()
             self._node_menu_handle.clearMenu()
 
-    
     ##########################################################################################
     # logging interfaces
     
@@ -126,7 +117,6 @@ class NukeEngine(tank.platform.Engine):
         if self.get_setting("debug_logging", False):
             msg = "Tank Debug: %s" % msg
             nuke.debug(msg)
-
 
     def log_info(self, msg):
         msg = "Tank Info: %s" % msg
@@ -196,8 +186,6 @@ class NukeEngine(tank.platform.Engine):
                             type=(nuke.IMAGE|nuke.SCRIPT|nuke.FONT|nuke.GEO), 
                             icon=self._tk2_logo_small, 
                             tooltip=path)
-        
-        
     
     ##########################################################################################
     # managing the menu            
@@ -235,7 +223,6 @@ class NukeEngine(tank.platform.Engine):
         if self.tank.documentation_url:
             self.__add_documentation_item(help_menu, "Tank Core Documentation", self.tank.documentation_url)
 
-
     def __launch_context_in_fs(self):
         
         tmpl = self.tank.templates.get(self.get_setting("template_context"))
@@ -260,10 +247,6 @@ class NukeEngine(tank.platform.Engine):
         exit_code = os.system(cmd)
         if exit_code != 0:
             self.log_error("Failed to launch '%s'!" % cmd)
-
-
-
-
 
     def __add_context_menu(self):
         """
@@ -300,7 +283,6 @@ class NukeEngine(tank.platform.Engine):
         # and finally a separator
         self._menu_handle.addSeparator()
     
-    
     def _add_command_to_menu(self, name, callback, properties):
         """
         Adds an app command to the menu
@@ -334,8 +316,6 @@ class NukeEngine(tank.platform.Engine):
             # std shotgun menu
             self._menu_handle.addCommand(name, callback) 
             
-        
-    
     def _create_menu(self):
         """
         Render the entire Tank menu.
