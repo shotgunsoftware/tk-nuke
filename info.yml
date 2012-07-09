@@ -11,12 +11,6 @@ configuration:
         description: Controls whether debug messages should be emitted to the logger
         default_value: false
     
-    template_context: 
-        type: template
-        description: Path that represents the currently selected context. This should 
-                     typically be set to point at the work area on disk, where your
-                     nuke script files are stored.
-    
 # the Shotgun fields that this engine needs in order to operate correctly
 requires_shotgun_fields:
         

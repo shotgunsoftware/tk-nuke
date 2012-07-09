@@ -48,10 +48,25 @@ class NukeEngine(tank.platform.Engine):
         import tk_nuke
         
         self.log_debug("%s: Initializing..." % self)
+
+        
         
         # now check that there is a location on disk which corresponds to the context
-        # for the maya engine (because it for example sets the maya project)
-        if len(self.context.entity_locations) == 0:
+        if self.context.entity:
+            # context has an entity
+            locations = self.tank.paths_from_entity(self.context.entity["type"], 
+                                                    self.context.entity["id"])
+        elif self.context.project:
+            # context has a project
+            locations = self.tank.paths_from_entity(self.context.project["type"], 
+                                                    self.context.project["id"])
+        else:
+            # must have at least a project in the context to even start!
+            raise tank.TankError("The nuke engine needs at least a project in the context "
+                                 "in order to start! Your context: %s" % self.context)
+        
+        # make sure there are folders on disk
+        if len(locations) == 0:
             raise tank.TankError("No folders on disk are associated with the current context. The Nuke "
                             "engine requires a context which exists on disk in order to run "
                             "correctly.")
@@ -175,18 +190,7 @@ class NukeEngine(tank.platform.Engine):
                                     type=(nuke.IMAGE|nuke.SCRIPT|nuke.FONT|nuke.GEO), 
                                     icon=self._tk2_logo_small, 
                                     tooltip=path)
-    
-        # now set up a shortcut for the context
-        tmpl = self.tank.templates.get(self.get_setting("template_context"))
-        fields = self.context.as_template_fields(tmpl)
-        path = tmpl.apply_fields(fields)
-        nuke.removeFavoriteDir("Tank Current Work")
-        nuke.addFavoriteDir("Tank Current Work", 
-                            directory=path,
-                            type=(nuke.IMAGE|nuke.SCRIPT|nuke.FONT|nuke.GEO), 
-                            icon=self._tk2_logo_small, 
-                            tooltip=path)
-    
+        
     ##########################################################################################
     # managing the menu            
     
@@ -225,28 +229,32 @@ class NukeEngine(tank.platform.Engine):
 
     def __launch_context_in_fs(self):
         
-        tmpl = self.tank.templates.get(self.get_setting("template_context"))
-        fields = self.context.as_template_fields(tmpl)
-        proj_path = tmpl.apply_fields(fields)
-        self.log_debug("Launching file system viewer for folder %s" % proj_path)        
-        
-        # get the setting        
-        system = platform.system()
-        
-        # run the app
-        if system == "Linux":
-            cmd = 'xdg-open "%s"' % proj_path
-        elif system == "Darwin":
-            cmd = 'open "%s"' % proj_path
-        elif system == "Windows":
-            cmd = 'cmd.exe /C start "Folder" "%s"' % proj_path
+        if self.context.entity:
+            paths = self.tank.paths_from_entity(self.context.entity["type"], self.context.entity["id"])
         else:
-            raise Exception("Platform '%s' is not supported." % system)
+            paths = self.tank.paths_from_entity(self.context.project["type"], self.context.project["id"])
         
-        self.log_debug("Executing command '%s'" % cmd)
-        exit_code = os.system(cmd)
-        if exit_code != 0:
-            self.log_error("Failed to launch '%s'!" % cmd)
+        # launch one window for each location on disk
+        # todo: can we do this in a more elegant way?
+        for disk_location in paths:
+                
+            # get the setting        
+            system = platform.system()
+            
+            # run the app
+            if system == "Linux":
+                cmd = 'xdg-open "%s"' % disk_location
+            elif system == "Darwin":
+                cmd = 'open "%s"' % disk_location
+            elif system == "Windows":
+                cmd = 'cmd.exe /C start "Folder" "%s"' % disk_location
+            else:
+                raise Exception("Platform '%s' is not supported." % system)
+            
+            self.log_debug("Executing command '%s'" % cmd)
+            exit_code = os.system(cmd)
+            if exit_code != 0:
+                self.log_error("Failed to launch '%s'!" % cmd)
 
     def __add_context_menu(self):
         """
@@ -255,17 +263,23 @@ class NukeEngine(tank.platform.Engine):
         
         ctx = self.context
         
-        # try to figure out task/step, however this may not always be present
-        task_step = None
-        if ctx.step:
-            task_step = ctx.step.get("name")
-        if ctx.task:
-            task_step = ctx.task.get("name")
-
-        if task_step is None:
+        if ctx.entity is None:
+            # project-only!
+            ctx_name = "[%s]" % ctx.project["name"]
+        
+        elif ctx.step is None and ctx.task is None:
+            # entity only
             # e.g. [Shot ABC_123]
             ctx_name = "[%s %s]" % (ctx.entity["type"], ctx.entity["name"])
+
         else:
+            # we have either step or task
+            task_step = None
+            if ctx.step:
+                task_step = ctx.step.get("name")
+            if ctx.task:
+                task_step = ctx.task.get("name")
+            
             # e.g. [Lighting, Shot ABC_123]
             ctx_name = "[%s, %s %s]" % (task_step, ctx.entity["type"], ctx.entity["name"])
         
@@ -273,9 +287,12 @@ class NukeEngine(tank.platform.Engine):
         self._ctx_menu_handle = self._menu_handle.addMenu(ctx_name)
                 
         # link to shotgun
-        sg_url = "%s/detail/%s/%d" % (self.shotgun.base_url, ctx.entity["type"], ctx.entity["id"])
+        if ctx.entity is None:
+            sg_url = "%s/detail/%s/%d" % (self.shotgun.base_url, ctx.project["type"], ctx.project["id"])
+        else:
+            sg_url = "%s/detail/%s/%d" % (self.shotgun.base_url, ctx.entity["type"], ctx.entity["id"])
         cmd = "import nukescripts.openurl; nukescripts.openurl.start('%s')" % sg_url
-        self._ctx_menu_handle.addCommand("Show %s in Shotgun" % ctx.entity["type"], cmd)
+        self._ctx_menu_handle.addCommand("Show in Shotgun", cmd)
         
         # link to fs
         self._ctx_menu_handle.addCommand("Show in File System", self.__launch_context_in_fs)        
