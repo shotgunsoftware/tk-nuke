@@ -101,7 +101,9 @@ class NukeEngine(tank.platform.Engine):
     
         # render the menu!
         if self._ui_enabled:
-            self._create_menu()
+            import tk_nuke
+            self._menu_generator = tk_nuke.MenuGenerator(self)
+            self._menu_generator.create_menu()
             self.__setup_favourite_dirs()
         
         # make sure callbacks tracking the context switching are active
@@ -122,8 +124,7 @@ class NukeEngine(tank.platform.Engine):
     def destroy_engine(self):
         self.log_debug("%s: Destroying..." % self)
         if self._ui_enabled:
-            self._menu_handle.clearMenu()
-            self._node_menu_handle.clearMenu()
+            self._menu_generator.destroy_menu()
 
     ##########################################################################################
     # logging interfaces
@@ -131,13 +132,11 @@ class NukeEngine(tank.platform.Engine):
     def log_debug(self, msg):
         if self.get_setting("debug_logging", False):
             msg = "Tank Debug: %s" % msg
-            nuke.debug(msg)
+            print msg
 
     def log_info(self, msg):
         msg = "Tank Info: %s" % msg
-        nuke.debug(msg)
-
-        nuke.debug("Tank: %s" % msg)
+        print msg
         
     def log_warning(self, msg):
         msg = "Tank Warning: %s" % msg
@@ -158,6 +157,9 @@ class NukeEngine(tank.platform.Engine):
         that are presented in the left hand side of 
         nuke common dialogs (open, save)
         """
+        
+        engine_root_dir = self.disk_location
+        tank_logo_small = os.path.abspath(os.path.join(engine_root_dir, "resources", "logo_color_16.png"))
         
         supported_entity_types = ["Shot", "Sequence", "Scene", "Asset", "Project"]
         
@@ -188,146 +190,9 @@ class NukeEngine(tank.platform.Engine):
                 nuke.addFavoriteDir("Tank Current %s" % sg_et, 
                                     directory=path,  
                                     type=(nuke.IMAGE|nuke.SCRIPT|nuke.FONT|nuke.GEO), 
-                                    icon=self._tk2_logo_small, 
+                                    icon=tank_logo_small, 
                                     tooltip=path)
         
-    ##########################################################################################
-    # managing the menu            
-    
-    def __add_documentation_item(self, menu, caption, url):
-        """
-        Helper that adds a single doc item to the menu
-        """
-        # deal with nuke's inability to handle unicode. #fail
-        if url.__class__ == unicode:
-            url = unicodedata.normalize('NFKD', url).encode('ascii', 'ignore')
-        cmd = "import nukescripts.openurl; nukescripts.openurl.start('%s')" % url
-        if caption.__class__ == unicode:
-            caption = unicodedata.normalize('NFKD', caption).encode('ascii', 'ignore')
-        menu.addCommand(caption, cmd)
-    
-    def __add_documentation_to_menu(self):
-        """
-        Adds documentation items to menu based on what docs are available. 
-        """
-        
-        # create Help menu
-        self._menu_handle.addSeparator()
-        help_menu = self._menu_handle.addMenu("Help")
-
-        if self.documentation_url:
-            self.__add_documentation_item(help_menu, "Engine Documentation", self.documentation_url)
-
-        for app in self.apps.values():
-            if app.documentation_url:
-                self.__add_documentation_item(help_menu, 
-                                              "%s Documentation" % app.display_name, 
-                                              app.documentation_url)
-                
-        if self.tank.documentation_url:
-            self.__add_documentation_item(help_menu, "Tank Core Documentation", self.tank.documentation_url)
-
-    def __add_context_menu(self):
-        """
-        Adds a context menu which displays the current context
-        """        
-        
-        ctx = self.context
-        
-        if ctx.entity is None:
-            # project-only!
-            ctx_name = "[%s]" % ctx.project["name"]
-        
-        elif ctx.step is None and ctx.task is None:
-            # entity only
-            # e.g. [Shot ABC_123]
-            ctx_name = "[%s %s]" % (ctx.entity["type"], ctx.entity["name"])
-
-        else:
-            # we have either step or task
-            task_step = None
-            if ctx.step:
-                task_step = ctx.step.get("name")
-            if ctx.task:
-                task_step = ctx.task.get("name")
-            
-            # e.g. [Lighting, Shot ABC_123]
-            ctx_name = "[%s, %s %s]" % (task_step, ctx.entity["type"], ctx.entity["name"])
-        
-        # create the menu object        
-        self._menu_handle.addCommand(ctx_name, self.__show_context_ui)
-                        
-        # and finally a separator
-        self._menu_handle.addSeparator()
-    
-    def __show_context_ui(self):
-        """
-        """
-        from tk_nuke import ContextDetailsDialog
-        # some QT notes here. Need to keep the dialog object from being GC-ed
-        # otherwise pyside will go hara kiri. QT has its own loop to track
-        # objects and destroy them and unless we store the dialog as a member
-        self._dialog = ContextDetailsDialog(self)
-        # run modal dialogue
-        self._dialog.exec_()
-        # seems needs to explicitly close dialog
-        self._dialog.close()
-        # lastly, need to explicitly delete it, otherwise it stays around in the background.
-        self._dialog.deleteLater()
-        
-        
-    
-    def _add_command_to_menu(self, name, callback, properties):
-        """
-        Adds an app command to the menu
-        """
-        if properties.get("type") == "node":
-            # this should go on the custom node menu!
-            
-            # get icon if specified - default to tank icon if not specified
-            icon = properties.get("icon", self._tk2_logo)
-
-            self._node_menu_handle.addCommand(name, callback, icon=icon)
-
-        elif properties.get("type") == "custom_pane":
-            # add to the std pane menu in nuke
-            self._pane_menu.addCommand(name, callback)
-            # also register the panel so that a panel restore command will
-            # properly register it on startup or panel profile restore.
-            nukescripts.registerPanel(properties.get("panel_id", "undefined"),
-                                      callback)
-
-        else:
-            # std shotgun menu
-            self._menu_handle.addCommand(name, callback) 
-            
-    def _create_menu(self):
-        """
-        Render the entire Tank menu.
-        """
-        # create main menu
-        nuke_menu = nuke.menu("Nuke")
-        self._menu_handle = nuke_menu.addMenu("Tank") 
-
-        # the right click menu that is displayed when clicking on a pane 
-        self._pane_menu = nuke.menu("Pane") 
-        
-        # slight hack here but first ensure that the menu is empty
-        self._menu_handle.clearMenu()
-
-        # create tank side menu
-        this_folder = os.path.dirname(__file__)
-        self._tk2_logo = os.path.abspath(os.path.join(this_folder, "resources", "logo_gray_22.png"))
-        self._tk2_logo_small = os.path.abspath(os.path.join(this_folder, "resources", "logo_color_16.png"))
-        self._node_menu_handle = nuke.menu("Nodes").addMenu("Tank", icon=self._tk2_logo)
-    
-        self.__add_context_menu()
-        
-        for (cmd_name, cmd_details) in self.commands.items():
-            self._add_command_to_menu(cmd_name, cmd_details["callback"], cmd_details["properties"])
-            
-        self.__add_documentation_to_menu()
-            
     ##########################################################################################
     # queue
 

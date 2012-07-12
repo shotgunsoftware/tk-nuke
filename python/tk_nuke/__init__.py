@@ -13,7 +13,7 @@ import sys
 import traceback
 from tank_vendor import yaml
 
-from .context_details_dialog import ContextDetailsDialog
+from .menu_generation import MenuGenerator
 
 
 def __show_tank_disabled_message(details):
