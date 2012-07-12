@@ -349,8 +349,8 @@ class NukeEngine(tank.platform.Engine):
 
         # create tank side menu
         this_folder = os.path.dirname(__file__)
-        self._tk2_logo = os.path.abspath(os.path.join(this_folder, "resources", "box_22.png"))
-        self._tk2_logo_small = os.path.abspath(os.path.join(this_folder, "resources", "box_16.png"))
+        self._tk2_logo = os.path.abspath(os.path.join(this_folder, "resources", "logo_gray_22.png"))
+        self._tk2_logo_small = os.path.abspath(os.path.join(this_folder, "resources", "logo_color_16.png"))
         self._node_menu_handle = nuke.menu("Nodes").addMenu("Tank", icon=self._tk2_logo)
     
         self.__add_context_menu()
