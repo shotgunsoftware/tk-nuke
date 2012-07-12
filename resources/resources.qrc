@@ -1,0 +1,6 @@
+<RCC>
+  <qresource prefix="res">
+    <file>tank_logo.png</file>
+    <file>pipeline_step.png</file>
+  </qresource>
+</RCC>

@@ -227,35 +227,6 @@ class NukeEngine(tank.platform.Engine):
         if self.tank.documentation_url:
             self.__add_documentation_item(help_menu, "Tank Core Documentation", self.tank.documentation_url)
 
-    def __launch_context_in_fs(self):
-        
-        if self.context.entity:
-            paths = self.tank.paths_from_entity(self.context.entity["type"], self.context.entity["id"])
-        else:
-            paths = self.tank.paths_from_entity(self.context.project["type"], self.context.project["id"])
-        
-        # launch one window for each location on disk
-        # todo: can we do this in a more elegant way?
-        for disk_location in paths:
-                
-            # get the setting        
-            system = platform.system()
-            
-            # run the app
-            if system == "Linux":
-                cmd = 'xdg-open "%s"' % disk_location
-            elif system == "Darwin":
-                cmd = 'open "%s"' % disk_location
-            elif system == "Windows":
-                cmd = 'cmd.exe /C start "Folder" "%s"' % disk_location
-            else:
-                raise Exception("Platform '%s' is not supported." % system)
-            
-            self.log_debug("Executing command '%s'" % cmd)
-            exit_code = os.system(cmd)
-            if exit_code != 0:
-                self.log_error("Failed to launch '%s'!" % cmd)
-
     def __add_context_menu(self):
         """
         Adds a context menu which displays the current context
@@ -284,21 +255,27 @@ class NukeEngine(tank.platform.Engine):
             ctx_name = "[%s, %s %s]" % (task_step, ctx.entity["type"], ctx.entity["name"])
         
         # create the menu object        
-        self._ctx_menu_handle = self._menu_handle.addMenu(ctx_name)
-                
-        # link to shotgun
-        if ctx.entity is None:
-            sg_url = "%s/detail/%s/%d" % (self.shotgun.base_url, ctx.project["type"], ctx.project["id"])
-        else:
-            sg_url = "%s/detail/%s/%d" % (self.shotgun.base_url, ctx.entity["type"], ctx.entity["id"])
-        cmd = "import nukescripts.openurl; nukescripts.openurl.start('%s')" % sg_url
-        self._ctx_menu_handle.addCommand("Show in Shotgun", cmd)
-        
-        # link to fs
-        self._ctx_menu_handle.addCommand("Show in File System", self.__launch_context_in_fs)        
-        
+        self._menu_handle.addCommand(ctx_name, self.__show_context_ui)
+                        
         # and finally a separator
         self._menu_handle.addSeparator()
+    
+    def __show_context_ui(self):
+        """
+        """
+        from tk_nuke import ContextDetailsDialog
+        # some QT notes here. Need to keep the dialog object from being GC-ed
+        # otherwise pyside will go hara kiri. QT has its own loop to track
+        # objects and destroy them and unless we store the dialog as a member
+        self._dialog = ContextDetailsDialog(self)
+        # run modal dialogue
+        self._dialog.exec_()
+        # seems needs to explicitly close dialog
+        self._dialog.close()
+        # lastly, need to explicitly delete it, otherwise it stays around in the background.
+        self._dialog.deleteLater()
+        
+        
     
     def _add_command_to_menu(self, name, callback, properties):
         """
@@ -320,15 +297,6 @@ class NukeEngine(tank.platform.Engine):
             nukescripts.registerPanel(properties.get("panel_id", "undefined"),
                                       callback)
 
-        elif properties.get("type") == "context_menu":
-            
-            # get icon if specified - don't show icon if not specified
-            icon = properties.get("icon")
-            if icon is None:
-                self._ctx_menu_handle.addCommand(name, callback)
-            else:
-                self._ctx_menu_handle.addCommand(name, callback, icon=icon)
-            
         else:
             # std shotgun menu
             self._menu_handle.addCommand(name, callback) 

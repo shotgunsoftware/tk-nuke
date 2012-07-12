@@ -13,6 +13,9 @@ import sys
 import traceback
 from tank_vendor import yaml
 
+from .context_details_dialog import ContextDetailsDialog
+
+
 def __show_tank_disabled_message(details):
     """
     Message when user clicks the tank is disabled menu
