@@ -19,7 +19,7 @@ class ListHeader(ListBase):
         self.ui = Ui_Header() 
         self.ui.setupUi(self)
         self.ui.label.setText("<big>Shots and Shit</big>")        
-        self.ui.background.setStyleSheet("background-color: #6F6F6F;")
+        self.ui.background.setStyleSheet("background-color: #6F6F6F; border: none")
 
     def set_title(self, title):
         self.ui.label.setText("<big>%s</big>" % title)

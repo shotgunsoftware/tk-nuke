@@ -44,7 +44,7 @@ class ListItem(ListBase):
     def set_selected(self, status):
         self._selected = status
         if self._selected:
-            self.ui.background.setStyleSheet("background-color: #707070;")
+            self.ui.background.setStyleSheet("background-color: #707070; border: none")
         else:
             self.ui.background.setStyleSheet("")
             

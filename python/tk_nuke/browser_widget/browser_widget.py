@@ -43,6 +43,7 @@ class BrowserWidget(QtGui.QWidget):
         self._selected_items = []
         self._dynamic_widgets = []
         self._multi_select = False
+        self._search = True
         
         # spinner
         self._spin_icons = []
@@ -63,6 +64,11 @@ class BrowserWidget(QtGui.QWidget):
         """
         self._multi_select = True
         
+    def enable_search(self, status):
+        """
+        Toggle the search bar (on by default)
+        """
+        self.ui.search.setVisible(status)
         
     def destroy(self):
         self.clear()

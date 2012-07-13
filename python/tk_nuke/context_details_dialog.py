@@ -26,6 +26,7 @@ class ContextDetailsDialog(QtGui.QDialog):
         # set up the browsers
         self.ui.browser.set_app(self._app)
         self.ui.browser.set_label("Your Current Work Context")
+        self.ui.browser.enable_search(False)
         
         self.ui.browser.action_requested.connect( self.show_in_sg )
         

@@ -24,7 +24,9 @@ class ListBase(QtGui.QWidget):
         return False
 
     def mousePressEvent(self, event):
-        self.clicked.emit(self)
+        if event.button() == QtCore.Qt.LeftButton:
+            # handle this event!
+            self.clicked.emit(self)
 
     def mouseDoubleClickEvent(self, event):
         self.double_clicked.emit(self)
