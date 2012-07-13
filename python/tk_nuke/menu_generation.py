@@ -135,7 +135,7 @@ class MenuGenerator(object):
                 task_step = ctx.task.get("name")
             
             # e.g. [Lighting, Shot ABC_123]
-            ctx_name = "[%s, %s %s]" % (task_step, ctx.entity["type"], ctx.entity["name"])
+            ctx_name = "%s, %s %s" % (task_step, ctx.entity["type"], ctx.entity["name"])
         
         # create the menu object        
         self._menu_handle.addCommand(ctx_name, self._show_context_ui)
