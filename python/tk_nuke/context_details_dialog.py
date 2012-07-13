@@ -23,6 +23,10 @@ class ContextDetailsDialog(QtGui.QDialog):
         self.ui = Ui_Dialog() 
         self.ui.setupUi(self)
         
+        # set platform version in title
+        title = "Tank %s - Context Information" % self._app.tank.version
+        self.setWindowTitle(title)
+        
         # set up the browsers
         self.ui.browser.set_app(self._app)
         self.ui.browser.set_label("Your Current Work Context")
