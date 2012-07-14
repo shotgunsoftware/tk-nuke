@@ -13,6 +13,7 @@ from PySide import QtCore, QtGui
 class Worker(QtCore.QThread):
     
     work_completed = QtCore.Signal(str, dict)
+    work_failure = QtCore.Signal(str, str)
     
     def __init__(self, app, parent=None):
         QtCore.QThread.__init__(self, parent)
@@ -88,9 +89,9 @@ class Worker(QtCore.QThread):
                 try:
                     data = item_to_process["fn"](item_to_process["params"])
                 except Exception, e:
-                    # not sure I can use std engine logger here, since we are in 
-                    # the non_UI thread
-                    print("Worker error: %s" % e)
+                    if self._execute_tasks:
+                        self.work_failure.emit(item_to_process["id"], "An error occured: %s" % e)
+                    
                 else:
                     if self._execute_tasks:
                         self.work_completed.emit(item_to_process["id"], data)

@@ -83,6 +83,8 @@ class BrowserWidget(QtGui.QWidget):
         # set up worker queue
         self._worker = Worker(app)
         self._worker.work_completed.connect( self._on_worker_signal)
+        self._worker.work_failure.connect( self._on_worker_failure)
+        
         self._worker.start(QtCore.QThread.LowPriority)
         
     def set_label(self, label):
@@ -208,6 +210,23 @@ class BrowserWidget(QtGui.QWidget):
                 else:
                     i.setVisible(False)
     
+    def _on_worker_failure(self, uid, msg):
+        """
+        The worker couldn't execute stuff
+        """
+        if self._current_work_id != uid:
+            # not our job. ignore
+            return
+
+        # finally, turn off progress indication and turn on display
+        self.ui.scroll_area.setVisible(True)
+        self.ui.load_overlay.setVisible(False)        
+        self._timer.stop()
+    
+        # show error message
+        self.set_message(msg)
+        
+
     def _on_worker_signal(self, uid, data):
         """
         Signalled whenever the worker completes something
