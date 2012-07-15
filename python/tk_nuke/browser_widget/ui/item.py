@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'item.ui'
 #
-# Created: Tue Jul 10 22:11:45 2012
+# Created: Sun Jul 15 14:28:08 2012
 #      by: pyside-uic 0.2.13 running on PySide 1.1.0
 #
 # WARNING! All changes made in this file will be lost!
@@ -13,8 +13,12 @@ class Ui_Item(object):
     def setupUi(self, Item):
         Item.setObjectName("Item")
         Item.resize(416, 100)
+        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Minimum)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(Item.sizePolicy().hasHeightForWidth())
+        Item.setSizePolicy(sizePolicy)
         Item.setMinimumSize(QtCore.QSize(0, 100))
-        Item.setMaximumSize(QtCore.QSize(16777215, 100))
         self.verticalLayout = QtGui.QVBoxLayout(Item)
         self.verticalLayout.setSpacing(2)
         self.verticalLayout.setContentsMargins(2, 2, 2, 2)
