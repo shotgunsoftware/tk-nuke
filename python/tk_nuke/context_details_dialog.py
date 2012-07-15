@@ -5,6 +5,7 @@ Copyright (c) 2012 Shotgun Software, Inc
 import nuke
 import tank
 import platform
+import unicodedata
 import os
 import sys
 import nukescripts.openurl
@@ -28,25 +29,38 @@ class ContextDetailsDialog(QtGui.QDialog):
         self.setWindowTitle(title)
         
         # set up the browsers
-        self.ui.browser.set_app(self._app)
-        self.ui.browser.set_label("Your Current Work Context")
-        self.ui.browser.enable_search(False)
+        self.ui.context_browser.set_app(self._app)
+        self.ui.context_browser.set_label("Your Current Work Context")
+        self.ui.context_browser.enable_search(False)        
+        self.ui.context_browser.action_requested.connect( self.show_in_sg )
         
-        self.ui.browser.action_requested.connect( self.show_in_sg )
+        self.ui.app_browser.set_app(self._app)
+        self.ui.app_browser.set_label("Currently Running Tank Apps")
+        self.ui.app_browser.enable_search(False)
+        self.ui.app_browser.action_requested.connect( self.show_app_in_app_store )        
+
+        self.ui.environment_browser.set_app(self._app)
+        self.ui.environment_browser.set_label("Your current Environment")
+        self.ui.environment_browser.enable_search(False)        
+        self.ui.environment_browser.action_requested.connect( self.show_engine_in_app_store )
         
         self.ui.jump_to_fs.clicked.connect( self.show_in_fs )
         self.ui.support.clicked.connect( self.open_helpdesk )
         self.ui.platform_docs.clicked.connect( self.open_platform_docs )
                 
         # load data from shotgun
-        self.setup_context_list()        
+        self.setup_context_list()
+        self.setup_apps_list()
+        self.setup_environment_list()
         
     ########################################################################################
     # make sure we trap when the dialog is closed so that we can shut down 
     # our threads. Nuke does not do proper cleanup on exit.
     
     def _cleanup(self):
-        self.ui.browser.destroy()
+        self.ui.context_browser.destroy()
+        self.ui.app_browser.destroy()
+        self.ui.environment_browser.destroy()
         
     def closeEvent(self, event):
         self._cleanup()
@@ -68,16 +82,35 @@ class ContextDetailsDialog(QtGui.QDialog):
     ########################################################################################
     # basic business logic        
         
-    def setup_context_list(self): 
-        self.ui.browser.clear()
-        self.ui.browser.load({})
+    def _launch_url_unicode_fix(self, url):
+        """
+        wrapper to fix nuke's broken unicode functionality.
+        """ 
+        # deal with nuke's inability to handle unicode. #fail
+        if url.__class__ == unicode:
+            url = unicodedata.normalize('NFKD', url).encode('ascii', 'ignore')
+        nukescripts.openurl.start(url)
+
         
+    def setup_context_list(self): 
+        self.ui.context_browser.clear()
+        self.ui.context_browser.load({})
+        
+    def setup_apps_list(self): 
+        self.ui.app_browser.clear()
+        self.ui.app_browser.load({})
+
+    def setup_environment_list(self): 
+        self.ui.environment_browser.clear()
+        self.ui.environment_browser.load({})
+
     def open_helpdesk(self):
-        nukescripts.openurl.start("http://tank.zendesk.com")
+        self._launch_url_unicode_fix("http://tank.zendesk.com")
     
     def open_platform_docs(self):        
         if self._app.tank.documentation_url:
-            nukescripts.openurl.start(self._app.tank.documentation_url)
+            self._launch_url_unicode_fix(self._app.tank.documentation_url)
+
         else:
             QtGui.QMessageBox.critical(self, 
                                        "No Documentation found!",
@@ -121,12 +154,40 @@ class ContextDetailsDialog(QtGui.QDialog):
         """
         Jump to shotgun
         """
-        curr_selection = self.ui.browser.get_selected_item()
+        curr_selection = self.ui.context_browser.get_selected_item()
         if curr_selection is None:
             return
         
         data = curr_selection.sg_data
         sg_url = "%s/detail/%s/%d" % (self._app.shotgun.base_url, data["type"], data["id"])
-        nukescripts.openurl.start(sg_url)
+        self._launch_url_unicode_fix(sg_url)
         
+
+    def show_app_in_app_store(self):
+        """
+        Jump to app store
+        """
+        curr_selection = self.ui.app_browser.get_selected_item()
+        if curr_selection is None:
+            return
+        
+        doc_url = curr_selection.data.get("documentation_url")
+        if doc_url is None:
+            QtGui.QMessageBox.critical(self, 
+                                       "No Documentation found!",
+                                       "Sorry, this app does not have any associated documentation!")
+        else:
+            self._launch_url_unicode_fix(doc_url)
+
+    def show_engine_in_app_store(self):
+        """
+        Jump to app store
+        """
+        curr_selection = self.ui.environment_browser.get_selected_item()
+        if curr_selection is None:
+            return
+        
+        doc_url = curr_selection.data.get("documentation_url")
+        if doc_url:
+            self._launch_url_unicode_fix(doc_url)
         

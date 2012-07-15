@@ -175,24 +175,22 @@ class MenuGenerator(object):
         """
         for app_name in sorted(commands_by_app.keys()):
             
-            app_menu = self._menu_handle.addMenu(app_name)
             
-            for cmd in commands_by_app[app_name]:
-                cmd.add_command_to_menu(app_menu)
-                
-            # lastly, add documentation
-            cmd_obj = commands_by_app[app_name][0] # always 1+ items in list
-            doc_url = cmd_obj.get_documentation_url_str()
-            if doc_url:
-                app_menu.addSeparator()
-                cmd = "import nukescripts.openurl; nukescripts.openurl.start('%s')" % doc_url
-                app_menu.addCommand("Documentation", cmd)
-        
+            if len(commands_by_app[app_name]) > 1:
+                # more than one menu entry fort his app
+                # make a sub menu and put all items in the sub menu
+                app_menu = self._menu_handle.addMenu(app_name)
+                for cmd in commands_by_app[app_name]:
+                    cmd.add_command_to_menu(app_menu)
             
-        
-        
-        
-        
+            else:
+                # this app only has a single entry. 
+                # display that on the menu
+                # todo: Should this be labelled with the name of the app 
+                # or the name of the menu item? Not sure.
+                cmd_obj = commands_by_app[app_name][0]
+                cmd_obj.add_command_to_menu(self._menu_handle)
+                                
         
         
     

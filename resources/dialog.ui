@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>731</width>
-    <height>485</height>
+    <width>844</width>
+    <height>487</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,19 +15,94 @@
   </property>
   <layout class="QHBoxLayout" name="horizontalLayout">
    <item>
-    <widget class="ContextBrowserWidget" name="browser" native="true">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
+    <widget class="QTabWidget" name="context_overview_tab_widget">
+     <property name="tabPosition">
+      <enum>QTabWidget::South</enum>
      </property>
-     <property name="minimumSize">
-      <size>
-       <width>380</width>
-       <height>0</height>
-      </size>
+     <property name="currentIndex">
+      <number>0</number>
      </property>
+     <widget class="QWidget" name="tab">
+      <attribute name="icon">
+       <iconset resource="resources.qrc">
+        <normaloff>:/res/icon_task.png</normaloff>:/res/icon_task.png</iconset>
+      </attribute>
+      <attribute name="title">
+       <string>Current Context</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_4">
+       <item>
+        <widget class="ContextBrowserWidget" name="context_browser" native="true">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>380</width>
+           <height>0</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_2">
+      <attribute name="icon">
+       <iconset resource="resources.qrc">
+        <normaloff>:/res/logo_color_16.png</normaloff>:/res/logo_color_16.png</iconset>
+      </attribute>
+      <attribute name="title">
+       <string>Active Apps</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <item>
+        <widget class="AppBrowserWidget" name="app_browser" native="true">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>380</width>
+           <height>0</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="tab_3">
+      <attribute name="icon">
+       <iconset resource="resources.qrc">
+        <normaloff>:/res/cog_white.png</normaloff>:/res/cog_white.png</iconset>
+      </attribute>
+      <attribute name="title">
+       <string>Environment</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_3">
+       <item>
+        <widget class="EnvironmentBrowserWidget" name="environment_browser" native="true">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>380</width>
+           <height>0</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
     </widget>
    </item>
    <item>
@@ -95,6 +170,18 @@
    <class>ContextBrowserWidget</class>
    <extends>QWidget</extends>
    <header>..context_browser</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>AppBrowserWidget</class>
+   <extends>QWidget</extends>
+   <header>..app_browser</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>EnvironmentBrowserWidget</class>
+   <extends>QWidget</extends>
+   <header>..environment_browser</header>
    <container>1</container>
   </customwidget>
  </customwidgets>
