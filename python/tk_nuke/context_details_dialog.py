@@ -36,7 +36,6 @@ class ContextDetailsDialog(QtGui.QDialog):
         
         self.ui.app_browser.set_app(self._app)
         self.ui.app_browser.set_label("Currently Running Tank Apps")
-        self.ui.app_browser.enable_search(False)
         self.ui.app_browser.action_requested.connect( self.show_app_in_app_store )        
 
         self.ui.environment_browser.set_app(self._app)
