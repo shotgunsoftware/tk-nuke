@@ -48,7 +48,7 @@ class MenuGenerator(object):
     
         
         # now add the context item on top of the main menu
-        self._add_context_menu()
+        self._context_menu = self._add_context_menu()
         self._menu_handle.addSeparator()
 
 
@@ -87,6 +87,10 @@ class MenuGenerator(object):
                 # also register the panel so that a panel restore command will
                 # properly register it on startup or panel profile restore.
                 nukescripts.registerPanel(cmd.properties.get("panel_id", "undefined"), cmd.callback)
+                
+            elif cmd.get_type() == "context_menu":
+                # context menu!
+                self._context_menu.addCommand(cmd.name, cmd.callback)
                 
             else:
                 # normal menu
@@ -138,7 +142,11 @@ class MenuGenerator(object):
             ctx_name = "%s, %s %s" % (task_step, ctx.entity["type"], ctx.entity["name"])
         
         # create the menu object        
-        self._menu_handle.addCommand(ctx_name, self._show_context_ui)
+        ctx_menu = self._menu_handle.addMenu(ctx_name)
+        ctx_menu.addCommand("View Context Details", self._show_context_ui)
+        ctx_menu.addSeparator()
+        
+        return ctx_menu
                         
     
     def _show_context_ui(self):
