@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>844</width>
+    <width>811</width>
     <height>487</height>
    </rect>
   </property>
@@ -59,6 +59,13 @@
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <item>
+        <widget class="QLabel" name="label_2">
+         <property name="text">
+          <string>You can double click on an app to jump to its documentation.</string>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="AppBrowserWidget" name="app_browser" native="true">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -85,6 +92,16 @@
        <string>Environment</string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_3">
+       <item>
+        <widget class="QLabel" name="label_3">
+         <property name="text">
+          <string>The environment file contains all the settings and configuration for the currently running Tank Apps. The Tank Engine provides core services such as menu management and app startup.</string>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
        <item>
         <widget class="EnvironmentBrowserWidget" name="environment_browser" native="true">
          <property name="sizePolicy">
