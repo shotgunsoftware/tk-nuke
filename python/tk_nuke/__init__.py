@@ -33,6 +33,7 @@ def __create_tank_disabled_menu(details):
     """
     nuke_menu = nuke.menu("Nuke")
     sg_menu = nuke_menu.addMenu("Tank")
+    sg_menu.clearMenu()
     cmd = lambda d=details: __show_tank_disabled_message(d)    
     sg_menu.addCommand("Tank is disabled.", cmd)
 
@@ -52,6 +53,7 @@ def __create_tank_error_menu():
     
     nuke_menu = nuke.menu("Nuke")
     sg_menu = nuke_menu.addMenu("Tank")
+    sg_menu.clearMenu()
     cmd = lambda m=message: nuke.message(m)    
     sg_menu.addCommand("[Tank Error - Click for details]", cmd)
 
@@ -94,7 +96,12 @@ def __tank_on_save_callback():
     try:
         # this file could be in another project altogether, so create a new Tank
         # API instance.
-        tk = tank.tank_from_path(file_name)
+        try:
+            tk = tank.tank_from_path(file_name)
+        except tank.TankError, e:
+            __create_tank_disabled_menu(e)
+            return
+        
         new_ctx = tk.context_from_path(file_name)
         
         # now restart the engine with the new context
@@ -135,7 +142,13 @@ def __tank_startup_node_callback():
         else:
             # file->open
             file_name = nuke.root().name()
-            tk = tank.tank_from_path(file_name)
+            
+            try:
+                tk = tank.tank_from_path(file_name)
+            except tank.TankError, e:
+                __create_tank_disabled_menu(e)
+                return
+                
             new_ctx = tk.context_from_path(file_name)
     
         # now restart the engine with the new context
