@@ -269,7 +269,7 @@ class BrowserWidget(QtGui.QWidget):
                 if len(self._selected_items) > 0:
                     self._selected_item = self._selected_items[0]
                 else:
-                    self._selected_items = None 
+                    self._selected_item = None 
             else:
                 # add to selection
                 item.set_selected(True)
