@@ -8,6 +8,7 @@ Menu handling for Nuke
 
 import tank
 import platform
+import sys
 import nuke
 import os
 import unicodedata
@@ -24,6 +25,7 @@ class MenuGenerator(object):
 
     def __init__(self, engine):
         self._engine = engine
+        self._dialogs = []
         engine_root_dir = self._engine.disk_location
         self.tank_logo = os.path.abspath(os.path.join(engine_root_dir, "resources", "logo_gray_22.png"))
 
@@ -157,12 +159,20 @@ class MenuGenerator(object):
         # otherwise pyside will go hara kiri. QT has its own loop to track
         # objects and destroy them and unless we store the dialog as a member
         self._dialog = ContextDetailsDialog(self._engine)
+        
+        # hack - pyside can crash for some reason when a dialog object is GCed
+        # so keep all of them in memory. PySide FAIL
+        self._dialogs.append(self._dialog)
+        
         # run modal dialogue
         self._dialog.exec_()
-        # seems needs to explicitly close dialog
-        self._dialog.close()
-        # lastly, need to explicitly delete it, otherwise it stays around in the background.
-        self._dialog.deleteLater()
+        
+        # on the mac, need to delete it - otherwise a "ghost" will remain
+        # after closing has happened - on other platforms, however, this
+        # double deletion crashes Nuke >.<
+        if sys.platform == "darwin":
+            self._dialog.deleteLater()
+        
         
         
     ##########################################################################################
