@@ -71,7 +71,6 @@ class BrowserWidget(QtGui.QWidget):
         self.ui.search.setVisible(status)
         
     def destroy(self):
-        self.clear()
         if self._worker:
             self._worker.stop()
         
