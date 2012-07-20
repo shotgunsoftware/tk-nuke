@@ -2,18 +2,27 @@
 Copyright (c) 2012 Shotgun Software, Inc
 ----------------------------------------------------
 """
-import nuke
 import os
 import urllib
 import uuid
 import sys
 
-from PySide import QtCore, QtGui
+try:
+    from PyQt4 import QtCore, QtGui
+    USING_PYQT = True
+except:
+    from PySide import QtCore, QtGui
+    USING_PYQT = False 
 
 class Worker(QtCore.QThread):
     
-    work_completed = QtCore.Signal(str, dict)
-    work_failure = QtCore.Signal(str, str)
+    if USING_PYQT:
+        work_completed = QtCore.pyqtSignal(str, dict)
+        work_failure = QtCore.pyqtSignal(str, str)
+    else:
+        work_completed = QtCore.Signal(str, dict)
+        work_failure = QtCore.Signal(str, str)
+        
     
     def __init__(self, app, parent=None):
         QtCore.QThread.__init__(self, parent)

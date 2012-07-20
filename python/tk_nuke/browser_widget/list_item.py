@@ -2,18 +2,22 @@
 Copyright (c) 2012 Shotgun Software, Inc
 ----------------------------------------------------
 """
-import nuke
 import urlparse
 import os
 import urllib
 import shutil
 import sys
 
-from PySide import QtCore, QtGui
-from .ui.item import Ui_Item 
+try:
+    from PyQt4 import QtCore, QtGui
+    from .ui_pyqt.item import Ui_Item
+    USING_PYQT = True
+except:
+    from PySide import QtCore, QtGui
+    from .ui_pyside.item import Ui_Item
+    USING_PYQT = False 
+
 from .list_base import ListBase
-
-
 
 class ListItem(ListBase):
     
@@ -100,7 +104,7 @@ class ListItem(ListBase):
         
         if os.path.exists(path_to_cached_thumb):
             # cached! sweet!
-            return path_to_cached_thumb
+            return {"thumb_path": path_to_cached_thumb }
         
         # ok so the thumbnail was not in the cache. Get it.
         try:
@@ -116,7 +120,7 @@ class ListItem(ListBase):
         except Exception, e:
             print "Could not cache thumbnail %s in %s. Error: %s" % (url, path_to_cached_thumb, e)
         
-        return temp_file
+        return {"thumb_path": temp_file }
         
     def _on_worker_task_complete(self, uid, data):
         if uid != self._worker_uid:
@@ -127,7 +131,8 @@ class ListItem(ListBase):
             
         # set thumbnail! 
         try:
-            self.ui.thumbnail.setPixmap(QtGui.QPixmap(data))
+            path = data.get("thumb_path")
+            self.ui.thumbnail.setPixmap(QtGui.QPixmap(path))
         except:
             self.ui.thumbnail.setPixmap(QtGui.QPixmap(":/res/thumb_empty.png"))
 

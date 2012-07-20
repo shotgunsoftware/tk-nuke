@@ -2,18 +2,27 @@
 Copyright (c) 2012 Shotgun Software, Inc
 ----------------------------------------------------
 """
-import nuke
 import os
 import urllib
 import sys
 
-from PySide import QtCore, QtGui
+try:
+    from PyQt4 import QtCore, QtGui
+    USING_PYQT = True
+except:
+    from PySide import QtCore, QtGui
+    USING_PYQT = False 
 
 
 class ListBase(QtGui.QWidget):
     
-    clicked = QtCore.Signal(QtGui.QWidget)
-    double_clicked = QtCore.Signal(QtGui.QWidget)
+    if USING_PYQT:
+        clicked = QtCore.pyqtSignal(QtGui.QWidget)
+        double_clicked = QtCore.pyqtSignal(QtGui.QWidget)
+    else:
+        clicked = QtCore.Signal(QtGui.QWidget)
+        double_clicked = QtCore.Signal(QtGui.QWidget)
+        
     
     def __init__(self, app, worker, parent=None):
         QtGui.QWidget.__init__(self, parent)

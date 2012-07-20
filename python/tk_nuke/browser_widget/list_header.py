@@ -2,12 +2,18 @@
 Copyright (c) 2012 Shotgun Software, Inc
 ----------------------------------------------------
 """
-import nuke
 import os
 import sys
 
-from PySide import QtCore, QtGui
-from .ui.header import Ui_Header
+try:
+    from PyQt4 import QtCore, QtGui
+    from .ui_pyqt.header import Ui_Header
+    USING_PYQT = True
+except:
+    from PySide import QtCore, QtGui
+    from .ui_pyside.header import Ui_Header
+    USING_PYQT = False 
+
 from .list_base import ListBase
 
 class ListHeader(ListBase):
@@ -18,7 +24,6 @@ class ListHeader(ListBase):
         # set up the UI
         self.ui = Ui_Header() 
         self.ui.setupUi(self)
-        self.ui.label.setText("<big>Shots and Shit</big>")        
         self.ui.background.setStyleSheet("background-color: #6F6F6F; border: none")
 
     def set_title(self, title):
