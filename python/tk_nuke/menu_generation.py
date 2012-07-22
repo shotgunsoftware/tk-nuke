@@ -92,7 +92,7 @@ class MenuGenerator(object):
                 
             elif cmd.get_type() == "context_menu":
                 # context menu!
-                self._context_menu.addCommand(cmd.name, cmd.callback)
+                cmd.add_command_to_menu(self._context_menu)
                 
             else:
                 # normal menu
