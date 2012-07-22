@@ -76,6 +76,21 @@ class NukeEngine(tank.platform.Engine):
             self.log_error("The Nuke Engine does not work with the Nuke PLE!")
             return
         
+        # make sure that nuke has a higher version than 6.3v5
+        # this is because of pyqt
+        if nuke.env.get("NukeVersionMajor") < 6:
+            self.log_error("Tank Requires at least Nuke 6.3v5!")
+            return
+        if nuke.env.get("NukeVersionMajor") == 6 and \
+           nuke.env.get("NukeVersionMinor") < 3:
+            self.log_error("Tank Requires at least Nuke 6.3v5!")
+            return
+        if nuke.env.get("NukeVersionMajor") == 6 and \
+           nuke.env.get("NukeVersionMinor") == 3 and \
+           nuke.env.get("NukeVersionRelease") < 5:
+            self.log_error("Tank Requires at least Nuke 6.3v5!")
+            return
+                    
         # keep track of if a UI exists
         self._ui_enabled = nuke.env.get("gui")
         
