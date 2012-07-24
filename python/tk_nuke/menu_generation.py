@@ -85,7 +85,8 @@ class MenuGenerator(object):
             elif cmd.get_type() == "custom_pane":
                 # custom pane
                 # add to the std pane menu in nuke
-                self._pane_menu.addCommand(cmd.name, cmd.callback)
+                icon = cmd.properties.get("icon")
+                self._pane_menu.addCommand(cmd.name, cmd.callback, icon=icon)
                 # also register the panel so that a panel restore command will
                 # properly register it on startup or panel profile restore.
                 nukescripts.registerPanel(cmd.properties.get("panel_id", "undefined"), cmd.callback)
@@ -266,7 +267,8 @@ class AppCommand(object):
         Adds an app command to the menu
         """
         # std shotgun menu
-        menu.addCommand(self.name, self.callback) 
+        icon = self.properties.get("icon")
+        menu.addCommand(self.name, self.callback, icon=icon) 
 
 
 
