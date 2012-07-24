@@ -8,8 +8,10 @@ A Nuke engine for Tank.
 
 import tank
 import platform
+import time
 import nuke
 import os
+import threading
 import unicodedata
 from tank_vendor import yaml
 
@@ -36,6 +38,7 @@ class TankProgressWrapper(object):
     
     def close(self):
         if self.__ui:
+            self.__p.setProgress(100)
             self.__p = None
 
 class NukeEngine(tank.platform.Engine):
@@ -96,6 +99,7 @@ class NukeEngine(tank.platform.Engine):
         
         # create queue
         self._queue = []
+        self._queue_running = False
                     
         # now prepare tank so that it will be picked up by any new processes
         # created by file->new or file->open.
@@ -226,15 +230,28 @@ class NukeEngine(tank.platform.Engine):
         Callback function part of the engine queue. This is being passed into the methods
         that are executing in the queue so that they can report progress back if they like
         """
-        self._current_queue_item["progress"].set_progress(percent)
+        nuke.executeInMainThread(self._current_queue_item["progress"].set_progress, percent)
     
     def execute_queue(self):
         """
         Executes all items in the queue, one by one, in a controlled fashion
         """
+        if self._queue_running:
+            self.log_warning("Cannot execute queue - it is already executing!")
+            return
+        self._queue_running = True
+        
         # create progress items for all queue items
         for x in self._queue:
             x["progress"] = TankProgressWrapper(x["name"], self._ui_enabled)
+
+        threading.Thread( target=self.__execute_queue).start()  
+
+        
+    def __execute_queue(self):
+        """
+        Runs in a separate thread.
+        """
 
         # execute one after the other syncronously
         while len(self._queue) > 0:
@@ -247,16 +264,22 @@ class NukeEngine(tank.platform.Engine):
                 kwargs = self._current_queue_item["args"]
                 # force add a progress_callback arg - this is by convention
                 kwargs["progress_callback"] = self.report_progress
+                # init progress bar
+                self.report_progress(0)
                 # execute
                 self._current_queue_item["method"](**kwargs)
             except:
                 # error and continue
-                # todo: may want to abort here - or clear the queue? not sure.
-                self.log_exception("Error while processing callback %s" % self._current_queue_item)
+                msg = "Error while processing callback %s" % self._current_queue_item
+                nuke.executeInMainThread(self.log_exception, msg)
             finally:
-                self._current_queue_item["progress"].close()
-        
+                nuke.executeInMainThread(self._current_queue_item["progress"].close)
+                # nuke needs time to GC I think...
+                time.sleep(0.2)
 
+        # done
+        self._queue_running = False
             
+        
             
             
