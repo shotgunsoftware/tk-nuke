@@ -268,9 +268,11 @@ class NukeEngine(tank.platform.Engine):
                 self.report_progress(0)
                 # execute
                 self._current_queue_item["method"](**kwargs)
-            except:
+            except Exception, e:
                 # error and continue
-                msg = "Error while processing callback %s" % self._current_queue_item
+                msg = "Error processing callback %s. Error reported: %s" % (self._current_queue_item, e)
+                print msg
+                # FOOBAR - Nuke seems to ignore this call. WTF? FAIL
                 nuke.executeInMainThread(self.log_exception, msg)
             finally:
                 nuke.executeInMainThread(self._current_queue_item["progress"].close)
