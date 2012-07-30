@@ -12,6 +12,7 @@ import sys
 import nuke
 import os
 import unicodedata
+import nukescripts.openurl
 
 import nukescripts
 
@@ -146,11 +147,69 @@ class MenuGenerator(object):
         
         # create the menu object        
         ctx_menu = self._menu_handle.addMenu(ctx_name)
-        ctx_menu.addCommand("View Context Details", self._show_context_ui)
+        ctx_menu.addCommand("About Tank", self._show_context_ui)
+        ctx_menu.addSeparator()
+        ctx_menu.addCommand("Jump to Shotgun", self._jump_to_sg)
+        ctx_menu.addCommand("Jump to File System", self._jump_to_fs)
         ctx_menu.addSeparator()
         
         return ctx_menu
                         
+    
+    def _jump_to_sg(self):
+
+        if self._engine.context.entity is None:
+            # project-only!
+            url = "%s/detail/%s/%d" % (self._engine.shotgun.base_url, 
+                                       "Project", 
+                                       self._engine.context.project["id"])
+        else:
+            # entity-based
+            url = "%s/detail/%s/%d" % (self._engine.shotgun.base_url, 
+                                       self._engine.context.entity["type"], 
+                                       self._engine.context.entity["id"])
+        
+        # deal with fucked up nuke unicode handling
+        if url.__class__ == unicode:
+            url = unicodedata.normalize('NFKD', url).encode('ascii', 'ignore')
+        nukescripts.openurl.start(url)
+        
+        
+    def _jump_to_fs(self):
+        
+        """
+        Jump from context to FS
+        """
+        
+        if self._engine.context.entity:
+            paths = self._engine.tank.paths_from_entity(self._engine.context.entity["type"], 
+                                                     self._engine.context.entity["id"])
+        else:
+            paths = self._engine.tank.paths_from_entity(self._engine.context.project["type"], 
+                                                     self._engine.context.project["id"])
+        
+        # launch one window for each location on disk
+        # todo: can we do this in a more elegant way?
+        for disk_location in paths:
+                
+            # get the setting        
+            system = platform.system()
+            
+            # run the app
+            if system == "Linux":
+                cmd = 'xdg-open "%s"' % disk_location
+            elif system == "Darwin":
+                cmd = 'open "%s"' % disk_location
+            elif system == "Windows":
+                cmd = 'cmd.exe /C start "Folder" "%s"' % disk_location
+            else:
+                raise Exception("Platform '%s' is not supported." % system)
+            
+            exit_code = os.system(cmd)
+            if exit_code != 0:
+                self._engine.log_error("Failed to launch '%s'!" % cmd)
+        
+        
     
     def _show_context_ui(self):
         """
