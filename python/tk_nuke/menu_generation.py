@@ -334,9 +334,16 @@ class AppCommand(object):
         """
         Adds an app command to the menu
         """
+        
+        enabled = True
+        if "enable_callback" in self.properties:
+            enabled = self.properties["enable_callback"]()
+
         # std shotgun menu
         icon = self.properties.get("icon")
-        menu.addCommand(self.name, self.callback, icon=icon) 
+        menuItem = menu.addCommand(self.name, self.callback, icon=icon)
+        menuItem.setEnabled(enabled)
+
 
 
 
