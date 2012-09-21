@@ -102,7 +102,13 @@ def __tank_on_save_callback():
             __create_tank_disabled_menu(e)
             return
         
-        new_ctx = tk.context_from_path(file_name)
+        # try to get current ctx and inherit its values if possible
+        curr_ctx = None
+        if tank.platform.current_engine():
+            curr_ctx = tank.platform.current_engine().context
+        
+        # and now extract a new context based on the file
+        new_ctx = tk.context_from_path(file_name, curr_ctx)
         
         # now restart the engine with the new context
         __engine_refresh(tk, new_ctx)
@@ -149,7 +155,12 @@ def __tank_startup_node_callback():
                 __create_tank_disabled_menu(e)
                 return
                 
-            new_ctx = tk.context_from_path(file_name)
+            # try to get current ctx and inherit its values if possible
+            curr_ctx = None
+            if tank.platform.current_engine():
+                curr_ctx = tank.platform.current_engine().context                
+                
+            new_ctx = tk.context_from_path(file_name, curr_ctx)
     
         # now restart the engine with the new context
         __engine_refresh(tk, new_ctx)
