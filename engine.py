@@ -52,8 +52,6 @@ class NukeEngine(tank.platform.Engine):
         
         self.log_debug("%s: Initializing..." % self)
 
-        
-        
         # now check that there is a location on disk which corresponds to the context
         if self.context.entity:
             # context has an entity
@@ -117,17 +115,23 @@ class NukeEngine(tank.platform.Engine):
         # because nuke python does not have a __file__ attribute for that file
         local_python_path = os.path.abspath(os.path.join( os.path.dirname(__file__), "python"))
         os.environ["TANK_NUKE_ENGINE_MOD_PATH"] = local_python_path
-    
+            
+        # make sure callbacks tracking the context switching are active
+        tk_nuke.tank_ensure_callbacks_registered()
+        
+       
+    def post_app_init(self):
+        """
+        Called when all apps have initialized
+        """
+        
         # render the menu!
         if self._ui_enabled:
             import tk_nuke
             self._menu_generator = tk_nuke.MenuGenerator(self)
             self._menu_generator.create_menu()
             self.__setup_favourite_dirs()
-        
-        # make sure callbacks tracking the context switching are active
-        tk_nuke.tank_ensure_callbacks_registered()
-        
+            
         # iterate over all apps, if there is a gizmo folder, add it to nuke path
         for app in self.apps.values():
             # add gizmo to nuke path
@@ -139,6 +143,8 @@ class NukeEngine(tank.platform.Engine):
                 # new processes spawned from this one will have access too.
                 # (for example if you do file->open or file->new)
                 tank.util.append_path_to_env_var("NUKE_PATH", app_gizmo_folder)
+            
+        
        
     def destroy_engine(self):
         self.log_debug("%s: Destroying..." % self)
