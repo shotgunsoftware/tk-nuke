@@ -152,8 +152,6 @@ class MenuGenerator(object):
         
         # create the menu object        
         ctx_menu = self._menu_handle.addMenu(ctx_name)
-        ctx_menu.addCommand("About Tank", self._show_context_ui)
-        ctx_menu.addSeparator()
         ctx_menu.addCommand("Jump to Shotgun", self._jump_to_sg)
         ctx_menu.addCommand("Jump to File System", self._jump_to_fs)
         ctx_menu.addSeparator()
@@ -214,26 +212,7 @@ class MenuGenerator(object):
             if exit_code != 0:
                 self._engine.log_error("Failed to launch '%s'!" % cmd)
         
-        
-    
-    def _show_context_ui(self):
-        """
-        """
-        from .context_details_dialog import ContextDetailsDialog
-        # some QT notes here. Need to keep the dialog object from being GC-ed
-        # otherwise pyside will go hara kiri. QT has its own loop to track
-        # objects and destroy them and unless we store the dialog as a member
-        self._dialog = ContextDetailsDialog(self._engine)
-        
-        # hack - pyside can crash for some reason when a dialog object is GCed
-        # so keep all of them in memory. PySide FAIL
-        self._dialogs.append(self._dialog)
-        
-        # run modal dialogue
-        self._dialog.show()
-                
-        
-        
+            
     ##########################################################################################
     # app menus
         
