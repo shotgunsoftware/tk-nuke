@@ -78,7 +78,7 @@ class NukeEngine(tank.platform.Engine):
             return
         
         # make sure that nuke has a higher version than 6.3v5
-        # this is because of pyqt
+        # this is because of pyside
         if nuke.env.get("NukeVersionMajor") < 6:
             self.log_error("Tank Requires at least Nuke 6.3v5!")
             return
