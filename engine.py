@@ -12,6 +12,7 @@ import time
 import nuke
 import os
 import threading
+import traceback
 import unicodedata
 from tank_vendor import yaml
 
@@ -48,7 +49,7 @@ class NukeEngine(tank.platform.Engine):
     
     def init_engine(self):
         
-        import tk_nuke
+        tk_nuke = self.import_module("tk_nuke")
         
         self.log_debug("%s: Initializing..." % self)
 
@@ -124,10 +125,11 @@ class NukeEngine(tank.platform.Engine):
         """
         Called when all apps have initialized
         """
-        
         # render the menu!
         if self._ui_enabled:
-            import tk_nuke
+            
+            tk_nuke = self.import_module("tk_nuke")
+
             self._menu_generator = tk_nuke.MenuGenerator(self)
             self._menu_generator.create_menu()
             self.__setup_favourite_dirs()
@@ -156,22 +158,34 @@ class NukeEngine(tank.platform.Engine):
     
     def log_debug(self, msg):
         if self.get_setting("debug_logging", False):
+            # print it in the console
             msg = "Tank Debug: %s" % msg
             print msg
 
     def log_info(self, msg):
         msg = "Tank Info: %s" % msg
+        # print it in the console
         print msg
         
     def log_warning(self, msg):
         msg = "Tank Warning: %s" % msg
+        # print it in the nuke error console
         nuke.warning(msg)
+        # also print it in the nuke script console
+        print msg
     
     def log_error(self, msg):
         msg = "Tank Error: %s" % msg
+        
+        # print it in the nuke error console
         nuke.error(msg)
+        
+        # also print it in the nuke script console
+        print msg
+        
         # and pop up UI
         nuke.message(msg)
+        
     
     ##########################################################################################
     # managing favourite dirs            
