@@ -49,7 +49,9 @@ class NukeEngine(tank.platform.Engine):
     
     def init_engine(self):
         
-        tk_nuke = self.import_module("tk_nuke")
+        # note! not using the import as this confuses nuke's calback system
+        # (several of the key scene callbacks are in the main init file...)
+        import tk_nuke
         
         self.log_debug("%s: Initializing..." % self)
 
@@ -128,7 +130,9 @@ class NukeEngine(tank.platform.Engine):
         # render the menu!
         if self._ui_enabled:
             
-            tk_nuke = self.import_module("tk_nuke")
+            # note! not using the import as this confuses nuke's calback system
+            # (several of the key scene callbacks are in the main init file...)            
+            import tk_nuke
 
             self._menu_generator = tk_nuke.MenuGenerator(self)
             self._menu_generator.create_menu()
