@@ -143,7 +143,9 @@ class NukeEngine(tank.platform.Engine):
             # add gizmo to nuke path
             app_gizmo_folder = os.path.join(app.disk_location, "gizmos")
             if os.path.exists(app_gizmo_folder):
-                self.log_debug("Adding %s to nuke node path" % app_gizmo_folder)
+                # now translate the path so that nuke is happy on windows
+                app_gizmo_folder = app_gizmo_folder.replace(os.path.sep, "/")
+                self.log_debug("Gizmos found - Adding %s to nuke.pluginAddPath() and NUKE_PATH" % app_gizmo_folder)
                 nuke.pluginAddPath(app_gizmo_folder)
                 # and also add it to the plugin path - this is so that any 
                 # new processes spawned from this one will have access too.
