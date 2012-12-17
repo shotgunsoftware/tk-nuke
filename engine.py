@@ -11,7 +11,6 @@ import platform
 import time
 import nuke
 import os
-import threading
 import traceback
 import unicodedata
 from tank_vendor import yaml
@@ -34,6 +33,9 @@ class TankProgressWrapper(object):
     def set_progress(self, percent):
         if self.__ui:
             self.__p.setProgress(percent)
+            # since we are running async,
+            # give nuke a chance to process its own events 
+            time.sleep(0.1)
         else:
             print("TANK_PROGRESS Task:%s Progress:%d%%" % (self.__title, percent))
     
@@ -256,7 +258,7 @@ class NukeEngine(tank.platform.Engine):
         Callback function part of the engine queue. This is being passed into the methods
         that are executing in the queue so that they can report progress back if they like
         """
-        nuke.executeInMainThread(self._current_queue_item["progress"].set_progress, percent)
+        self._current_queue_item["progress"].set_progress(percent)
     
     def execute_queue(self):
         """
@@ -271,15 +273,7 @@ class NukeEngine(tank.platform.Engine):
         for x in self._queue:
             x["progress"] = TankProgressWrapper(x["name"], self._ui_enabled)
 
-        threading.Thread( target=self.__execute_queue).start()  
-
-        
-    def __execute_queue(self):
-        """
-        Runs in a separate thread.
-        """
-
-        # execute one after the other syncronously
+        # execute one after the other synchronously
         while len(self._queue) > 0:
             
             # take one item off
@@ -297,11 +291,9 @@ class NukeEngine(tank.platform.Engine):
             except Exception, e:
                 # error and continue
                 msg = "Error processing callback %s. Error reported: %s" % (self._current_queue_item, e)
-                print msg
-                # FOOBAR - Nuke seems to ignore this call. WTF? FAIL
-                nuke.executeInMainThread(self.log_exception, msg)
+                self.log_exception(msg)
             finally:
-                nuke.executeInMainThread(self._current_queue_item["progress"].close)
+                self._current_queue_item["progress"].close()
                 # nuke needs time to GC I think...
                 time.sleep(0.2)
 
