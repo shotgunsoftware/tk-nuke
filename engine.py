@@ -15,8 +15,6 @@ import traceback
 import unicodedata
 from tank_vendor import yaml
 
-import nukescripts
-
 class TankProgressWrapper(object):
     """
     A progressbar wrapper for nuke.
@@ -239,7 +237,32 @@ class NukeEngine(tank.platform.Engine):
                                     type=(nuke.IMAGE|nuke.SCRIPT|nuke.FONT|nuke.GEO), 
                                     icon=tank_logo_small, 
                                     tooltip=path)
-        
+
+    ##########################################################################################
+    # scene and project management
+
+    def save_file(self, path=None):
+        if not path:
+            nuke.scriptSave()
+        else:
+            nuke.scriptSaveAs(path)
+
+    def get_scene_path(self):
+        scene_path = nuke.root().name().replace("/", os.path.sep)
+        if scene_path == 'Root':
+            return ''
+        return scene_path
+
+    def get_app_version(self):
+        return ("nuke", nuke.NUKE_VERSION_STRING)
+
+    ##########################################################################################
+    # qt and ui
+    
+    def new_qt_widget(self, widget_cls, widget_id, app_settings={}, **kwargs):
+        import tk_nuke
+        return tk_nuke.new_qt_widget(widget_cls, widget_id, app_settings, **kwargs)
+
     ##########################################################################################
     # queue
 
