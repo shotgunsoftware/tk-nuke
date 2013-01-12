@@ -161,6 +161,13 @@ class NukeEngine(tank.platform.Engine):
         if self._ui_enabled:
             self._menu_generator.destroy_menu()
 
+    @property
+    def has_ui(self):
+        """
+        Detect and return if nuke is running in batch mode
+        """
+        return self._ui_enabled
+
     ##########################################################################################
     # logging interfaces
     
