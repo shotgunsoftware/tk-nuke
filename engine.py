@@ -254,6 +254,7 @@ class NukeEngine(tank.platform.Engine):
         """
         Nuke implementation of the engine synchronous queue. Adds an item to the queue.
         """
+        self.log_warning("The Engine Queue is now deprecated! Please contact support@shotgunsoftware.com")
         qi = {}
         qi["name"] = name
         qi["method"] = method
@@ -271,6 +272,7 @@ class NukeEngine(tank.platform.Engine):
         """
         Executes all items in the queue, one by one, in a controlled fashion
         """
+        self.log_warning("The Engine Queue is now deprecated! Please contact support@shotgunsoftware.com")
         if self._queue_running:
             self.log_warning("Cannot execute queue - it is already executing!")
             return
