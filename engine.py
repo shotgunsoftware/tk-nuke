@@ -201,37 +201,40 @@ class NukeEngine(tank.platform.Engine):
         engine_root_dir = self.disk_location
         tank_logo_small = os.path.abspath(os.path.join(engine_root_dir, "resources", "logo_color_16.png"))
         
+        # old versions were referring to these favourites - so keep them around to make
+        # sure there are no old leftovers in the system...
         supported_entity_types = ["Shot", "Sequence", "Scene", "Asset", "Project"]
-        
-        # remove all previous favs
         for x in supported_entity_types:
             nuke.removeFavoriteDir("Tank Current %s" % x)
-        
-        # get a list of project entities to process
-        entities = []
-        if self.context.entity:
-            # current entity
-            entities.append(self.context.entity)
+
+        # new style favourites are simply "Tank Current Project" and "Tank Current Work"
+        nuke.removeFavoriteDir("Tank Current Project")
+        nuke.removeFavoriteDir("Tank Current Work")
+
+        # we only present these shortcuts if there is exactly one path resolving to the work
+        # area or the project - otherwise it is just confusing!
+
+        # handle the project
         if self.context.project:
-            # current proj
-            entities.append(self.context.project)
-        
-        for x in entities:
-            sg_et = x["type"]
-            if sg_et not in supported_entity_types:
-                # don't know how to remove this, so don't add it!
-                continue
-            
-            paths = self.tank.paths_from_entity(x["type"], x["id"])
-            if len(paths) > 0:
-                # for now just pick the first path associated with this entity
-                # todo: later on present multiple ones? or decide on a single path to choose?
-                path = paths[0]
-                nuke.addFavoriteDir("Tank Current %s" % sg_et, 
-                                    directory=path,  
-                                    type=(nuke.IMAGE|nuke.SCRIPT|nuke.FONT|nuke.GEO), 
+            proj = self.context.project
+            paths = self.tank.paths_from_entity(proj["type"], proj["id"])
+            if len(paths) == 1:
+                p = paths[0]
+                nuke.addFavoriteDir("Tank Current Project", 
+                                    directory=p,  
+                                    type=(nuke.IMAGE|nuke.SCRIPT|nuke.GEO), 
                                     icon=tank_logo_small, 
-                                    tooltip=path)
+                                    tooltip=p)
+
+        # handle the current work
+        paths = self.context.filesystem_locations
+        if len(paths) == 1:
+            p = paths[0]            
+            nuke.addFavoriteDir("Tank Current Work", 
+                                directory=p,  
+                                type=(nuke.IMAGE|nuke.SCRIPT|nuke.GEO), 
+                                icon=tank_logo_small, 
+                                tooltip=p)
         
     ##########################################################################################
     # queue
