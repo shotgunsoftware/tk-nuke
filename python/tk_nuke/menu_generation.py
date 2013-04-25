@@ -270,8 +270,10 @@ class AppCommand(object):
         """
         # std shotgun menu
         icon = self.properties.get("icon")
-        menu.addCommand(self.name, self.callback, icon=icon) 
-
+        if self.properties.get("hotkey"):
+            menu.addCommand(self.name, self.callback, hotkey, icon=icon) 
+        else:
+            menu.addCommand(self.name, self.callback, icon=icon) 
 
 
 
