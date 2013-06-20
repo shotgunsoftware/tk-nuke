@@ -32,7 +32,7 @@ requires_shotgun_fields:
 
 # More verbose description of this item 
 display_name: "Nuke Engine"
-description: "Tank Integration in Nuke"
+description: "Shotgun Integration in Nuke"
 
 # Required minimum versions for this item to run
 requires_shotgun_version:

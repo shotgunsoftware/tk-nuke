@@ -27,7 +27,7 @@ if path:
     sys.path.append(path)
     handle_new_tank_session()
 else:
-    nuke.error("Tank could not find the environment variable TANK_NUKE_ENGINE_MOD_PATH!")
+    nuke.error("Shotgun could not find the environment variable TANK_NUKE_ENGINE_MOD_PATH!")
 
 
 

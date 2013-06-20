@@ -20,22 +20,22 @@ def __show_tank_disabled_message(details):
     """
     Message when user clicks the tank is disabled menu
     """
-    msg = ("Tank is currently disabled because the file you " 
-           "have opened is not recognized by Tank. Tank cannot "
+    msg = ("Shotgun integration is currently disabled because the file you " 
+           "have opened is not recognized. Shotgun cannot "
            "determine which Context the currently open file belongs to. "
-           "In order to enable the Tank functionality, try opening another "
+           "In order to enable the Shotgun functionality, try opening another "
            "file. <br><br><i>Details:</i> %s" % details)
     nuke.message(msg)
     
 def __create_tank_disabled_menu(details):    
     """
-    Creates a std "disabled" tank menu
+    Creates a std "disabled" shotgun menu
     """
     nuke_menu = nuke.menu("Nuke")
-    sg_menu = nuke_menu.addMenu("Tank")
+    sg_menu = nuke_menu.addMenu("Shotgun")
     sg_menu.clearMenu()
     cmd = lambda d=details: __show_tank_disabled_message(d)    
-    sg_menu.addCommand("Tank is disabled.", cmd)
+    sg_menu.addCommand("Shotgun is disabled.", cmd)
 
     
 def __create_tank_error_menu():    
@@ -45,17 +45,17 @@ def __create_tank_error_menu():
     """
     (exc_type, exc_value, exc_traceback) = sys.exc_info()
     message = ""
-    message += "Message: There was a problem starting the Tank Engine.\n"
+    message += "Shotgun: There was a problem starting the Engine.\n"
     message += "Please contact tanksupport@shotgunsoftware.com\n\n"
     message += "Exception: %s - %s\n" % (exc_type, exc_value)
     message += "Traceback (most recent call last):\n"
     message += "\n".join( traceback.format_tb(exc_traceback))
     
     nuke_menu = nuke.menu("Nuke")
-    sg_menu = nuke_menu.addMenu("Tank")
+    sg_menu = nuke_menu.addMenu("Shotgun")
     sg_menu.clearMenu()
     cmd = lambda m=message: nuke.message(m)    
-    sg_menu.addCommand("[Tank Error - Click for details]", cmd)
+    sg_menu.addCommand("[Shotgun Error - Click for details]", cmd)
 
     
 def __engine_refresh(tk, new_context):

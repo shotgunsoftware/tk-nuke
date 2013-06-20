@@ -34,15 +34,15 @@ class MenuGenerator(object):
 
     def create_menu(self):
         """
-        Render the entire Tank menu.
+        Render the entire Shotgun menu.
         """
         # create main menu
         nuke_menu = nuke.menu("Nuke")
-        self._menu_handle = nuke_menu.addMenu("Tank") 
+        self._menu_handle = nuke_menu.addMenu("Shotgun") 
         # the right click menu that is displayed when clicking on a pane 
         self._pane_menu = nuke.menu("Pane") 
         # create tank side menu
-        self._node_menu_handle = nuke.menu("Nodes").addMenu("Tank", icon=self.tank_logo)
+        self._node_menu_handle = nuke.menu("Nodes").addMenu("Shotgun", icon=self.tank_logo)
 
         # slight hack here but first ensure that the menu is empty
         self._menu_handle.clearMenu()

@@ -37,7 +37,7 @@ class TankProgressWrapper(object):
             # give nuke a chance to process its own events 
             time.sleep(0.1)
         else:
-            print("TANK_PROGRESS Task:%s Progress:%d%%" % (self.__title, percent))
+            print("SHOTGUN_PROGRESS Task:%s Progress:%d%%" % (self.__title, percent))
     
     def close(self):
         if self.__ui:
@@ -71,16 +71,16 @@ class NukeEngine(tank.platform.Engine):
         # make sure that nuke has a higher version than 6.3v5
         # this is because of pyside
         if nuke.env.get("NukeVersionMajor") < 6:
-            self.log_error("Tank Requires at least Nuke 6.3v5!")
+            self.log_error("Nuke 6.3v5 is the minimum version supported!")
             return
         if nuke.env.get("NukeVersionMajor") == 6 and \
            nuke.env.get("NukeVersionMinor") < 3:
-            self.log_error("Tank Requires at least Nuke 6.3v5!")
+            self.log_error("Nuke 6.3v5 is the minimum version supported!")
             return
         if nuke.env.get("NukeVersionMajor") == 6 and \
            nuke.env.get("NukeVersionMinor") == 3 and \
            nuke.env.get("NukeVersionRelease") < 5:
-            self.log_error("Tank Requires at least Nuke 6.3v5!")
+            self.log_error("Nuke 6.3v5 is the minimum version supported!")
             return
                     
         # keep track of if a UI exists
@@ -160,23 +160,23 @@ class NukeEngine(tank.platform.Engine):
     def log_debug(self, msg):
         if self.get_setting("debug_logging", False):
             # print it in the console
-            msg = "Tank Debug: %s" % msg
+            msg = "Shotgun Debug: %s" % msg
             print msg
 
     def log_info(self, msg):
-        msg = "Tank Info: %s" % msg
+        msg = "Shotgun Info: %s" % msg
         # print it in the console
         print msg
         
     def log_warning(self, msg):
-        msg = "Tank Warning: %s" % msg
+        msg = "Shotgun Warning: %s" % msg
         # print it in the nuke error console
         nuke.warning(msg)
         # also print it in the nuke script console
         print msg
     
     def log_error(self, msg):
-        msg = "Tank Error: %s" % msg
+        msg = "Shotgun Error: %s" % msg
         
         # print it in the nuke error console
         nuke.error(msg)
@@ -208,8 +208,13 @@ class NukeEngine(tank.platform.Engine):
             nuke.removeFavoriteDir("Tank Current %s" % x)
 
         # new style favourites are simply "Tank Current Project" and "Tank Current Work"
+        
+        # with the rename, make sure the old 'Tank' directories are removed:
         nuke.removeFavoriteDir("Tank Current Project")
         nuke.removeFavoriteDir("Tank Current Work")
+        # and then use the newer, new 'Shotgun' directories:
+        nuke.removeFavoriteDir("Shotgun Current Project")
+        nuke.removeFavoriteDir("Shotgun Current Work")
 
         # we only present these shortcuts if there is exactly one path resolving to the work
         # area or the project - otherwise it is just confusing!
@@ -220,7 +225,7 @@ class NukeEngine(tank.platform.Engine):
             paths = self.tank.paths_from_entity(proj["type"], proj["id"])
             if len(paths) == 1:
                 p = paths[0]
-                nuke.addFavoriteDir("Tank Current Project", 
+                nuke.addFavoriteDir("Shotgun Current Project", 
                                     directory=p,  
                                     type=(nuke.IMAGE|nuke.SCRIPT|nuke.GEO), 
                                     icon=tank_logo_small, 
@@ -230,7 +235,7 @@ class NukeEngine(tank.platform.Engine):
         paths = self.context.filesystem_locations
         if len(paths) == 1:
             p = paths[0]            
-            nuke.addFavoriteDir("Tank Current Work", 
+            nuke.addFavoriteDir("Shotgun Current Work", 
                                 directory=p,  
                                 type=(nuke.IMAGE|nuke.SCRIPT|nuke.GEO), 
                                 icon=tank_logo_small, 
