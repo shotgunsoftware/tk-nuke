@@ -23,8 +23,9 @@ class MenuGenerator(object):
     Menu generation functionality for Nuke
     """
 
-    def __init__(self, engine):
+    def __init__(self, engine, menu_name):
         self._engine = engine
+        self._menu_name = menu_name
         self._dialogs = []
         engine_root_dir = self._engine.disk_location
         self.tank_logo = os.path.abspath(os.path.join(engine_root_dir, "resources", "logo_gray_22.png"))
@@ -38,11 +39,11 @@ class MenuGenerator(object):
         """
         # create main menu
         nuke_menu = nuke.menu("Nuke")
-        self._menu_handle = nuke_menu.addMenu("Shotgun") 
+        self._menu_handle = nuke_menu.addMenu(self._menu_name) 
         # the right click menu that is displayed when clicking on a pane 
         self._pane_menu = nuke.menu("Pane") 
         # create tank side menu
-        self._node_menu_handle = nuke.menu("Nodes").addMenu("Shotgun", icon=self.tank_logo)
+        self._node_menu_handle = nuke.menu("Nodes").addMenu(self._menu_name, icon=self.tank_logo)
 
         # slight hack here but first ensure that the menu is empty
         self._menu_handle.clearMenu()

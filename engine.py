@@ -122,7 +122,11 @@ class NukeEngine(tank.platform.Engine):
             # (several of the key scene callbacks are in the main init file...)            
             import tk_nuke
 
-            self._menu_generator = tk_nuke.MenuGenerator(self)
+            menu_name = "Shotgun"
+            if self.get_setting("use_sgtk_as_menu_name", False):
+                menu_name = "Sgtk"
+
+            self._menu_generator = tk_nuke.MenuGenerator(self, menu_name)
             self._menu_generator.create_menu()
             self.__setup_favourite_dirs()
             
