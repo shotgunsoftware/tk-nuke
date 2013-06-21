@@ -35,7 +35,7 @@ def __create_tank_disabled_menu(details):
     sg_menu = nuke_menu.addMenu("Shotgun")
     sg_menu.clearMenu()
     cmd = lambda d=details: __show_tank_disabled_message(d)    
-    sg_menu.addCommand("Shotgun is disabled.", cmd)
+    sg_menu.addCommand("Sgtk is disabled.", cmd)
 
     
 def __create_tank_error_menu():    
