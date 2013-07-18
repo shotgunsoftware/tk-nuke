@@ -82,10 +82,25 @@ class NukeEngine(tank.platform.Engine):
            nuke.env.get("NukeVersionRelease") < 5:
             self.log_error("Nuke 6.3v5 is the minimum version supported!")
             return
-                    
+        
         # keep track of if a UI exists
         self._ui_enabled = nuke.env.get("gui")
-        
+
+        # versions > 6.x have not yet been tested so show a message to that effect:
+        if nuke.env.get("NukeVersionMajor") > 6:
+            # this is an untested version of Nuke
+            msg = ("The Shotgun Pipeline Toolkit has not yet been fully tested with Nuke %d.%dv%d. "
+                   "You can continue to use the Toolkit but you may experience bugs or "
+                   "instability.  Please report any issues you see to toolkitsupport@shotgunsoftware.com" 
+                   % (nuke.env.get("NukeVersionMajor"), nuke.env.get("NukeVersionMinor"), nuke.env.get("NukeVersionRelease")))
+            
+            # show nuke message if in UI mode and this is the first time the engine has been started:
+            if self._ui_enabled and not "TANK_NUKE_ENGINE_INIT_NAME" in os.environ:
+                nuke.message("Warning - Shotgun Pipeline Toolkit!\n\n%s" % msg)
+                           
+            # and log the warning
+            self.log_warning(msg)
+            
         # create queue
         self._queue = []
         self._queue_running = False
