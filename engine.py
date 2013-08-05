@@ -259,13 +259,25 @@ class NukeEngine(tank.platform.Engine):
 
         # handle the current work
         paths = self.context.filesystem_locations
-        if len(paths) == 1:
-            p = paths[0]            
-            nuke.addFavoriteDir("Shotgun Current Work", 
-                                directory=p,  
-                                type=(nuke.IMAGE|nuke.SCRIPT|nuke.GEO), 
-                                icon=tank_logo_small, 
-                                tooltip=p)
+        favourites = self.get_setting('match_favourites_folder')
+        if favourites:
+            for fav in favourites:
+                for path in paths:
+                    if path.__contains__(fav['filter']):
+                        p = path
+                nuke.addFavoriteDir(fav['name'], 
+                                    directory=p,  
+                                    type=(nuke.IMAGE|nuke.SCRIPT|nuke.GEO), 
+                                    icon=tank_logo_small, 
+                                    tooltip=p)
+        else:
+            if len(paths) == 1:
+                p = paths[0]    
+                nuke.addFavoriteDir("Shotgun Current Work", 
+                                    directory=p,  
+                                    type=(nuke.IMAGE|nuke.SCRIPT|nuke.GEO), 
+                                    icon=tank_logo_small, 
+                                    tooltip=p)
         
     ##########################################################################################
     # queue
