@@ -35,7 +35,19 @@ configuration:
         type: bool
         description: Optionally choose to use 'Sgtk' as the primary menu name instead of 'Shotgun'
         default_value: false
-                     
+    
+    match_favourites_folder:
+        type: list
+        description: "The context.filesystem_locations return a list of locations tight to the current context
+                      specify a clear identifier that is only contained in one of the items
+                      like '/work/' under filter than give it a name like 'Current Workfolders'"
+        allows_empty: True
+        values:
+            type: dict
+            items:
+                name: { type: str }
+                filter: { type: str }
+        default_value: []                     
     
 # the Shotgun fields that this engine needs in order to operate correctly
 requires_shotgun_fields:
