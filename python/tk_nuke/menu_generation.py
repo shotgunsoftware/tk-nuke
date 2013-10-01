@@ -46,20 +46,21 @@ class MenuGenerator(object):
         """
         # create main menu
         nuke_menu = nuke.menu("Nuke")
-        self._menu_handle = nuke_menu.addMenu(self._menu_name) 
+        menu_handle = nuke_menu.addMenu(self._menu_name) 
+        
         # the right click menu that is displayed when clicking on a pane 
         self._pane_menu = nuke.menu("Pane") 
         # create tank side menu
-        self._node_menu_handle = nuke.menu("Nodes").addMenu(self._menu_name, icon=self.tank_logo)
+        node_menu_handle = nuke.menu("Nodes").addMenu(self._menu_name, icon=self.tank_logo)
 
         # slight hack here but first ensure that the menu is empty
-        self._menu_handle.clearMenu()
+        menu_handle.clearMenu()
     
     
         
         # now add the context item on top of the main menu
-        self._context_menu = self._add_context_menu()
-        self._menu_handle.addSeparator()
+        self._context_menu = self._add_context_menu(menu_handle)
+        menu_handle.addSeparator()
 
         # now enumerate all items and create menu objects for them
         menu_items = []
@@ -76,11 +77,11 @@ class MenuGenerator(object):
             for cmd in menu_items:                 
                  if cmd.get_app_instance_name() == app_instance_name and cmd.name == menu_name:
                      # found our match!
-                     cmd.add_command_to_menu(self._menu_handle)
+                     cmd.add_command_to_menu(menu_handle)
                      # mark as a favourite item
                      cmd.favourite = True            
 
-        self._menu_handle.addSeparator()
+        menu_handle.addSeparator()
         
         
         # now go through all of the menu items.
@@ -93,7 +94,7 @@ class MenuGenerator(object):
                 # add to the node menu
                 # get icon if specified - default to tank icon if not specified
                 icon = cmd.properties.get("icon", self.tank_logo)
-                self._node_menu_handle.addCommand(cmd.name, cmd.callback, icon=icon)
+                node_menu_handle.addCommand(cmd.name, cmd.callback, icon=icon)
                 
             elif cmd.get_type() == "custom_pane":
                 # custom pane
@@ -119,18 +120,37 @@ class MenuGenerator(object):
                 commands_by_app[app_name].append(cmd)
         
         # now add all apps to main menu
-        self._add_app_menu(commands_by_app)
+        self._add_app_menu(commands_by_app, menu_handle)
             
             
     def destroy_menu(self):
+
+        # important!
+        # the menu code in nuke seems quite unstable, so make sure to test 
+        # any changes done in relation to menu deletion carefully.
+        # the removeItem() method seems to work on some version of Nuke, but not all.
+        # for example the following code works in nuke 7, not nuke 6:
+        # nuke.menu("Nuke").removeItem("Shotgun")
         
-            self._menu_handle.clearMenu()
-            self._node_menu_handle.clearMenu()
+        # the strategy below is to be as safe as possible, acquire a handle to 
+        # the menu by iteration (if you store the handle object, they may expire
+        # and when you try to access them they underlying object is gone and things 
+        # will crash). clearMenu() seems to work on both v6 and v7.
+
+        # find our Shotgun menu and clear it
+        for mh in nuke.menu("Nuke").items():
+            if mh.name() == self._menu_name:
+                mh.clearMenu()
+         
+        # find the toolbar menu and clear it
+        for mh in nuke.menu("Pane").items():
+            if mh.name() == self._menu_name:
+                mh.clearMenu()        
         
     ##########################################################################################
     # context menu and UI
 
-    def _add_context_menu(self):
+    def _add_context_menu(self, menu_handle):
         """
         Adds a context menu which displays the current context
         """        
@@ -139,7 +159,7 @@ class MenuGenerator(object):
         ctx_name = str(ctx)
         
         # create the menu object        
-        ctx_menu = self._menu_handle.addMenu(ctx_name)
+        ctx_menu = menu_handle.addMenu(ctx_name)
         ctx_menu.addCommand("Jump to Shotgun", self._jump_to_sg)
         ctx_menu.addCommand("Jump to File System", self._jump_to_fs)
         ctx_menu.addSeparator()
@@ -186,7 +206,7 @@ class MenuGenerator(object):
     # app menus
         
         
-    def _add_app_menu(self, commands_by_app):
+    def _add_app_menu(self, commands_by_app, menu_handle):
         """
         Add all apps to the main menu, process them one by one.
         """
@@ -196,7 +216,7 @@ class MenuGenerator(object):
             if len(commands_by_app[app_name]) > 1:
                 # more than one menu entry fort his app
                 # make a sub menu and put all items in the sub menu
-                app_menu = self._menu_handle.addMenu(app_name)
+                app_menu = menu_handle.addMenu(app_name)
                 for cmd in commands_by_app[app_name]:
                     cmd.add_command_to_menu(app_menu)
             
@@ -208,7 +228,7 @@ class MenuGenerator(object):
                 cmd_obj = commands_by_app[app_name][0]
                 if not cmd_obj.favourite:
                     # skip favourites since they are alreay on the menu
-                    cmd_obj.add_command_to_menu(self._menu_handle)
+                    cmd_obj.add_command_to_menu(menu_handle)
                                 
         
         
