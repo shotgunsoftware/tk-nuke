@@ -67,6 +67,8 @@ class MenuGenerator(object):
         for (cmd_name, cmd_details) in self._engine.commands.items():
              menu_items.append( AppCommand(cmd_name, cmd_details) )
 
+        # sort list of commands in name order
+        menu_items.sort(key=lambda x: x.name)
 
         # now add favourites
         for fav in self._engine.get_setting("menu_favourites"):
@@ -217,9 +219,15 @@ class MenuGenerator(object):
                 # more than one menu entry fort his app
                 # make a sub menu and put all items in the sub menu
                 app_menu = menu_handle.addMenu(app_name)
-                for cmd in commands_by_app[app_name]:
+                
+                # get the list of menu cmds for this app
+                cmds = commands_by_app[app_name]
+                # make sure it is in alphabetical order
+                cmds.sort(key=lambda x: x.name) 
+                
+                for cmd in cmds:
                     cmd.add_command_to_menu(app_menu)
-            
+                            
             else:
                 # this app only has a single entry. 
                 # display that on the menu
