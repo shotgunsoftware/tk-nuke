@@ -180,6 +180,11 @@ class NukeEngine(tank.platform.Engine):
         """
         return self._ui_enabled
 
+    def _get_dialog_parent(self):
+        if nuke.env.get("NukeVersionMajor") > 6:
+            return None
+        return super(NukeEngine, self)._get_dialog_parent()
+
     ##########################################################################################
     # logging interfaces
     
