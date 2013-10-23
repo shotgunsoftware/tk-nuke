@@ -93,8 +93,8 @@ class NukeEngine(tank.platform.Engine):
         # keep track of if a UI exists
         self._ui_enabled = nuke.env.get("gui")
 
-        # versions > 6.x have not yet been tested so show a message to that effect:
-        if nuke.env.get("NukeVersionMajor") > 6:
+        # versions > 7.x have not yet been tested so show a message to that effect:
+        if nuke.env.get("NukeVersionMajor") > 7:
             # this is an untested version of Nuke
             msg = ("The Shotgun Pipeline Toolkit has not yet been fully tested with Nuke %d.%dv%d. "
                    "You can continue to use the Toolkit but you may experience bugs or "
