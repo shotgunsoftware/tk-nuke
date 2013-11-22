@@ -207,16 +207,11 @@ class NukeEngine(tank.platform.Engine):
         print msg
     
     def log_error(self, msg):
-        msg = "Shotgun Error: %s" % msg
-        
+        msg = "Shotgun Error: %s" % msg        
         # print it in the nuke error console
         nuke.error(msg)
-        
         # also print it in the nuke script console
-        print msg
-        
-        # and pop up UI
-        nuke.message(msg)
+        print msg        
         
     
     ##########################################################################################
