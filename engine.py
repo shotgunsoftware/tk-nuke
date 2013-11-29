@@ -150,6 +150,7 @@ class NukeEngine(tank.platform.Engine):
 
             self._menu_generator = tk_nuke.MenuGenerator(self, menu_name)
             self._menu_generator.create_menu()
+            
             self.__setup_favourite_dirs()
             
         # iterate over all apps, if there is a gizmo folder, add it to nuke path
@@ -232,39 +233,48 @@ class NukeEngine(tank.platform.Engine):
         supported_entity_types = ["Shot", "Sequence", "Scene", "Asset", "Project"]
         for x in supported_entity_types:
             nuke.removeFavoriteDir("Tank Current %s" % x)
-
-        # new style favourites are simply "Tank Current Project" and "Tank Current Work"
         
-        # with the rename, make sure the old 'Tank' directories are removed:
-        nuke.removeFavoriteDir("Tank Current Project")
-        nuke.removeFavoriteDir("Tank Current Work")
-        # and then use the newer, new 'Shotgun' directories:
-        nuke.removeFavoriteDir("Shotgun Current Project")
-        nuke.removeFavoriteDir("Shotgun Current Work")
-
-        # we only present these shortcuts if there is exactly one path resolving to the work
-        # area or the project - otherwise it is just confusing!
-
-        # handle the project
-        if self.context.project:
-            proj = self.context.project
-            paths = self.tank.paths_from_entity(proj["type"], proj["id"])
-            if len(paths) == 1:
-                p = paths[0]
-                nuke.addFavoriteDir("Shotgun Current Project", 
-                                    directory=p,  
-                                    type=(nuke.IMAGE|nuke.SCRIPT|nuke.GEO), 
-                                    icon=tank_logo_small, 
-                                    tooltip=p)
-
-        # handle the current work
-        paths = self.context.filesystem_locations
-        if len(paths) == 1:
-            p = paths[0]            
-            nuke.addFavoriteDir("Shotgun Current Work", 
-                                directory=p,  
+        #handle project
+        proj = self.context.project
+        paths = self.tank.paths_from_entity(proj["type"], proj["id"])
+        pipeline_config=tank.pipelineconfig.from_path(paths[0])
+        for path in paths:
+            
+            #getting root names if the paths are the same
+            dirname='Unknown Path'
+            if path in pipeline_config.get_data_roots().values():
+                
+                #comparing roots paths with input path
+                for rootname, rootpath in pipeline_config.get_data_roots().items():
+                    if rootpath == path:
+                        dirname=rootname
+            
+            #removing old directory
+            nuke.removeFavoriteDir(dirname)
+            
+            #adding new path
+            nuke.addFavoriteDir(dirname, 
+                                directory=path,  
                                 type=(nuke.IMAGE|nuke.SCRIPT|nuke.GEO), 
                                 icon=tank_logo_small, 
+                                tooltip=path)
+        
+        #handle favourites directories
+        for directory in self.get_setting("favorite_directories"):
+            
+            #removing old directory
+            nuke.removeFavoriteDir(directory['display_name'])
+            
+            #getting paths from context
+            template=self.get_template_by_name(directory['directory'])
+            fields=self.context.as_template_fields(template)
+            p=template.apply_fields(fields)
+            
+            #adding new directory
+            nuke.addFavoriteDir(directory['display_name'], 
+                                directory=p,  
+                                type=(nuke.IMAGE|nuke.SCRIPT|nuke.GEO), 
+                                icon=directory['icon'], 
                                 tooltip=p)
         
     ##########################################################################################

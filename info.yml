@@ -12,6 +12,23 @@
 
 # expected fields in the configuration file for this engine
 configuration:
+
+    favorite_directories:
+        type: list
+        values:
+            type: dict
+            items:
+                display_name:
+                    type: str
+                    description: Name of shortcut in favourites menu.
+                directory:
+                    type: template
+                    description: Directory of shortcut in favourites menu.
+                icon:
+                    type: config_path
+                    description: Icon of shotcut in favourites menu.
+        default_value: []
+
     debug_logging: 
         type: bool
         description: Controls whether debug messages should be emitted to the logger
