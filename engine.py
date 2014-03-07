@@ -150,7 +150,8 @@ class NukeEngine(tank.platform.Engine):
 
             self._menu_generator = tk_nuke.MenuGenerator(self, menu_name)
             self._menu_generator.create_menu()
-            self.__setup_favourite_dirs()
+            
+            self.__setup_favorite_dirs()
             
         # iterate over all apps, if there is a gizmo folder, add it to nuke path
         for app in self.apps.values():
@@ -215,57 +216,72 @@ class NukeEngine(tank.platform.Engine):
         
     
     ##########################################################################################
-    # managing favourite dirs            
+    # managing favorite dirs            
     
-    def __setup_favourite_dirs(self):
+    def __setup_favorite_dirs(self):
         """
-        Sets up nuke shortcut "favourite dirs"
-        that are presented in the left hand side of 
+        Sets up nuke shortcut "favorite dirs" that are presented in the left hand side of 
         nuke common dialogs (open, save)
+
+        Nuke currently only writes favorites to disk in ~/.nuke/folders.nk. If you add/remove 
+        one in the UI. Doing them via the api only updates them for the session (Nuke bug #3740). 
+        See http://forums.thefoundry.co.uk/phpBB2/viewtopic.php?t=3481&start=15
         """
         
         engine_root_dir = self.disk_location
         tank_logo_small = os.path.abspath(os.path.join(engine_root_dir, "resources", "logo_color_16.png"))
         
-        # old versions were referring to these favourites - so keep them around to make
-        # sure there are no old leftovers in the system...
+        # Ensure old favorites we used to use are removed. 
         supported_entity_types = ["Shot", "Sequence", "Scene", "Asset", "Project"]
         for x in supported_entity_types:
             nuke.removeFavoriteDir("Tank Current %s" % x)
-
-        # new style favourites are simply "Tank Current Project" and "Tank Current Work"
-        
-        # with the rename, make sure the old 'Tank' directories are removed:
-        nuke.removeFavoriteDir("Tank Current Project")
         nuke.removeFavoriteDir("Tank Current Work")
-        # and then use the newer, new 'Shotgun' directories:
         nuke.removeFavoriteDir("Shotgun Current Project")
         nuke.removeFavoriteDir("Shotgun Current Work")
 
-        # we only present these shortcuts if there is exactly one path resolving to the work
-        # area or the project - otherwise it is just confusing!
+        # add favorties for current project root(s)
+        proj = self.context.project
+        if proj:
+            proj_roots = self.tank.roots
+            for root_name, root_path in proj_roots.items():
+                dir_name = "Shotgun Current Project"
+                if len(proj_roots) > 1:
+                    dir_name += " (%s)" % root_name
 
-        # handle the project
-        if self.context.project:
-            proj = self.context.project
-            paths = self.tank.paths_from_entity(proj["type"], proj["id"])
-            if len(paths) == 1:
-                p = paths[0]
-                nuke.addFavoriteDir("Shotgun Current Project", 
-                                    directory=p,  
+                # remove old directory
+                nuke.removeFavoriteDir(dir_name)
+            
+                # add new path
+                nuke.addFavoriteDir(dir_name, 
+                                    directory=root_path,  
                                     type=(nuke.IMAGE|nuke.SCRIPT|nuke.GEO), 
                                     icon=tank_logo_small, 
-                                    tooltip=p)
+                                    tooltip=root_path)
 
-        # handle the current work
-        paths = self.context.filesystem_locations
-        if len(paths) == 1:
-            p = paths[0]            
-            nuke.addFavoriteDir("Shotgun Current Work", 
-                                directory=p,  
+        # add favorites directories from the config
+        for favorite in self.get_setting("favourite_directories"):
+            # remove old directory
+            nuke.removeFavoriteDir(favorite['display_name'])
+            try:
+                template = self.get_template_by_name(favorite['template_directory'])
+                fields = self.context.as_template_fields(template)
+                path = template.apply_fields(fields)
+            except Exception, e:
+                msg = "Error processing template '%s' to add to favorite " \
+                      "directories: %s" % (favorite['template_directory'], e)
+                self.log_exception(msg)
+                continue
+            
+            # add new directory 
+            icon_path = favorite.get('icon')
+            if not os.path.isfile(icon_path) or not os.path.exists(icon_path):
+                icon_path = tank_logo_small
+
+            nuke.addFavoriteDir(favorite['display_name'], 
+                                directory=path,  
                                 type=(nuke.IMAGE|nuke.SCRIPT|nuke.GEO), 
-                                icon=tank_logo_small, 
-                                tooltip=p)
+                                icon=icon_path, 
+                                tooltip=path)
         
     ##########################################################################################
     # queue
