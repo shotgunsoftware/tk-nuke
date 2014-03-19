@@ -38,12 +38,15 @@ def __create_tank_disabled_menu(details):
     """
     Creates a std "disabled" shotgun menu
     """
-    nuke_menu = nuke.menu("Nuke")
-    sg_menu = nuke_menu.addMenu("Shotgun")
-    sg_menu.clearMenu()
-    cmd = lambda d=details: __show_tank_disabled_message(d)    
-    sg_menu.addCommand("Sgtk is disabled.", cmd)
-
+    if nuke.env.get("gui"):
+        nuke_menu = nuke.menu("Nuke")
+        sg_menu = nuke_menu.addMenu("Shotgun")
+        sg_menu.clearMenu()
+        cmd = lambda d=details: __show_tank_disabled_message(d)    
+        sg_menu.addCommand("Toolkit is disabled.", cmd)
+    else:
+        nuke.error("The Shotgun Pipeline Toolkit is disabled: %s" % details)
+        
     
 def __create_tank_error_menu():    
     """
@@ -53,17 +56,19 @@ def __create_tank_error_menu():
     (exc_type, exc_value, exc_traceback) = sys.exc_info()
     message = ""
     message += "Message: Shotgun encountered a problem starting the Engine.\n"
-    message += "Please contact sgtksupport@shotgunsoftware.com\n\n"
+    message += "Please contact toolkitsupport@shotgunsoftware.com\n\n"
     message += "Exception: %s - %s\n" % (exc_type, exc_value)
     message += "Traceback (most recent call last):\n"
     message += "\n".join( traceback.format_tb(exc_traceback))
     
-    nuke_menu = nuke.menu("Nuke")
-    sg_menu = nuke_menu.addMenu("Shotgun")
-    sg_menu.clearMenu()
-    cmd = lambda m=message: nuke.message(m)    
-    sg_menu.addCommand("[Shotgun Error - Click for details]", cmd)
-
+    if nuke.env.get("gui"):
+        nuke_menu = nuke.menu("Nuke")
+        sg_menu = nuke_menu.addMenu("Shotgun")
+        sg_menu.clearMenu()
+        cmd = lambda m=message: nuke.message(m)    
+        sg_menu.addCommand("[Shotgun Error - Click for details]", cmd)
+    else:
+        nuke.error("The Shotgun Pipeline Toolkit caught an error: %s" % message)
     
 def __engine_refresh(tk, new_context):
     """
