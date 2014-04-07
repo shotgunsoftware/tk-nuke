@@ -57,6 +57,11 @@ configuration:
         type: bool
         description: Optionally choose to use 'Sgtk' as the primary menu name instead of 'Shotgun'
         default_value: false
+
+    show_version_warning:
+        type: bool
+        description: Disable the nuke message dialog at engine start up
+        default_value: true
                      
     
 # the Shotgun fields that this engine needs in order to operate correctly

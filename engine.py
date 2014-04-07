@@ -102,7 +102,7 @@ class NukeEngine(tank.platform.Engine):
                    % (nuke.env.get("NukeVersionMajor"), nuke.env.get("NukeVersionMinor"), nuke.env.get("NukeVersionRelease")))
             
             # show nuke message if in UI mode and this is the first time the engine has been started:
-            if self._ui_enabled and not "TANK_NUKE_ENGINE_INIT_NAME" in os.environ:
+            if self._ui_enabled and not "TANK_NUKE_ENGINE_INIT_NAME" in os.environ and self.get_setting("show_version_warning"):
                 nuke.message("Warning - Shotgun Pipeline Toolkit!\n\n%s" % msg)
                            
             # and log the warning
