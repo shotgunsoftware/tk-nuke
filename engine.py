@@ -24,32 +24,6 @@ from tank_vendor import yaml
 
 import nukescripts
 
-class TankProgressWrapper(object):
-    """
-    A progressbar wrapper for nuke.
-    Does not currently handle the cancel button.
-    It is nice to wrap the nuke object like this because otherwise 
-    it can be tricky to delete later.
-    """
-    def __init__(self, title, ui_enabled):
-        self.__ui = ui_enabled
-        self.__title = title
-        if self.__ui:
-            self.__p = nuke.ProgressTask(title)
-    
-    def set_progress(self, percent):
-        if self.__ui:
-            self.__p.setProgress(percent)
-            # since we are running async,
-            # give nuke a chance to process its own events 
-            time.sleep(0.1)
-        else:
-            print("SHOTGUN_PROGRESS Task:%s Progress:%d%%" % (self.__title, percent))
-    
-    def close(self):
-        if self.__ui:
-            self.__p.setProgress(100)
-            self.__p = None
 
 class NukeEngine(tank.platform.Engine):
 
@@ -113,10 +87,6 @@ class NukeEngine(tank.platform.Engine):
             # and log the warning
             self.log_warning(msg)
             
-        # create queue
-        self._queue = []
-        self._queue_running = False
-                    
         # now prepare tank so that it will be picked up by any new processes
         # created by file->new or file->open.
             
@@ -288,68 +258,3 @@ class NukeEngine(tank.platform.Engine):
                                 icon=icon_path, 
                                 tooltip=path)
         
-    ##########################################################################################
-    # queue
-
-    def add_to_queue(self, name, method, args):
-        """
-        Nuke implementation of the engine synchronous queue. Adds an item to the queue.
-        """
-        self.log_warning("The Engine Queue is now deprecated! Please contact support@shotgunsoftware.com")
-        qi = {}
-        qi["name"] = name
-        qi["method"] = method
-        qi["args"] = args
-        self._queue.append(qi)
-    
-    def report_progress(self, percent):
-        """
-        Callback function part of the engine queue. This is being passed into the methods
-        that are executing in the queue so that they can report progress back if they like
-        """
-        self._current_queue_item["progress"].set_progress(percent)
-    
-    def execute_queue(self):
-        """
-        Executes all items in the queue, one by one, in a controlled fashion
-        """
-        self.log_warning("The Engine Queue is now deprecated! Please contact support@shotgunsoftware.com")
-        if self._queue_running:
-            self.log_warning("Cannot execute queue - it is already executing!")
-            return
-        self._queue_running = True
-        
-        # create progress items for all queue items
-        for x in self._queue:
-            x["progress"] = TankProgressWrapper(x["name"], self._ui_enabled)
-
-        # execute one after the other synchronously
-        while len(self._queue) > 0:
-            
-            # take one item off
-            self._current_queue_item = self._queue.pop(0)
-            
-            # process it
-            try:
-                kwargs = self._current_queue_item["args"]
-                # force add a progress_callback arg - this is by convention
-                kwargs["progress_callback"] = self.report_progress
-                # init progress bar
-                self.report_progress(0)
-                # execute
-                self._current_queue_item["method"](**kwargs)
-            except Exception, e:
-                # error and continue
-                msg = "Error processing callback %s. Error reported: %s" % (self._current_queue_item, e)
-                self.log_exception(msg)
-            finally:
-                self._current_queue_item["progress"].close()
-                # nuke needs time to GC I think...
-                time.sleep(0.2)
-
-        # done
-        self._queue_running = False
-            
-        
-            
-            
