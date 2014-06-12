@@ -157,6 +157,12 @@ class NukeEngine(tank.platform.Engine):
         return self._ui_enabled
 
     def _get_dialog_parent(self):
+        """
+        Return the QWidget parent for all dialogs created through show_dialog & show_modal.
+        """
+        # see https://github.com/shotgunsoftware/tk-nuke/commit/35ca540d152cc5357dc7e347b5efc728a3a89f4a 
+        # for more info. There have been instability issues with nuke 7 causing various crashes, so 
+        # window parenting on Nuke versions above 6 is currently disabled.
         if nuke.env.get("NukeVersionMajor") > 6:
             return None
         return super(NukeEngine, self)._get_dialog_parent()
