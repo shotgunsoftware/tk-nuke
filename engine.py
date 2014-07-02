@@ -222,8 +222,10 @@ class NukeEngine(tank.platform.Engine):
 
         # add favorties for current project root(s)
         proj = self.context.project
-        current_proj_fav = self.get_setting("current_project_favourite_name")
-        if proj:
+        current_proj_fav = self.get_setting("project_favourite_name")
+        # only add these current project entries if we have a value from settings.
+        # Otherwise, they have opted to not show them.
+        if proj and current_proj_fav:
             proj_roots = self.tank.roots
             for root_name, root_path in proj_roots.items():
                 dir_name = current_proj_fav
@@ -233,15 +235,12 @@ class NukeEngine(tank.platform.Engine):
                 # remove old directory
                 nuke.removeFavoriteDir(dir_name)
             
-                # only add a new entry if we have a value from settings.
-                # Otherwise, they have opted to not show these menus.
-                if current_proj_fav:
-                    # add new path
-                    nuke.addFavoriteDir(dir_name, 
-                                        directory=root_path,  
-                                        type=(nuke.IMAGE|nuke.SCRIPT|nuke.GEO), 
-                                        icon=tank_logo_small, 
-                                        tooltip=root_path)
+                # add new path
+                nuke.addFavoriteDir(dir_name, 
+                                    directory=root_path,  
+                                    type=(nuke.IMAGE|nuke.SCRIPT|nuke.GEO), 
+                                    icon=tank_logo_small, 
+                                    tooltip=root_path)
 
         # add favorites directories from the config
         for favorite in self.get_setting("favourite_directories"):

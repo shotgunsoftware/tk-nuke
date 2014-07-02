@@ -34,7 +34,7 @@ configuration:
         default_value: []
         allows_empty: true
 
-    current_project_favourite_name:
+    project_favourite_name:
         type: str
         description: "Allows customizing the name of the favourite directory representing
                      the current project root in the file chooser. eg. 'Shotgun Current Project'. 
