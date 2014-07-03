@@ -34,6 +34,15 @@ configuration:
         default_value: []
         allows_empty: true
 
+    project_favourite_name:
+        type: str
+        description: "Allows customizing the name of the favourite directory representing
+                     the current project root in the file chooser. eg. 'Shotgun Current Project'. 
+                     In multi-root configs, there will be an entry for each root eg. 'Shotgun 
+                     Current Project (secondary)'. Specifying an empty string will disable this 
+                     menu from being added to the favourites automatically."
+        default_value: "Shotgun Current Project"
+
     debug_logging: 
         type: bool
         description: Controls whether debug messages should be emitted to the logger

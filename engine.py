@@ -222,10 +222,13 @@ class NukeEngine(tank.platform.Engine):
 
         # add favorties for current project root(s)
         proj = self.context.project
-        if proj:
+        current_proj_fav = self.get_setting("project_favourite_name")
+        # only add these current project entries if we have a value from settings.
+        # Otherwise, they have opted to not show them.
+        if proj and current_proj_fav:
             proj_roots = self.tank.roots
             for root_name, root_path in proj_roots.items():
-                dir_name = "Shotgun Current Project"
+                dir_name = current_proj_fav
                 if len(proj_roots) > 1:
                     dir_name += " (%s)" % root_name
 
