@@ -69,8 +69,8 @@ class NukeEngine(tank.platform.Engine):
         # keep track of if a UI exists
         self._ui_enabled = nuke.env.get("gui")
 
-        # versions > 7.x have not yet been tested so show a message to that effect:
-        if nuke_version[0] > 7:
+        # versions > 8.0 have not yet been tested so show a message to that effect:
+        if nuke_version[0] > 8 or (nuke_version[0] == 8 and nuke_version[1] > 0):
             # this is an untested version of Nuke
             msg = ("The Shotgun Pipeline Toolkit has not yet been fully tested with Nuke %d.%dv%d. "
                    "You can continue to use the Toolkit but you may experience bugs or "
@@ -81,7 +81,7 @@ class NukeEngine(tank.platform.Engine):
             # and the warning dialog isn't overriden by the config:
             if (self._ui_enabled 
                 and not "TANK_NUKE_ENGINE_INIT_NAME" in os.environ
-                and nuke_version[0] >= self.get_setting("compatibility_dialog_min_version", 8)):
+                and nuke_version[0] >= self.get_setting("compatibility_dialog_min_version", 9)):
                 nuke.message("Warning - Shotgun Pipeline Toolkit!\n\n%s" % msg)
                            
             # and log the warning
