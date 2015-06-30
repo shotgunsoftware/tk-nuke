@@ -19,8 +19,8 @@ import sgtk
 import nukescripts
 
 from sgtk.platform.qt import QtCore, QtGui
-from .ui.panel_not_found_dialog import Ui_PanelNotFoundDialog
 
+from .ui.panel_not_found_dialog import Ui_PanelNotFoundDialog
 
 class NukePanelWidget(nukescripts.panels.PythonPanel):
     """
@@ -44,7 +44,7 @@ class NukePanelWidget(nukescripts.panels.PythonPanel):
         #
         # Once this attribute is set, it means that you can access the
         # class from sgtk.panel_id_name 
-        setattr(tank, panel_id, widget_class)
+        setattr(sgtk, panel_id, widget_class)
 
         # Run parent constructor
         nukescripts.panels.PythonPanel.__init__(self, dialog_name, panel_id)
@@ -55,28 +55,6 @@ class NukePanelWidget(nukescripts.panels.PythonPanel):
         # and lastly tell nuke about our panel object 
         self.customKnob = nuke.PyCustom_Knob(dialog_name, "", cmd)
         self.addKnob(self.customKnob)
-
-
-
-
-
-
-class PanelNotFoundDialog(QtGui.QWidget):
-    """
-    Panel not found widget
-    """
-    
-    def __init__(self):
-        """
-        Constructor
-        """
-        # first, call the base class and let it do its thing.
-        QtGui.QWidget.__init__(self)
-        
-        # now load in the UI that was created in the UI designer
-        self.ui = Ui_PanelNotFoundDialog() 
-        self.ui.setupUi(self)
-        
 
 
 
@@ -98,7 +76,7 @@ class NukeNotFoundPanelWidget(nukescripts.panels.PythonPanel):
         #
         # Once this attribute is set, it means that you can access the
         # class from sgtk.panel_id_name 
-        setattr(tank, "sgtk_not_found_dialog", PanelNotFoundDialog)
+        setattr(sgtk, "sgtk_not_found_dialog", PanelNotFoundDialog)
 
         # Run parent constructor
         nukescripts.panels.PythonPanel.__init__(self, "Shotgun", panel_id)
@@ -109,6 +87,30 @@ class NukeNotFoundPanelWidget(nukescripts.panels.PythonPanel):
         # and lastly tell nuke about our panel object 
         self.customKnob = nuke.PyCustom_Knob("Shotgun", "", cmd)
         self.addKnob(self.customKnob)
+
+
+
+
+class PanelNotFoundDialog(QtGui.QWidget):
+    """
+    Panel not found widget
+    """
+    
+    def __init__(self):
+        """
+        Constructor
+        """
+        # first, call the base class and let it do its thing.
+        QtGui.QWidget.__init__(self)
+        
+        
+        
+        # now load in the UI that was created in the UI designer
+        self.ui = Ui_PanelNotFoundDialog() 
+        self.ui.setupUi(self)
+        
+
+
 
 
 

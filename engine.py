@@ -31,10 +31,6 @@ class NukeEngine(tank.platform.Engine):
     
     def init_engine(self):
         
-        # note! not using the import as this confuses nuke's calback system
-        # (several of the key scene callbacks are in the main init file...)
-        import tk_nuke
-        
         self.log_debug("%s: Initializing..." % self)
 
         # track the panels that apps have registered with the engine 
@@ -105,7 +101,14 @@ class NukeEngine(tank.platform.Engine):
         # because nuke python does not have a __file__ attribute for that file
         local_python_path = os.path.abspath(os.path.join( os.path.dirname(__file__), "python"))
         os.environ["TANK_NUKE_ENGINE_MOD_PATH"] = local_python_path
-            
+        
+    
+    def pre_app_init(self):
+        
+        # note! not using the import as this confuses nuke's calback system
+        # (several of the key scene callbacks are in the main init file...)
+        import tk_nuke
+        
         # make sure callbacks tracking the context switching are active
         tk_nuke.tank_ensure_callbacks_registered()
         
@@ -229,6 +232,11 @@ class NukeEngine(tank.platform.Engine):
         :param panel_id: Unique identifier string for the panel
         :returns: panel widget object 
         """
+        
+        # note! not using the import as this confuses nuke's calback system
+        # (several of the key scene callbacks are in the main init file...)
+        import tk_nuke
+        
         self.log_debug("Restoring the state of panel %s." % panel_id)
 
         panel_widget = None
@@ -290,6 +298,11 @@ class NukeEngine(tank.platform.Engine):
         
         :returns: the created widget_class instance
         """
+        
+        # note! not using the import as this confuses nuke's calback system
+        # (several of the key scene callbacks are in the main init file...)
+        import tk_nuke
+        
         # attempt to locate the nuke properties pane and
         # then place the new panel in the same location as 
         # this one.

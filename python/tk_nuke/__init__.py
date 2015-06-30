@@ -21,7 +21,7 @@ import traceback
 from tank_vendor import yaml
 
 from .menu_generation import MenuGenerator
-from .panel_widget import NukePanelWidget, NukeNotFoundPanelWidget
+from .panels import NukePanelWidget, NukeNotFoundPanelWidget
 
 
 def __show_tank_disabled_message(details):
