@@ -345,7 +345,7 @@ class NukeEngine(tank.platform.Engine):
             # tell the user that they need to have the property
             # pane present in the UI
             nuke.message("Cannot find any of the standard Nuke UI panels to anchor against. "
-                         "Please add a properties panel to your Nuke UI layout and try again.")
+                         "Please add a Properties Bin to your Nuke UI layout and try again.")
             return None
 
         # ok all good - we are running nuke 9 and/or 
