@@ -313,25 +313,45 @@ class NukeEngine(tank.platform.Engine):
         # note! not using the import as this confuses nuke's calback system
         # (several of the key scene callbacks are in the main init file...)
         import tk_nuke
+                
+        # now parent it. Try to parent it next to the properties panel
+        # if possible, because this is typically laid out like a classic
+        # panel UI - narrow and tall. If not possible, then fall back on other
+        # built-in objects and use these to find a location.
+        #
+        # Note: on nuke versions prior to 9, a pane is required for the UI to appear.
         
+        built_in_tabs = ["Properties.1",   # properties dialog - best choice to parent next to
+                         "DAG.1",          # node graph, so usually wide not tall
+                         "DopeSheet.1",    # dope sheet, usually wide, not tall
+                         "Viewer.1",       # viewer
+                         "Toolbar.1"]      # nodes toolbar
+        
+        existing_pane = None
+        for tab_name in built_in_tabs:
+            self.log_debug("Parenting panel - looking for %s tab..." % tab_name)
+            existing_pane = nuke.getPaneFor(tab_name)
+            if existing_pane:
+                break
+
         # create the panel
         panel_id = self._generate_panel_id(title, bundle)
         panel_widget = tk_nuke.NukePanelWidget(title, panel_id, widget_class)
-        
-        # now parent it. Try to parent it next to the properties panel
-        # if possible, because this is typically laid out like a classic
-        # panel UI - narrow and tall. If not possible, then revert back 
-        # to nuke defaults
-        properties_pane = nuke.getPaneFor("Properties.1")
-        if properties_pane is None:
-            # could not find the properties pane
-            # add to default
-            panel_widget.addToPane(None)
-        
-        else:
-            # add the panel next to the properties tab
-            panel_widget.addToPane(properties_pane)
-        
+
+        if existing_pane is None and nuke.env.get("NukeVersionMajor") < 9:
+            # couldn't find anything to parent next to!
+            # nuke 9 will automatically handle this situation
+            # but older versions will not show the UI!
+            # tell the user that they need to have the property
+            # pane present in the UI
+            nuke.message("Cannot find any of the standard Nuke UI panels to anchor against. "
+                         "Please add a properties panel to your Nuke UI layout and try again.")
+            return None
+
+        # ok all good - we are running nuke 9 and/or 
+        # have existing panes to parent against.
+        panel_widget.addToPane(existing_pane)
+    
         # lastly, return the instantiated widget
         return panel_widget
         
