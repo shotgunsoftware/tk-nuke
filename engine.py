@@ -155,14 +155,12 @@ class NukeEngine(tank.platform.Engine):
                 tank.util.append_path_to_env_var("NUKE_PATH", app_gizmo_folder)
                    
     def destroy_engine(self):
+        """
+        Runs when the engine is unloaded, e.g. typically at context switch.
+        """
         self.log_debug("%s: Destroying..." % self)
         if self._ui_enabled:
             self._menu_generator.destroy_menu()
-
-#         # find the toolbar menu and clear it
-#         for mh in nuke.menu("Pane").items():
-#             if mh.name() == self._menu_name:
-#                 mh.clearMenu()        
         
 
     @property
@@ -220,13 +218,13 @@ class NukeEngine(tank.platform.Engine):
         Given a dialog name and a bundle, generate a Nuke panel id.
         This panel id is used by Nuke to identify and persist the panel.
         
-        This will return something like 'sgtk_tk_multi_loader2_main'
+        This will return something like 'shotgun_tk_multi_loader2_main'
         
         :param dialog_name: An identifier string to identify the dialog to be hosted by the panel
         :param bundle: The bundle (e.g. app) object to be associated with the panel
         :returns: a unique identifier string 
         """
-        panel_id = "sgtk_%s_%s" % (bundle.name, dialog_name)
+        panel_id = "shotgun_%s_%s" % (bundle.name, dialog_name)
         # replace any non-alphanumeric chars with underscores
         panel_id = re.sub("\W", "_", panel_id)
         panel_id = panel_id.lower()
