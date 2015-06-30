@@ -10,7 +10,6 @@
 
 """
 A Nuke engine for Tank.
-
 """
 
 import tank
@@ -18,11 +17,11 @@ import platform
 import time
 import nuke
 import os
+import re
 import traceback
 import unicodedata
-from tank_vendor import yaml
-
 import nukescripts
+from tank_vendor import yaml
 
 
 class NukeEngine(tank.platform.Engine):
@@ -37,6 +36,9 @@ class NukeEngine(tank.platform.Engine):
         import tk_nuke
         
         self.log_debug("%s: Initializing..." % self)
+
+        # track the panels that apps have registered with the engine 
+        self._panels = {}
 
         # now check that there is a location on disk which corresponds to the context
         if self.context.project is None:
@@ -122,10 +124,12 @@ class NukeEngine(tank.platform.Engine):
             menu_name = "Shotgun"
             if self.get_setting("use_sgtk_as_menu_name", False):
                 menu_name = "Sgtk"
-
+            
+            # create menu
             self._menu_generator = tk_nuke.MenuGenerator(self, menu_name)
             self._menu_generator.create_menu()
             
+            # initialize favourite dirs in the file open/file save dialogs
             self.__setup_favorite_dirs()
             
         # iterate over all apps, if there is a gizmo folder, add it to nuke path
@@ -141,9 +145,7 @@ class NukeEngine(tank.platform.Engine):
                 # new processes spawned from this one will have access too.
                 # (for example if you do file->open or file->new)
                 tank.util.append_path_to_env_var("NUKE_PATH", app_gizmo_folder)
-            
-        
-       
+                   
     def destroy_engine(self):
         self.log_debug("%s: Destroying..." % self)
         if self._ui_enabled:
@@ -194,6 +196,117 @@ class NukeEngine(tank.platform.Engine):
         nuke.error(msg)
         # also print it in the nuke script console
         print msg        
+        
+    
+    ##########################################################################################
+    # panel interfaces
+    
+    def _generate_panel_id(self, dialog_name, bundle):
+        """
+        Given a dialog name and a bundle, generate a Nuke panel id.
+        This panel id is used by Nuke to identify and persist the panel.
+        
+        This will return something like 'sgtk_tk_multi_loader2_main'
+        
+        :param dialog_name: An identifier string to identify the dialog to be hosted by the panel
+        :param bundle: The bundle (e.g. app) object to be associated with the panel
+        :returns: a unique identifier string 
+        """
+        panel_id = "sgtk_%s_%s" % (bundle.name, dialog_name)
+        # replace any non-alphanumeric chars with underscores
+        panel_id = re.sub("\W", "_", panel_id)
+        self.log_debug("Unique panel id for %s %s -> %s" % (bundle, dialog_name, panel_id))
+        return panel_id 
+        
+    def _restore_panel(self, panel_id):
+        """
+        Given a panel id, generate a panel UI. 
+        
+        This method is intended to be executed by nuke itself as a callback
+        that runs when panels are being restored, either at startup or 
+        at UI profile switch.
+        
+        :param panel_id: Unique identifier string for the panel
+        :returns: panel widget object 
+        """
+        self.log_debug("Restoring the state of panel %s." % panel_id)
+
+        panel_widget = None
+        if panel_id not in self._panels:
+            self.log_warning("Cannot restore the state of %s - app not loaded!" % panel_id)
+            panel_widget = tk_nuke.NukeNotFoundPanelWidget()            
+            panel_widget.addToPane()
+        else:
+            panel = self._panels[panel_id]
+            panel_widget = tk_nuke.NukePanelWidget(panel["title"], panel["bundle"], panel["widget_class"])            
+            panel_widget.addToPane()
+        return panel_widget
+        
+        
+    def register_panel(self, title, bundle, widget_class):
+        """
+        Register a panel so that it can persist across sessions. This needs to be called
+        by an app as part of its init phase in order to be detected by the DCC initial restore 
+        logic. Executing this method will merely register the panel so that the DCC is 
+        aware of its existence and can launch it at startup if needed.
+        
+        In order to show or focus on a panel, use the show_panel() method instead.
+        
+        :param title: Title to display in the panel tab
+        :param bundle: Bundle (e.g. app) that the panel belongs to
+        :param widget_class: Class to instantiate. The constructor of this class
+                             mustn't take any arguments.        
+        """
+        # generate unique identifier
+        panel_id = self._generate_panel_id(title, bundle)
+        
+        # track registered panels
+        self.log_debug("Registering sgtk nuke panel '%s'" % panel_id)
+        self._panels[panel_id] = {"title": title, "bundle": bundle, "widget_class": widget_class}
+
+        # tell nuke how to create this panel
+        # this will be used at nuke startup in order
+        # for nuke to be able to restore panels 
+        # automatically. For all panels that exist as
+        # part of saved layouts, nuke will look through
+        # a global list of registered panels, try to locate
+        # the one it needs and then run the callback         
+        fn = lambda : self._restore_panel(panel_id)
+        nukescripts.panels.registerPanel(panel_id, fn)
+                
+        # and also register it with the standard nuke pane menu
+        menu = nuke.menu('Pane') 
+        menu.addCommand(title, fn) 
+           
+        
+    def show_panel(self, title, bundle, widget_class):
+        """
+        Show a widget as a panel.
+        
+        :param title: The title text to appear in the panel label
+        :param bundle: The app, engine or framework object that is associated with this window
+        :param widget_class: The class of the UI to be constructed. This must derive from QWidget and
+                             the constructor cannot take any arguments.
+        
+        :returns: the created widget_class instance
+        """
+        # attempt to locate the nuke properties pane and
+        # then place the new panel in the same location as 
+        # this one.
+        properties_pane = nuke.getPaneFor("Properties.1")
+        if properties_pane is None:
+            raise TankError("Cannot locate the nuke properties panel. This is used to position the "
+                            "panel. Try either launching the panel via the right-click menu on a panel "
+                            "or show the properties panel and try again.")
+
+        # create the panel
+        panel_id = self._generate_panel_id(title, bundle)
+        w = tk_nuke.NukePanelWidget(title, panel_id, widget_class)
+        w.addToPane(properties_pane)
+        
+        # lastly, return the instantiated widget
+        return w
+        
         
     
     ##########################################################################################

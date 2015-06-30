@@ -1,0 +1,5 @@
+<RCC>
+  <qresource prefix="tk_nuke">
+    <file>not_found.png</file>
+  </qresource>
+</RCC>
