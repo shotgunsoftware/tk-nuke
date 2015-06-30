@@ -143,12 +143,7 @@ class MenuGenerator(object):
         for mh in nuke.menu("Nuke").items():
             if mh.name() == self._menu_name:
                 mh.clearMenu()
-         
-        # find the toolbar menu and clear it
-        for mh in nuke.menu("Pane").items():
-            if mh.name() == self._menu_name:
-                mh.clearMenu()        
-        
+                
     ##########################################################################################
     # context menu and UI
 

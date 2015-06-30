@@ -30,6 +30,9 @@ class NukeEngine(tank.platform.Engine):
     # init
     
     def init_engine(self):
+        """
+        Called at Engine startup
+        """
         
         self.log_debug("%s: Initializing..." % self)
 
@@ -104,7 +107,9 @@ class NukeEngine(tank.platform.Engine):
         
     
     def pre_app_init(self):
-        
+        """
+        Called at startup, but after QT has been initialized
+        """
         # note! not using the import as this confuses nuke's calback system
         # (several of the key scene callbacks are in the main init file...)
         import tk_nuke
@@ -153,6 +158,12 @@ class NukeEngine(tank.platform.Engine):
         self.log_debug("%s: Destroying..." % self)
         if self._ui_enabled:
             self._menu_generator.destroy_menu()
+
+#         # find the toolbar menu and clear it
+#         for mh in nuke.menu("Pane").items():
+#             if mh.name() == self._menu_name:
+#                 mh.clearMenu()        
+        
 
     @property
     def has_ui(self):
@@ -218,12 +229,13 @@ class NukeEngine(tank.platform.Engine):
         panel_id = "sgtk_%s_%s" % (bundle.name, dialog_name)
         # replace any non-alphanumeric chars with underscores
         panel_id = re.sub("\W", "_", panel_id)
+        panel_id = panel_id.lower()
         self.log_debug("Unique panel id for %s %s -> %s" % (bundle, dialog_name, panel_id))
         return panel_id 
         
-    def _restore_panel(self, panel_id):
+    def _panel_factory_callback(self, panel_id):
         """
-        Given a panel id, generate a panel UI. 
+        Given a panel id, generate a panel UI.
         
         This method is intended to be executed by nuke itself as a callback
         that runs when panels are being restored, either at startup or 
@@ -232,22 +244,28 @@ class NukeEngine(tank.platform.Engine):
         :param panel_id: Unique identifier string for the panel
         :returns: panel widget object 
         """
-        
-        # note! not using the import as this confuses nuke's calback system
-        # (several of the key scene callbacks are in the main init file...)
-        import tk_nuke
-        
-        self.log_debug("Restoring the state of panel %s." % panel_id)
-
+        # note: Nuke silently consumes any exceptions within the callback system
+        # so add a catch all exception handler around this to make sure
+        # we properly log any output 
         panel_widget = None
-        if panel_id not in self._panels:
-            self.log_warning("Cannot restore the state of %s - app not loaded!" % panel_id)
-            panel_widget = tk_nuke.NukeNotFoundPanelWidget()            
-            panel_widget.addToPane()
-        else:
+        try:
+            # note! not using the import as this confuses nuke's calback system 
+            import tk_nuke
+        
+            self.log_debug("Panel Factory Callback: Generating UI for panel id '%s'." % panel_id)
+            
+            # the callback is registered at the same time as the panel callback,
+            # so we can assume that our _panels lookup data structure has a matching
+            # object present
             panel = self._panels[panel_id]
-            panel_widget = tk_nuke.NukePanelWidget(panel["title"], panel["bundle"], panel["widget_class"])            
+            # create a new panel widget
+            panel_widget = tk_nuke.NukePanelWidget(panel["title"], panel_id, panel["widget_class"])
+            # and add it to the current pane context (nuke handles this state)
             panel_widget.addToPane()
+            
+        except Exception, e:
+            self.log_exception("Could not generate panel UI for panel id '%s'" % panel_id)
+        
         return panel_widget
         
         
@@ -256,7 +274,7 @@ class NukeEngine(tank.platform.Engine):
         Register a panel so that it can persist across sessions. This needs to be called
         by an app as part of its init phase in order to be detected by the DCC initial restore 
         logic. Executing this method will merely register the panel so that the DCC is 
-        aware of its existence and can launch it at startup if needed.
+        aware of its existence and can launch it at startup UI restore if needed.
         
         In order to show or focus on a panel, use the show_panel() method instead.
         
@@ -269,7 +287,7 @@ class NukeEngine(tank.platform.Engine):
         panel_id = self._generate_panel_id(title, bundle)
         
         # track registered panels
-        self.log_debug("Registering sgtk nuke panel '%s'" % panel_id)
+        self.log_debug("Registering panel '%s'" % panel_id)
         self._panels[panel_id] = {"title": title, "bundle": bundle, "widget_class": widget_class}
 
         # tell nuke how to create this panel
@@ -279,13 +297,9 @@ class NukeEngine(tank.platform.Engine):
         # part of saved layouts, nuke will look through
         # a global list of registered panels, try to locate
         # the one it needs and then run the callback         
-        fn = lambda : self._restore_panel(panel_id)
+        fn = lambda : self._panel_factory_callback(panel_id)
         nukescripts.panels.registerPanel(panel_id, fn)
-                
-        # and also register it with the standard nuke pane menu
-        menu = nuke.menu('Pane') 
-        menu.addCommand(title, fn) 
-           
+                   
         
     def show_panel(self, title, bundle, widget_class):
         """
@@ -298,27 +312,30 @@ class NukeEngine(tank.platform.Engine):
         
         :returns: the created widget_class instance
         """
-        
         # note! not using the import as this confuses nuke's calback system
         # (several of the key scene callbacks are in the main init file...)
         import tk_nuke
         
-        # attempt to locate the nuke properties pane and
-        # then place the new panel in the same location as 
-        # this one.
-        properties_pane = nuke.getPaneFor("Properties.1")
-        if properties_pane is None:
-            raise TankError("Cannot locate the nuke properties panel. This is used to position the "
-                            "panel. Try either launching the panel via the right-click menu on a panel "
-                            "or show the properties panel and try again.")
-
         # create the panel
         panel_id = self._generate_panel_id(title, bundle)
-        w = tk_nuke.NukePanelWidget(title, panel_id, widget_class)
-        w.addToPane(properties_pane)
+        panel_widget = tk_nuke.NukePanelWidget(title, panel_id, widget_class)
+        
+        # now parent it. Try to parent it next to the properties panel
+        # if possible, because this is typically laid out like a classic
+        # panel UI - narrow and tall. If not possible, then revert back 
+        # to nuke defaults
+        properties_pane = nuke.getPaneFor("Properties.1")
+        if properties_pane is None:
+            # could not find the properties pane
+            # add to default
+            panel_widget.addToPane(None)
+        
+        else:
+            # add the panel next to the properties tab
+            panel_widget.addToPane(properties_pane)
         
         # lastly, return the instantiated widget
-        return w
+        return panel_widget
         
         
     
