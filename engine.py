@@ -371,7 +371,7 @@ class NukeEngine(tank.platform.Engine):
         """
         
         engine_root_dir = self.disk_location
-        tank_logo_small = os.path.abspath(os.path.join(engine_root_dir, "resources", "logo_color_16.png"))
+        sg_logo = os.path.abspath(os.path.join(engine_root_dir, "resources", "sg_logo_80px.png"))
         
         # Ensure old favorites we used to use are removed. 
         supported_entity_types = ["Shot", "Sequence", "Scene", "Asset", "Project"]
@@ -400,7 +400,7 @@ class NukeEngine(tank.platform.Engine):
                 nuke.addFavoriteDir(dir_name, 
                                     directory=root_path,  
                                     type=(nuke.IMAGE|nuke.SCRIPT|nuke.GEO), 
-                                    icon=tank_logo_small, 
+                                    icon=sg_logo, 
                                     tooltip=root_path)
 
         # add favorites directories from the config
@@ -420,7 +420,7 @@ class NukeEngine(tank.platform.Engine):
             # add new directory 
             icon_path = favorite.get('icon')
             if not os.path.isfile(icon_path) or not os.path.exists(icon_path):
-                icon_path = tank_logo_small
+                icon_path = sg_logo
 
             nuke.addFavoriteDir(favorite['display_name'], 
                                 directory=path,  
