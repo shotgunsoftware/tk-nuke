@@ -36,6 +36,7 @@ class MenuGenerator(object):
         self._dialogs = []
         engine_root_dir = self._engine.disk_location
         self._shotgun_logo = os.path.abspath(os.path.join(engine_root_dir, "resources", "sg_logo_80px.png"))
+        self._shotgun_logo_blue = os.path.abspath(os.path.join(engine_root_dir, "resources", "sg_logo_blue_32px.png"))
 
     ##########################################################################################
     # public methods
@@ -157,7 +158,7 @@ class MenuGenerator(object):
         ctx_name = str(ctx)
         
         # create the menu object        
-        ctx_menu = menu_handle.addMenu(ctx_name, icon=self._shotgun_logo)
+        ctx_menu = menu_handle.addMenu(ctx_name, icon=self._shotgun_logo_blue)
         ctx_menu.addCommand("Jump to Shotgun", self._jump_to_sg)
         ctx_menu.addCommand("Jump to File System", self._jump_to_fs)
         ctx_menu.addSeparator()
