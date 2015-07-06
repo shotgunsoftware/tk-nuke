@@ -257,7 +257,11 @@ class NukeEngine(tank.platform.Engine):
             # object present
             panel = self._panels[panel_id]
             # create a new panel widget
-            panel_widget = tk_nuke.NukePanelWidget(panel["title"], panel_id, panel["widget_class"])
+            panel_widget = tk_nuke.NukePanelWidget(panel["title"], 
+                                                   panel_id, 
+                                                   panel["widget_class"],
+                                                   *panel["args"],
+                                                   **panel["kwargs"])
             # and add it to the current pane context (nuke handles this state)
             panel_widget.addToPane()
             
@@ -267,26 +271,38 @@ class NukeEngine(tank.platform.Engine):
         return panel_widget
         
         
-    def register_panel(self, title, bundle, widget_class):
+    def register_panel(self, title, bundle, widget_class, *args, **kwargs):
         """
-        Register a panel so that it can persist across sessions. This needs to be called
-        by an app as part of its init phase in order to be detected by the DCC initial restore 
-        logic. Executing this method will merely register the panel so that the DCC is 
-        aware of its existence and can launch it at startup UI restore if needed.
+        Similar to register_command, but instead of registering a menu item in the form of a
+        command, this method registers a UI panel. The arguments passed to this method is the
+        same as for show_panel().
+        
+        Just like with the register_command() method, panel registration should be executed 
+        from within the init phase of the app. Once a panel has been registered, it is possible
+        for the engine to correctly restore panel UIs that persist between sessions. 
+        
+        Not all engines support this feature, but in for example Nuke, a panel can be saved in 
+        a saved layout. Apps wanting to be able to take advantage of the persistance given by
+        these saved layouts will need to call register_panel as part of their init_app phase.
         
         In order to show or focus on a panel, use the show_panel() method instead.
         
-        :param title: Title to display in the panel tab
-        :param bundle: Bundle (e.g. app) that the panel belongs to
-        :param widget_class: Class to instantiate. The constructor of this class
-                             mustn't take any arguments.        
+        :param title: The title of the window
+        :param bundle: The app, engine or framework object that is associated with this panel
+        :param widget_class: The class of the UI to be constructed. This must derive from QWidget.
+        
+        Additional parameters specified will be passed through to the widget_class constructor.
         """
         # generate unique identifier
         panel_id = self._generate_panel_id(title, bundle)
         
         # track registered panels
         self.log_debug("Registering panel '%s'" % panel_id)
-        self._panels[panel_id] = {"title": title, "bundle": bundle, "widget_class": widget_class}
+        self._panels[panel_id] = {"title": title, 
+                                  "bundle": bundle, 
+                                  "widget_class": widget_class,
+                                  "args": args,
+                                  "kwargs": kwargs}
 
         # tell nuke how to create this panel
         # this will be used at nuke startup in order
@@ -299,59 +315,82 @@ class NukeEngine(tank.platform.Engine):
         nukescripts.panels.registerPanel(panel_id, fn)
                    
         
-    def show_panel(self, title, bundle, widget_class):
+    def show_panel(self, title, bundle, widget_class, *args, **kwargs):
         """
-        Show a widget as a panel.
+        Shows a panel in a way suitable for this engine. The engine will attempt to
+        integrate it as seamlessly as possible into the host application. If the engine does 
+        not specifically implement panel support, the window will be shown as a modeless
+        dialog instead.
         
-        :param title: The title text to appear in the panel label
+        :param title: The title of the window
         :param bundle: The app, engine or framework object that is associated with this window
-        :param widget_class: The class of the UI to be constructed. This must derive from QWidget and
-                             the constructor cannot take any arguments.
+        :param widget_class: The class of the UI to be constructed. This must derive from QWidget.
         
-        :returns: the created widget_class instance
+        Additional parameters specified will be passed through to the widget_class constructor.
+
+        :returns: (a standard QT dialog status return code, the created widget_class instance)
         """
         # note! not using the import as this confuses nuke's calback system
         # (several of the key scene callbacks are in the main init file...)
         import tk_nuke
-                
-        # now parent it. Try to parent it next to the properties panel
-        # if possible, because this is typically laid out like a classic
-        # panel UI - narrow and tall. If not possible, then fall back on other
-        # built-in objects and use these to find a location.
+        
+        # now look for the tank._panel_callback_from_pane_menu property
+        # if this exists, that is an indication that this call comes from 
+        # within a nuke pane menu (see menu generation module). In this case,
+        # the correct pane to place the UI in is picked up automatically
+        # by the addToPane() method. 
         #
-        # Note: on nuke versions prior to 9, a pane is required for the UI to appear.
-        
-        built_in_tabs = ["Properties.1",   # properties dialog - best choice to parent next to
-                         "DAG.1",          # node graph, so usually wide not tall
-                         "DopeSheet.1",    # dope sheet, usually wide, not tall
-                         "Viewer.1",       # viewer
-                         "Toolbar.1"]      # nodes toolbar
-        
-        existing_pane = None
-        for tab_name in built_in_tabs:
-            self.log_debug("Parenting panel - looking for %s tab..." % tab_name)
-            existing_pane = nuke.getPaneFor(tab_name)
-            if existing_pane:
-                break
-
+        # When this is not called from within a panel, we instead need to 
+        # find a suitable place to mount it. 
+        try:
+            pane_callback = tank._panel_callback_from_pane_menu
+        except AttributeError:
+            pane_callback = False
+                
         # create the panel
         panel_id = self._generate_panel_id(title, bundle)
-        panel_widget = tk_nuke.NukePanelWidget(title, panel_id, widget_class)
-
-        if existing_pane is None and nuke.env.get("NukeVersionMajor") < 9:
-            # couldn't find anything to parent next to!
-            # nuke 9 will automatically handle this situation
-            # but older versions will not show the UI!
-            # tell the user that they need to have the property
-            # pane present in the UI
-            nuke.message("Cannot find any of the standard Nuke UI panels to anchor against. "
-                         "Please add a Properties Bin to your Nuke UI layout and try again.")
-            return None
-
-        # ok all good - we are running nuke 9 and/or 
-        # have existing panes to parent against.
-        panel_widget.addToPane(existing_pane)
+        panel_widget = tk_nuke.NukePanelWidget(title, panel_id, widget_class, *args, **kwargs)
+        
+        if pane_callback:
+            # add it to the current pane
+            panel_widget.addToPane()
+            
+        else:
+        
+            # parent it. Try to parent it next to the properties panel
+            # if possible, because this is typically laid out like a classic
+            # panel UI - narrow and tall. If not possible, then fall back on other
+            # built-in objects and use these to find a location.
+            #
+            # Note: on nuke versions prior to 9, a pane is required for the UI to appear.
+            
+            built_in_tabs = ["Properties.1",   # properties dialog - best choice to parent next to
+                             "DAG.1",          # node graph, so usually wide not tall
+                             "DopeSheet.1",    # dope sheet, usually wide, not tall
+                             "Viewer.1",       # viewer
+                             "Toolbar.1"]      # nodes toolbar
+            
+            existing_pane = None
+            for tab_name in built_in_tabs:
+                self.log_debug("Parenting panel - looking for %s tab..." % tab_name)
+                existing_pane = nuke.getPaneFor(tab_name)
+                if existing_pane:
+                    break
     
+            if existing_pane is None and nuke.env.get("NukeVersionMajor") < 9:
+                # couldn't find anything to parent next to!
+                # nuke 9 will automatically handle this situation
+                # but older versions will not show the UI!
+                # tell the user that they need to have the property
+                # pane present in the UI
+                nuke.message("Cannot find any of the standard Nuke UI panels to anchor against. "
+                             "Please add a Properties Bin to your Nuke UI layout and try again.")
+                return None
+    
+            # ok all good - we are running nuke 9 and/or 
+            # have existing panes to parent against.
+            panel_widget.addToPane(existing_pane)
+        
         # lastly, return the instantiated widget
         return panel_widget
         

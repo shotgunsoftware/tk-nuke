@@ -48,9 +48,6 @@ class MenuGenerator(object):
         # create main Shotgun menu
         menu_handle = nuke.menu("Nuke").addMenu(self._menu_name)
         
-        # create Pane menu 
-        pane_menu = nuke.menu("Pane").addMenu(self._menu_name, icon=self._shotgun_logo)
-        
         # create tank side menu
         node_menu_handle = nuke.menu("Nodes").addMenu(self._menu_name, icon=self._shotgun_logo)
 
@@ -59,7 +56,6 @@ class MenuGenerator(object):
         # where the engine didn't clean up after itself properly
         menu_handle.clearMenu()
         node_menu_handle.clearMenu()
-        pane_menu.clearMenu()
         
         # now add the context item on top of the main menu
         self._context_menu = self._add_context_menu(menu_handle)
@@ -117,7 +113,10 @@ class MenuGenerator(object):
             # in addition to being added to the normal menu above,
             # panel menu items are also added to the pane menu
             if cmd.get_type() == "panel":
-                cmd.add_command_to_menu(pane_menu)
+                # first make sure the Shotgun pane menu exists
+                pane_menu = nuke.menu("Pane").addMenu("Shotgun", icon=self._shotgun_logo)
+                # now set up the callback
+                cmd.add_command_to_pane_menu(pane_menu)
         
         # now add all apps to main menu
         self._add_app_menu(commands_by_app, menu_handle)
@@ -296,6 +295,30 @@ class AppCommand(object):
         returns the command type. Returns node, custom_pane or default
         """
         return self.properties.get("type", "default")
+        
+    def _pane_menu_callback_wrapper(self, callback):
+        """
+        Callback for pane menu commands
+        """
+        setattr(tank, "_panel_callback_from_pane_menu", True)
+        try:
+            callback()
+        finally:    
+            setattr(tank, "_panel_callback_from_pane_menu", False)
+        
+    def add_command_to_pane_menu(self, menu):
+        """
+        Add a command to the pane menu
+        """
+        # now wrap the command callback in a wrapper (see above)
+        # which sets a global state variable. This is detected
+        # by the show_panel so that it can correctly establish 
+        # the flow for when a pane menu is clicked and you want
+        # the potential new panel to open in that window.
+        cb = lambda: self._pane_menu_callback_wrapper(self.callback)
+        icon = self.properties.get("icon")
+        menu.addCommand(self.name, cb, icon=icon)
+        
         
     def add_command_to_menu(self, menu):
         """
