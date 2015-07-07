@@ -19,10 +19,7 @@ import nuke
 import os
 import unicodedata
 import nukescripts.openurl
-
 import nukescripts
-
-
 
 
 class MenuGenerator(object):
@@ -249,7 +246,6 @@ class AppCommand(object):
         self.callback = command_dict["callback"]
         self.favourite = False
         
-        
     def get_app_name(self):
         """
         Returns the name of the app that this command belongs to
@@ -273,7 +269,6 @@ class AppCommand(object):
             if app_instance_obj == app_instance:
                 # found our app!
                 return app_instance_name
-            
         return None
         
     def get_documentation_url_str(self):
@@ -300,6 +295,14 @@ class AppCommand(object):
         """
         Callback for pane menu commands
         """
+        # this is a wrapped menu callback for whenever an item is clicked inside
+        # a pane menu. The wrapper sets and unsets a global 
+        # tank._panel_callback_from_pane_menu flag which can be picked up
+        # by engine methods who need to know if the callback request came from
+        # a pane menu or not.
+        # 
+        # the use case for this is when a panel needs to be opened and it 
+        # need to be opened in the same UI area as the pane.
         setattr(tank, "_panel_callback_from_pane_menu", True)
         try:
             callback()
@@ -309,6 +312,8 @@ class AppCommand(object):
     def add_command_to_pane_menu(self, menu):
         """
         Add a command to the pane menu
+        
+        :param menu: Menu object to add the new item to
         """
         # now wrap the command callback in a wrapper (see above)
         # which sets a global state variable. This is detected
@@ -323,6 +328,8 @@ class AppCommand(object):
     def add_command_to_menu(self, menu):
         """
         Adds an app command to the menu
+        
+        :param menu: Menu object to add the new item to
         """
         # std shotgun menu
         icon = self.properties.get("icon")
@@ -332,16 +339,3 @@ class AppCommand(object):
         else:
             menu.addCommand(self.name, self.callback, icon=icon) 
 
-
-
-
-
-
-
-
-
-
-
-
-
-    
