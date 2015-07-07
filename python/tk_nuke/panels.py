@@ -25,10 +25,11 @@ class NukePanelWidget(nukescripts.panels.PythonPanel):
     Wrapper class that sets up a panel widget in Nuke.
     This panel widget wraps around a QT widget.
     """
-    def __init__(self, dialog_name, panel_id, widget_class, *args, **kwargs):
+    def __init__(self, bundle, dialog_name, panel_id, widget_class, *args, **kwargs):
         """
         Constructor.
         
+        :param bundle: The app/engine/fraemwork that the dialog belongs to
         :param dialog_name: Name to be displayed on the panel tab
         :param panel_id: Unique id for this panel
         :param widget_class: The class to be instantiated. Its constructor 
@@ -47,6 +48,7 @@ class NukePanelWidget(nukescripts.panels.PythonPanel):
         setattr(sgtk, "_current_panel_id", panel_id)
         setattr(sgtk, "_current_panel_args", args)
         setattr(sgtk, "_current_panel_kwargs", kwargs)
+        setattr(sgtk, "_current_panel_bundle", bundle)
 
         # Run parent constructor
         nukescripts.panels.PythonPanel.__init__(self, dialog_name, panel_id)
@@ -77,8 +79,16 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
         panel_id = sgtk._current_panel_id
         args = sgtk._current_panel_args
         kwargs = sgtk._current_panel_kwargs
+        bundle = sgtk._current_panel_bundle
         
         PanelClass = sgtk._current_panel_class
+        
+        # deallocate global tmp variables
+        sgtk._current_panel_id = None
+        sgtk._current_panel_args = None
+        sgtk._current_panel_kwargs = None
+        sgtk._current_panel_bundle = None
+        sgtk._current_panel_class = None
         
         # set up this object and create a layout
         self.setObjectName("%s.wrapper" % panel_id)
@@ -116,6 +126,9 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
             # keep a python side reference
             # and also parent it to this widget
             self.toolkit_widget = PanelClass(*args, **kwargs)
+            
+            # now let the core apply any external stylesheets
+            bundle.engine._apply_external_styleshet(bundle, self.toolkit_widget)
             
         else:
             # there is already a dialog. Re-parent it to this

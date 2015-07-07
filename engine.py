@@ -254,7 +254,8 @@ class NukeEngine(tank.platform.Engine):
             # object present
             panel = self._panels[panel_id]
             # create a new panel widget
-            panel_widget = tk_nuke.NukePanelWidget(panel["title"], 
+            panel_widget = tk_nuke.NukePanelWidget(panel["bundle"],
+                                                   panel["title"], 
                                                    panel_id, 
                                                    panel["widget_class"],
                                                    *panel["args"],
@@ -343,7 +344,7 @@ class NukeEngine(tank.platform.Engine):
                 
         # create the panel
         panel_id = self._generate_panel_id(title, bundle)
-        panel_widget = tk_nuke.NukePanelWidget(title, panel_id, widget_class, *args, **kwargs)
+        panel_widget = tk_nuke.NukePanelWidget(bundle, title, panel_id, widget_class, *args, **kwargs)
         
         if pane_callback:
             # add it to the current pane
