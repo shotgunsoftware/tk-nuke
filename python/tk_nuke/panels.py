@@ -206,15 +206,22 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
 
 class CloseEventFilter(QtCore.QObject):
     """
-    Event filter which emits a resized signal whenever
+    Event filter which emits a parent_closed signal whenever
     the monitored widget closes.
     """
     parent_closed = QtCore.Signal()
      
     def eventFilter(self,  obj,  event):
+        """
+        QT Event filter callback
+        
+        :param obj: The object where the event originated from
+        :param event: The actual event object
+        :returns: True if event was consumed, False if not
+        """        
         # peek at the message
         if event.type() == QtCore.QEvent.Close:
-            # re-broadcast any resize events
+            # re-broadcast any close events
             self.parent_closed.emit()
         # pass it on!
         return False
