@@ -23,7 +23,6 @@ import unicodedata
 import nukescripts
 from tank_vendor import yaml
 
-
 class NukeEngine(tank.platform.Engine):
 
     ##########################################################################################
@@ -240,12 +239,10 @@ class NukeEngine(tank.platform.Engine):
         at UI profile switch.
         
         :param panel_id: Unique identifier string for the panel
-        :returns: panel widget object 
         """
         # note: Nuke silently consumes any exceptions within the callback system
         # so add a catch all exception handler around this to make sure
         # we properly log any output 
-        panel_widget = None
         try:
             # note! not using the import as this confuses nuke's calback system 
             import tk_nuke
@@ -266,9 +263,8 @@ class NukeEngine(tank.platform.Engine):
             panel_widget.addToPane()
             
         except Exception, e:
+            # catch-em-all here because otherwise Nuke will just silently swallow them
             self.log_exception("Could not generate panel UI for panel id '%s'" % panel_id)
-        
-        return panel_widget
         
         
     def register_panel(self, title, bundle, widget_class, *args, **kwargs):
@@ -327,8 +323,6 @@ class NukeEngine(tank.platform.Engine):
         :param widget_class: The class of the UI to be constructed. This must derive from QWidget.
         
         Additional parameters specified will be passed through to the widget_class constructor.
-
-        :returns: (a standard QT dialog status return code, the created widget_class instance)
         """
         # note! not using the import as this confuses nuke's calback system
         # (several of the key scene callbacks are in the main init file...)
@@ -385,15 +379,11 @@ class NukeEngine(tank.platform.Engine):
                 # pane present in the UI
                 nuke.message("Cannot find any of the standard Nuke UI panels to anchor against. "
                              "Please add a Properties Bin to your Nuke UI layout and try again.")
-                return None
+                return
     
             # ok all good - we are running nuke 9 and/or 
             # have existing panes to parent against.
-            panel_widget.addToPane(existing_pane)
-        
-        # lastly, return the instantiated widget
-        return panel_widget
-        
+            panel_widget.addToPane(existing_pane)        
         
     
     ##########################################################################################

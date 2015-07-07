@@ -115,7 +115,7 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
             # create a new dialog
             # keep a python side reference
             # and also parent it to this widget
-            self.toolkit_widget = PanelClass(self, *args, **kwargs)
+            self.toolkit_widget = PanelClass(*args, **kwargs)
             
         else:
             # there is already a dialog. Re-parent it to this
