@@ -263,6 +263,8 @@ class NukeEngine(tank.platform.Engine):
             # and add it to the current pane context (nuke handles this state)
             panel_widget.addToPane()
             
+            return panel_widget
+            
         except Exception, e:
             # catch-em-all here because otherwise Nuke will just silently swallow them
             self.log_exception("Could not generate panel UI for panel id '%s'" % panel_id)
