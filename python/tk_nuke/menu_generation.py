@@ -291,23 +291,25 @@ class AppCommand(object):
         """
         return self.properties.get("type", "default")
         
-    def _pane_menu_callback_wrapper(self, callback):
+    def _non_pane_menu_callback_wrapper(self, callback):
         """
-        Callback for pane menu commands
+        Callback for all non pane menu commands
         """
-        # this is a wrapped menu callback for whenever an item is clicked inside
-        # a pane menu. The wrapper sets and unsets a global 
-        # tank._panel_callback_from_pane_menu flag which can be picked up
-        # by engine methods who need to know if the callback request came from
-        # a pane menu or not.
-        # 
-        # the use case for this is when a panel needs to be opened and it 
-        # need to be opened in the same UI area as the pane.
-        setattr(tank, "_panel_callback_from_pane_menu", True)
+        # this is a wrapped menu callback for whenever an item is clicked
+        # in a menu which isn't the standard nuke pane menu. This ie because 
+        # the standard pane menu in nuke provides nuke with an implicit state
+        # so that nuke knows where to put the panel when it is created.
+        # if the command is called from a non-pane menu however, this implicity
+        # state does not exist and needs to be explicity defined.
+        #
+        # for this purpose, we set a global flag to hint to the panelling 
+        # logic to run its special window logic in this case.
+         
+        setattr(tank, "_callback_from_non_pane_menu", True)
         try:
             callback()
         finally:    
-            setattr(tank, "_panel_callback_from_pane_menu", False)
+            setattr(tank, "_callback_from_non_pane_menu", False)
         
     def add_command_to_pane_menu(self, menu):
         """
@@ -315,15 +317,8 @@ class AppCommand(object):
         
         :param menu: Menu object to add the new item to
         """
-        # now wrap the command callback in a wrapper (see above)
-        # which sets a global state variable. This is detected
-        # by the show_panel so that it can correctly establish 
-        # the flow for when a pane menu is clicked and you want
-        # the potential new panel to open in that window.
-        cb = lambda: self._pane_menu_callback_wrapper(self.callback)
         icon = self.properties.get("icon")
-        menu.addCommand(self.name, cb, icon=icon)
-        
+        menu.addCommand(self.name, self.callback, icon=icon)
         
     def add_command_to_menu(self, menu):
         """
@@ -334,8 +329,16 @@ class AppCommand(object):
         # std shotgun menu
         icon = self.properties.get("icon")
         hotkey = self.properties.get("hotkey")
+        
+        # now wrap the command callback in a wrapper (see above)
+        # which sets a global state variable. This is detected
+        # by the show_panel so that it can correctly establish 
+        # the flow for when a pane menu is clicked and you want
+        # the potential new panel to open in that window.
+        cb = lambda: self._non_pane_menu_callback_wrapper(self.callback)
+
         if hotkey:
-            menu.addCommand(self.name, self.callback, hotkey, icon=icon) 
+            menu.addCommand(self.name, cb, hotkey, icon=icon) 
         else:
-            menu.addCommand(self.name, self.callback, icon=icon) 
+            menu.addCommand(self.name, cb, icon=icon) 
 

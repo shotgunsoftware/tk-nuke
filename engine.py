@@ -139,6 +139,16 @@ class NukeEngine(tank.platform.Engine):
             # initialize favourite dirs in the file open/file save dialogs
             self.__setup_favorite_dirs()
             
+            # register all panels with nuke's callback system
+            # this will be used at nuke startup in order
+            # for nuke to be able to restore panels 
+            # automatically. For all panels that exist as
+            # part of saved layouts, nuke will look through
+            # a global list of registered panels, try to locate
+            # the one it needs and then run the callback         
+            for (panel_id, panel_dict) in self.panels.iteritems():
+                nukescripts.panels.registerPanel(panel_id, panel_dict["callback"])
+            
         # iterate over all apps, if there is a gizmo folder, add it to nuke path
         for app in self.apps.values():
             # add gizmo to nuke path
@@ -211,110 +221,8 @@ class NukeEngine(tank.platform.Engine):
     
     ##########################################################################################
     # panel interfaces
-    
-    def _generate_panel_id(self, dialog_name, bundle):
-        """
-        Given a dialog name and a bundle, generate a Nuke panel id.
-        This panel id is used by Nuke to identify and persist the panel.
-        
-        This will return something like 'shotgun_tk_multi_loader2_main'
-        
-        :param dialog_name: An identifier string to identify the dialog to be hosted by the panel
-        :param bundle: The bundle (e.g. app) object to be associated with the panel
-        :returns: a unique identifier string 
-        """
-        panel_id = "shotgun_%s_%s" % (bundle.name, dialog_name)
-        # replace any non-alphanumeric chars with underscores
-        panel_id = re.sub("\W", "_", panel_id)
-        panel_id = panel_id.lower()
-        self.log_debug("Unique panel id for %s %s -> %s" % (bundle, dialog_name, panel_id))
-        return panel_id 
-        
-    def _panel_factory_callback(self, panel_id):
-        """
-        Given a panel id, generate a panel UI.
-        
-        This method is intended to be executed by nuke itself as a callback
-        that runs when panels are being restored, either at startup or 
-        at UI profile switch.
-        
-        :param panel_id: Unique identifier string for the panel
-        """
-        # note: Nuke silently consumes any exceptions within the callback system
-        # so add a catch all exception handler around this to make sure
-        # we properly log any output 
-        try:
-            # note! not using the import as this confuses nuke's calback system 
-            import tk_nuke
-        
-            self.log_debug("Panel Factory Callback: Generating UI for panel id '%s'." % panel_id)
-            
-            # the callback is registered at the same time as the panel callback,
-            # so we can assume that our _panels lookup data structure has a matching
-            # object present
-            panel = self._panels[panel_id]
-            # create a new panel widget
-            panel_widget = tk_nuke.NukePanelWidget(panel["bundle"],
-                                                   panel["title"], 
-                                                   panel_id, 
-                                                   panel["widget_class"],
-                                                   *panel["args"],
-                                                   **panel["kwargs"])
-            # and add it to the current pane context (nuke handles this state)
-            panel_widget.addToPane()
-            
-            return panel_widget
-            
-        except Exception, e:
-            # catch-em-all here because otherwise Nuke will just silently swallow them
-            self.log_exception("Could not generate panel UI for panel id '%s'" % panel_id)
-        
-        
-    def register_panel(self, title, bundle, widget_class, *args, **kwargs):
-        """
-        Similar to register_command, but instead of registering a menu item in the form of a
-        command, this method registers a UI panel. The arguments passed to this method is the
-        same as for show_panel().
-        
-        Just like with the register_command() method, panel registration should be executed 
-        from within the init phase of the app. Once a panel has been registered, it is possible
-        for the engine to correctly restore panel UIs that persist between sessions. 
-        
-        Not all engines support this feature, but in for example Nuke, a panel can be saved in 
-        a saved layout. Apps wanting to be able to take advantage of the persistance given by
-        these saved layouts will need to call register_panel as part of their init_app phase.
-        
-        In order to show or focus on a panel, use the show_panel() method instead.
-        
-        :param title: The title of the window
-        :param bundle: The app, engine or framework object that is associated with this panel
-        :param widget_class: The class of the UI to be constructed. This must derive from QWidget.
-        
-        Additional parameters specified will be passed through to the widget_class constructor.
-        """
-        # generate unique identifier
-        panel_id = self._generate_panel_id(title, bundle)
-        
-        # track registered panels
-        self.log_debug("Registering panel '%s'" % panel_id)
-        self._panels[panel_id] = {"title": title, 
-                                  "bundle": bundle, 
-                                  "widget_class": widget_class,
-                                  "args": args,
-                                  "kwargs": kwargs}
 
-        # tell nuke how to create this panel
-        # this will be used at nuke startup in order
-        # for nuke to be able to restore panels 
-        # automatically. For all panels that exist as
-        # part of saved layouts, nuke will look through
-        # a global list of registered panels, try to locate
-        # the one it needs and then run the callback         
-        fn = lambda : self._panel_factory_callback(panel_id)
-        nukescripts.panels.registerPanel(panel_id, fn)
-                   
-        
-    def show_panel(self, title, bundle, widget_class, *args, **kwargs):
+    def show_panel(self, panel_id, title, bundle, widget_class, *args, **kwargs):
         """
         Shows a panel in a way suitable for this engine. The engine will attempt to
         integrate it as seamlessly as possible into the host application. If the engine does 
@@ -331,29 +239,21 @@ class NukeEngine(tank.platform.Engine):
         # (several of the key scene callbacks are in the main init file...)
         import tk_nuke
         
-        # now look for the tank._panel_callback_from_pane_menu property
+        # now look for the tank._callback_from_non_pane_menu property
         # if this exists, that is an indication that this call comes from 
-        # within a nuke pane menu (see menu generation module). In this case,
-        # the correct pane to place the UI in is picked up automatically
-        # by the addToPane() method. 
+        # a non-pane menu, like the Shotgun menu. 
         #
-        # When this is not called from within a panel, we instead need to 
-        # find a suitable place to mount it. 
+        # In this case, we need to explicitly specify where to host the window
+        #
         try:
-            pane_callback = tank._panel_callback_from_pane_menu
+            non_pane_callback = tank._callback_from_non_pane_menu
         except AttributeError:
-            pane_callback = False
+            non_pane_callback = False
                 
         # create the panel
-        panel_id = self._generate_panel_id(title, bundle)
         panel_widget = tk_nuke.NukePanelWidget(bundle, title, panel_id, widget_class, *args, **kwargs)
         
-        if pane_callback:
-            # add it to the current pane
-            panel_widget.addToPane()
-            
-        else:
-        
+        if non_pane_callback:
             # parent it. Try to parent it next to the properties panel
             # if possible, because this is typically laid out like a classic
             # panel UI - narrow and tall. If not possible, then fall back on other
@@ -386,7 +286,15 @@ class NukeEngine(tank.platform.Engine):
     
             # ok all good - we are running nuke 9 and/or 
             # have existing panes to parent against.
-            panel_widget.addToPane(existing_pane)        
+            panel_widget.addToPane(existing_pane)   
+        
+        else:
+            # add it to the current pane
+            panel_widget.addToPane()
+
+        
+        # return the created widget
+        return panel_widget     
         
     
     ##########################################################################################
