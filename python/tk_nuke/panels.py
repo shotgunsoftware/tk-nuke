@@ -36,14 +36,18 @@ class NukePanelWidget(nukescripts.panels.PythonPanel):
                              should not take any parameters.
         """
         
-        # first, store the widget class on the sgtk object
-        # and key it by id. This is because we then pass the class
-        # name as a string into Nuke, and we need a way to uniquely refer
-        # back to the class object.
+        # create a reference to the ToolkitWidgetWrapper class so that 
+        # we can refer to it safely using a single line of fully qualified
+        # python to return it:
+        # 
+        # __import__('sgtk')._panel_wrapper_class
         #
-        # Once this attribute is set, it means that you can access the
-        # class from sgtk.panel_id_name 
+        # This necessary for the panel creation in Nuke
         setattr(sgtk, "_panel_wrapper_class", ToolkitWidgetWrapper)
+        
+        # store various parameters on the sgtk object
+        # so that we can pass it to the constructor
+        # of the ToolkitWidgetWrapper() safely
         setattr(sgtk, "_current_panel_class", widget_class)
         setattr(sgtk, "_current_panel_id", panel_id)
         setattr(sgtk, "_current_panel_args", args)
@@ -149,27 +153,30 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
         # now, the close widget logic does not propagate correctly
         # down to the child widgets. When someone closes a tab or pane,
         # QStackedWidget::removeWidget is being called, which merely takes
-        # our widget out of the layout and hides it. So it will stay resindent
+        # our widget out of the layout and hides it. So it will stay resident
         # in memory which is not what we want. Instead, it should close properly
         # if someone decides to close its tab. 
         #
         # We can accomplish this by installing a close event listener on the 
         # tab itself and have that call our widget so that we can close ourselves.
         # note that we search for the tab widget by unique id rather than going
-        # up in the widget hierarchy, because the hiearchy has not been properly
+        # up in the widget hierarchy, because the hierarchy has not been properly
         # established at this point yet. 
         for widget in QtGui.QApplication.allWidgets():
             if widget.objectName() == panel_id:
                 filter = CloseEventFilter(widget)
                 filter.parent_closed.connect(self._on_parent_closed)
                 widget.installEventFilter(filter)
-                bundle.log_debug("Installed close-event filter watcher on tab %s" % widget)     
+                bundle.log_debug("Installed close-event filter watcher on tab %s" % widget)
+                break     
         
     def _find_panel_tab(self, widget):
         """
         Helper method.
         Given a tk panel widget, traverse upwards in the hierarchy and
-        attempt to locate the tab widget. 
+        attempt to locate the tab widget. In the case for some reason
+        the object hiearchy is not as we expect it to be (caused by an
+        incomplete or inconsistent state restore in Nuke), None is returned.
         
         :param widget: widget to start from
         :returns: QWidget instance or None if not found

@@ -35,9 +35,6 @@ class NukeEngine(tank.platform.Engine):
         
         self.log_debug("%s: Initializing..." % self)
 
-        # track the panels that apps have registered with the engine 
-        self._panels = {}
-
         # now check that there is a location on disk which corresponds to the context
         if self.context.project is None:
             # must have at least a project in the context to even start!
