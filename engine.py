@@ -221,11 +221,17 @@ class NukeEngine(tank.platform.Engine):
 
     def show_panel(self, panel_id, title, bundle, widget_class, *args, **kwargs):
         """
-        Shows a panel in a way suitable for this engine. The engine will attempt to
-        integrate it as seamlessly as possible into the host application. If the engine does 
-        not specifically implement panel support, the window will be shown as a modeless
-        dialog instead.
+        Shows a panel in Nuke. If the panel already exists, the previous panel is swapped out
+        and replaced with a new one. In this case, the contents of the panel (e.g. the toolkit app)
+        is not destroyed but carried over to the new panel.
         
+        If this is being called from a non-pane menu in Nuke, there isn't a well established logic
+        for where the panel should be mounted. In this case, the code will look for suitable
+        areas in the UI and try to panel it there, starting by looking for the property pane and
+        trying to dock panels next to this.
+        
+        :param panel_id: Unique id to associate with the panel - normally this is a string obtained
+                         via the register_panel() call.
         :param title: The title of the window
         :param bundle: The app, engine or framework object that is associated with this window
         :param widget_class: The class of the UI to be constructed. This must derive from QWidget.
@@ -236,22 +242,15 @@ class NukeEngine(tank.platform.Engine):
         # (several of the key scene callbacks are in the main init file...)
         import tk_nuke
         
-        # now look for the tank._callback_from_non_pane_menu property
-        # if this exists, that is an indication that this call comes from 
-        # a non-pane menu, like the Shotgun menu. 
-        #
-        # In this case, we need to explicitly specify where to host the window
-        #
-        try:
-            non_pane_callback = tank._callback_from_non_pane_menu
-        except AttributeError:
-            non_pane_callback = False
-                
         # create the panel
         panel_widget = tk_nuke.NukePanelWidget(bundle, title, panel_id, widget_class, *args, **kwargs)
         
-        if non_pane_callback:
-            # parent it. Try to parent it next to the properties panel
+        if hasattr(tank, "_callback_from_non_pane_menu"):
+            # this global flag is set by the menu callback system
+            # to indicate that the click comes from a non-pane context.
+            # 
+            # In this case, we have to figure out where the pane should be shown.
+            # Try to parent it next to the properties panel
             # if possible, because this is typically laid out like a classic
             # panel UI - narrow and tall. If not possible, then fall back on other
             # built-in objects and use these to find a location.
@@ -286,6 +285,10 @@ class NukeEngine(tank.platform.Engine):
             panel_widget.addToPane(existing_pane)   
         
         else:
+            # we are either calling this from a pane restore
+            # callback or from the pane menu in Nuke. In both
+            # these cases, the current pane is already established
+            # by the system, so just add our widget.
             # add it to the current pane
             panel_widget.addToPane()
 

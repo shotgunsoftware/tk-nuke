@@ -29,7 +29,7 @@ class NukePanelWidget(nukescripts.panels.PythonPanel):
         """
         Constructor.
         
-        :param bundle: The app/engine/fraemwork that the dialog belongs to
+        :param bundle: The app/engine/framework that the dialog belongs to
         :param dialog_name: Name to be displayed on the panel tab
         :param panel_id: Unique id for this panel
         :param widget_class: The class to be instantiated. Its constructor 
@@ -44,16 +44,11 @@ class NukePanelWidget(nukescripts.panels.PythonPanel):
         #
         # This necessary for the panel creation in Nuke
         setattr(sgtk, "_panel_wrapper_class", ToolkitWidgetWrapper)
+                
+        # we cannot pass parameters to the constructor of our wrapper class
+        # directly, so instead pass them via a special class method
+        ToolkitWidgetWrapper.set_init_parameters(widget_class, panel_id, bundle, args, kwargs)
         
-        # store various parameters on the sgtk object
-        # so that we can pass it to the constructor
-        # of the ToolkitWidgetWrapper() safely
-        setattr(sgtk, "_current_panel_class", widget_class)
-        setattr(sgtk, "_current_panel_id", panel_id)
-        setattr(sgtk, "_current_panel_args", args)
-        setattr(sgtk, "_current_panel_kwargs", kwargs)
-        setattr(sgtk, "_current_panel_bundle", bundle)
-
         # Run parent constructor
         nukescripts.panels.PythonPanel.__init__(self, dialog_name, panel_id)
         
@@ -69,6 +64,32 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
     """
     Wrapper widget which wraps around a tk app widget
     """
+    _init_widget_class = None
+    _init_panel_id = None
+    _init_kwargs = None
+    _init_bundle = None
+    _init_args = None
+    
+    @classmethod
+    def set_init_parameters(cls, widget_class, panel_id, bundle, args, kwargs):
+        """
+        Specify construction arguments. Because we don't have direct access to 
+        the arg list of the constructor, initialization happens though this mechanism
+        instead. See the code in the NukePanelWidget above for an example of how this
+        is being used and why.
+        
+        :param widget_class: Class to wrap
+        :param panel_id: Unique panel id
+        :param bundle: Bundle that the class belongs to
+        :param args: Args to pass to class constructor
+        :param kwargs: Args to pass to class constructor
+        """
+        cls._init_widget_class = widget_class
+        cls._init_panel_id = panel_id
+        cls._init_bundle = bundle
+        cls._init_args = args
+        cls._init_kwargs = kwargs
+    
     
     def __init__(self):
         """
@@ -78,23 +99,20 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
         # first, call the base class and let it do its thing.
         QtGui.QWidget.__init__(self)
         
-        # pick up members from the global sgtk namespace
-        # where it was set by the NukePanelWidget code above
-        panel_id = sgtk._current_panel_id
-        args = sgtk._current_panel_args
-        kwargs = sgtk._current_panel_kwargs
-        bundle = sgtk._current_panel_bundle
+        # pick up the rest of the construction parameters
+        # these are set via the class emthod set_init_parameters() 
+        # because we cannot control the constructor args
+        PanelClass = self._init_widget_class
         
-        PanelClass = sgtk._current_panel_class
+        panel_id = self._init_panel_id
+        args = self._init_args
+        kwargs = self._init_kwargs
+        bundle = self._init_bundle
+        
+        # and now clear the init parameters
+        self.set_init_parameters(None, None, None, None, None)
         
         bundle.log_debug("Creating panel '%s' to host %s" % (panel_id, PanelClass))
-        
-        # deallocate global tmp variables
-        sgtk._current_panel_id = None
-        sgtk._current_panel_args = None
-        sgtk._current_panel_kwargs = None
-        sgtk._current_panel_bundle = None
-        sgtk._current_panel_class = None
         
         # set up this object and create a layout
         self.setObjectName("%s.wrapper" % panel_id)

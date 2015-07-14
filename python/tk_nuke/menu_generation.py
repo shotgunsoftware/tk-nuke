@@ -304,12 +304,16 @@ class AppCommand(object):
         #
         # for this purpose, we set a global flag to hint to the panelling 
         # logic to run its special window logic in this case.
-         
+        #
+        # note that because of nuke not using the import_module()
+        # system, it's hard to obtain a reference to the engine object
+        # right here - this is why we set a flag on the main tank
+        # object like this.
         setattr(tank, "_callback_from_non_pane_menu", True)
         try:
             callback()
         finally:    
-            setattr(tank, "_callback_from_non_pane_menu", False)
+            delattr(tank, "_callback_from_non_pane_menu")
         
     def add_command_to_pane_menu(self, menu):
         """
