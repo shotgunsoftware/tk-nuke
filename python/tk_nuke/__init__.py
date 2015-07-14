@@ -1,4 +1,4 @@
-# Copyright (c) 2013 Shotgun Software Inc.
+# Copyright (c) 2015 Shotgun Software Inc.
 # 
 # CONFIDENTIAL AND PROPRIETARY
 # 
@@ -21,6 +21,7 @@ import traceback
 from tank_vendor import yaml
 
 from .menu_generation import MenuGenerator
+from .panels import NukePanelWidget
 
 
 def __show_tank_disabled_message(details):

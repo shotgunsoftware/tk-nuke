@@ -1,4 +1,4 @@
-# Copyright (c) 2013 Shotgun Software Inc.
+# Copyright (c) 2015 Shotgun Software Inc.
 # 
 # CONFIDENTIAL AND PROPRIETARY
 # 
@@ -19,10 +19,7 @@ import nuke
 import os
 import unicodedata
 import nukescripts.openurl
-
 import nukescripts
-
-
 
 
 class MenuGenerator(object):
@@ -35,7 +32,8 @@ class MenuGenerator(object):
         self._menu_name = menu_name
         self._dialogs = []
         engine_root_dir = self._engine.disk_location
-        self.tank_logo = os.path.abspath(os.path.join(engine_root_dir, "resources", "logo_gray_22.png"))
+        self._shotgun_logo = os.path.abspath(os.path.join(engine_root_dir, "resources", "sg_logo_80px.png"))
+        self._shotgun_logo_blue = os.path.abspath(os.path.join(engine_root_dir, "resources", "sg_logo_blue_32px.png"))
 
     ##########################################################################################
     # public methods
@@ -44,19 +42,17 @@ class MenuGenerator(object):
         """
         Render the entire Shotgun menu.
         """
-        # create main menu
-        nuke_menu = nuke.menu("Nuke")
-        menu_handle = nuke_menu.addMenu(self._menu_name) 
+        # create main Shotgun menu
+        menu_handle = nuke.menu("Nuke").addMenu(self._menu_name)
         
-        # the right click menu that is displayed when clicking on a pane 
-        self._pane_menu = nuke.menu("Pane") 
         # create tank side menu
-        node_menu_handle = nuke.menu("Nodes").addMenu(self._menu_name, icon=self.tank_logo)
+        node_menu_handle = nuke.menu("Nodes").addMenu(self._menu_name, icon=self._shotgun_logo)
 
-        # slight hack here but first ensure that the menu is empty
+        # slight hack here but first ensure that menus are empty
+        # this is to ensure we can recover from weird context switches
+        # where the engine didn't clean up after itself properly
         menu_handle.clearMenu()
-    
-    
+        node_menu_handle.clearMenu()
         
         # now add the context item on top of the main menu
         self._context_menu = self._add_context_menu(menu_handle)
@@ -65,7 +61,7 @@ class MenuGenerator(object):
         # now enumerate all items and create menu objects for them
         menu_items = []
         for (cmd_name, cmd_details) in self._engine.commands.items():
-             menu_items.append( AppCommand(cmd_name, cmd_details) )
+             menu_items.append(AppCommand(cmd_name, cmd_details))
 
         # sort list of commands in name order
         menu_items.sort(key=lambda x: x.name)
@@ -85,7 +81,6 @@ class MenuGenerator(object):
 
         menu_handle.addSeparator()
         
-        
         # now go through all of the menu items.
         # separate them out into various sections
         commands_by_app = {}
@@ -95,18 +90,9 @@ class MenuGenerator(object):
             if cmd.get_type() == "node":
                 # add to the node menu
                 # get icon if specified - default to tank icon if not specified
-                icon = cmd.properties.get("icon", self.tank_logo)
+                icon = cmd.properties.get("icon", self._shotgun_logo)
                 node_menu_handle.addCommand(cmd.name, cmd.callback, icon=icon)
-                
-            elif cmd.get_type() == "custom_pane":
-                # custom pane
-                # add to the std pane menu in nuke
-                icon = cmd.properties.get("icon")
-                self._pane_menu.addCommand(cmd.name, cmd.callback, icon=icon)
-                # also register the panel so that a panel restore command will
-                # properly register it on startup or panel profile restore.
-                nukescripts.registerPanel(cmd.properties.get("panel_id", "undefined"), cmd.callback)
-                
+                            
             elif cmd.get_type() == "context_menu":
                 # context menu!
                 cmd.add_command_to_menu(self._context_menu)
@@ -120,6 +106,14 @@ class MenuGenerator(object):
                 if not app_name in commands_by_app:
                     commands_by_app[app_name] = []
                 commands_by_app[app_name].append(cmd)
+
+            # in addition to being added to the normal menu above,
+            # panel menu items are also added to the pane menu
+            if cmd.get_type() == "panel":
+                # first make sure the Shotgun pane menu exists
+                pane_menu = nuke.menu("Pane").addMenu("Shotgun", icon=self._shotgun_logo)
+                # now set up the callback
+                cmd.add_command_to_pane_menu(pane_menu)
         
         # now add all apps to main menu
         self._add_app_menu(commands_by_app, menu_handle)
@@ -138,17 +132,16 @@ class MenuGenerator(object):
         # the menu by iteration (if you store the handle object, they may expire
         # and when you try to access them they underlying object is gone and things 
         # will crash). clearMenu() seems to work on both v6 and v7.
+        menus = ["Nuke", "Pane", "Nodes"]
 
-        # find our Shotgun menu and clear it
-        for mh in nuke.menu("Nuke").items():
-            if mh.name() == self._menu_name:
-                mh.clearMenu()
-         
-        # find the toolbar menu and clear it
-        for mh in nuke.menu("Pane").items():
-            if mh.name() == self._menu_name:
-                mh.clearMenu()        
-        
+        for menu in menus:
+            # find the menu and iterate over all items
+            for mh in nuke.menu(menu).items():
+                # look for the shotgun menu
+                if mh.name() == self._menu_name:
+                    # and clear it
+                    mh.clearMenu()
+
     ##########################################################################################
     # context menu and UI
 
@@ -161,7 +154,7 @@ class MenuGenerator(object):
         ctx_name = str(ctx)
         
         # create the menu object        
-        ctx_menu = menu_handle.addMenu(ctx_name)
+        ctx_menu = menu_handle.addMenu(ctx_name, icon=self._shotgun_logo_blue)
         ctx_menu.addCommand("Jump to Shotgun", self._jump_to_sg)
         ctx_menu.addCommand("Jump to File System", self._jump_to_fs)
         ctx_menu.addSeparator()
@@ -253,7 +246,6 @@ class AppCommand(object):
         self.callback = command_dict["callback"]
         self.favourite = False
         
-        
     def get_app_name(self):
         """
         Returns the name of the app that this command belongs to
@@ -277,7 +269,6 @@ class AppCommand(object):
             if app_instance_obj == app_instance:
                 # found our app!
                 return app_instance_name
-            
         return None
         
     def get_documentation_url_str(self):
@@ -300,28 +291,58 @@ class AppCommand(object):
         """
         return self.properties.get("type", "default")
         
+    def _non_pane_menu_callback_wrapper(self, callback):
+        """
+        Callback for all non pane menu commands
+        """
+        # this is a wrapped menu callback for whenever an item is clicked
+        # in a menu which isn't the standard nuke pane menu. This ie because 
+        # the standard pane menu in nuke provides nuke with an implicit state
+        # so that nuke knows where to put the panel when it is created.
+        # if the command is called from a non-pane menu however, this implicity
+        # state does not exist and needs to be explicity defined.
+        #
+        # for this purpose, we set a global flag to hint to the panelling 
+        # logic to run its special window logic in this case.
+        #
+        # note that because of nuke not using the import_module()
+        # system, it's hard to obtain a reference to the engine object
+        # right here - this is why we set a flag on the main tank
+        # object like this.
+        setattr(tank, "_callback_from_non_pane_menu", True)
+        try:
+            callback()
+        finally:    
+            delattr(tank, "_callback_from_non_pane_menu")
+        
+    def add_command_to_pane_menu(self, menu):
+        """
+        Add a command to the pane menu
+        
+        :param menu: Menu object to add the new item to
+        """
+        icon = self.properties.get("icon")
+        menu.addCommand(self.name, self.callback, icon=icon)
+        
     def add_command_to_menu(self, menu):
         """
         Adds an app command to the menu
+        
+        :param menu: Menu object to add the new item to
         """
         # std shotgun menu
         icon = self.properties.get("icon")
         hotkey = self.properties.get("hotkey")
+        
+        # now wrap the command callback in a wrapper (see above)
+        # which sets a global state variable. This is detected
+        # by the show_panel so that it can correctly establish 
+        # the flow for when a pane menu is clicked and you want
+        # the potential new panel to open in that window.
+        cb = lambda: self._non_pane_menu_callback_wrapper(self.callback)
+
         if hotkey:
-            menu.addCommand(self.name, self.callback, hotkey, icon=icon) 
+            menu.addCommand(self.name, cb, hotkey, icon=icon) 
         else:
-            menu.addCommand(self.name, self.callback, icon=icon) 
+            menu.addCommand(self.name, cb, icon=icon) 
 
-
-
-
-
-
-
-
-
-
-
-
-
-    

@@ -1,4 +1,4 @@
-# Copyright (c) 2013 Shotgun Software Inc.
+# Copyright (c) 2015 Shotgun Software Inc.
 # 
 # CONFIDENTIAL AND PROPRIETARY
 # 
@@ -10,7 +10,6 @@
 
 """
 A Nuke engine for Tank.
-
 """
 
 import tank
@@ -18,12 +17,11 @@ import platform
 import time
 import nuke
 import os
+import re
 import traceback
 import unicodedata
-from tank_vendor import yaml
-
 import nukescripts
-
+from tank_vendor import yaml
 
 class NukeEngine(tank.platform.Engine):
 
@@ -31,10 +29,9 @@ class NukeEngine(tank.platform.Engine):
     # init
     
     def init_engine(self):
-        
-        # note! not using the import as this confuses nuke's calback system
-        # (several of the key scene callbacks are in the main init file...)
-        import tk_nuke
+        """
+        Called at Engine startup
+        """
         
         self.log_debug("%s: Initializing..." % self)
 
@@ -103,7 +100,16 @@ class NukeEngine(tank.platform.Engine):
         # because nuke python does not have a __file__ attribute for that file
         local_python_path = os.path.abspath(os.path.join( os.path.dirname(__file__), "python"))
         os.environ["TANK_NUKE_ENGINE_MOD_PATH"] = local_python_path
-            
+        
+    
+    def pre_app_init(self):
+        """
+        Called at startup, but after QT has been initialized
+        """
+        # note! not using the import as this confuses nuke's calback system
+        # (several of the key scene callbacks are in the main init file...)
+        import tk_nuke
+        
         # make sure callbacks tracking the context switching are active
         tk_nuke.tank_ensure_callbacks_registered()
         
@@ -122,11 +128,23 @@ class NukeEngine(tank.platform.Engine):
             menu_name = "Shotgun"
             if self.get_setting("use_sgtk_as_menu_name", False):
                 menu_name = "Sgtk"
-
+            
+            # create menu
             self._menu_generator = tk_nuke.MenuGenerator(self, menu_name)
             self._menu_generator.create_menu()
             
+            # initialize favourite dirs in the file open/file save dialogs
             self.__setup_favorite_dirs()
+            
+            # register all panels with nuke's callback system
+            # this will be used at nuke startup in order
+            # for nuke to be able to restore panels 
+            # automatically. For all panels that exist as
+            # part of saved layouts, nuke will look through
+            # a global list of registered panels, try to locate
+            # the one it needs and then run the callback         
+            for (panel_id, panel_dict) in self.panels.iteritems():
+                nukescripts.panels.registerPanel(panel_id, panel_dict["callback"])
             
         # iterate over all apps, if there is a gizmo folder, add it to nuke path
         for app in self.apps.values():
@@ -141,13 +159,15 @@ class NukeEngine(tank.platform.Engine):
                 # new processes spawned from this one will have access too.
                 # (for example if you do file->open or file->new)
                 tank.util.append_path_to_env_var("NUKE_PATH", app_gizmo_folder)
-            
-        
-       
+                   
     def destroy_engine(self):
+        """
+        Runs when the engine is unloaded, e.g. typically at context switch.
+        """
         self.log_debug("%s: Destroying..." % self)
         if self._ui_enabled:
             self._menu_generator.destroy_menu()
+        
 
     @property
     def has_ui(self):
@@ -197,6 +217,87 @@ class NukeEngine(tank.platform.Engine):
         
     
     ##########################################################################################
+    # panel interfaces
+
+    def show_panel(self, panel_id, title, bundle, widget_class, *args, **kwargs):
+        """
+        Shows a panel in Nuke. If the panel already exists, the previous panel is swapped out
+        and replaced with a new one. In this case, the contents of the panel (e.g. the toolkit app)
+        is not destroyed but carried over to the new panel.
+        
+        If this is being called from a non-pane menu in Nuke, there isn't a well established logic
+        for where the panel should be mounted. In this case, the code will look for suitable
+        areas in the UI and try to panel it there, starting by looking for the property pane and
+        trying to dock panels next to this.
+        
+        :param panel_id: Unique id to associate with the panel - normally this is a string obtained
+                         via the register_panel() call.
+        :param title: The title of the window
+        :param bundle: The app, engine or framework object that is associated with this window
+        :param widget_class: The class of the UI to be constructed. This must derive from QWidget.
+        
+        Additional parameters specified will be passed through to the widget_class constructor.
+        """
+        # note! not using the import as this confuses nuke's calback system
+        # (several of the key scene callbacks are in the main init file...)
+        import tk_nuke
+        
+        # create the panel
+        panel_widget = tk_nuke.NukePanelWidget(bundle, title, panel_id, widget_class, *args, **kwargs)
+        
+        if hasattr(tank, "_callback_from_non_pane_menu"):
+            # this global flag is set by the menu callback system
+            # to indicate that the click comes from a non-pane context.
+            # 
+            # In this case, we have to figure out where the pane should be shown.
+            # Try to parent it next to the properties panel
+            # if possible, because this is typically laid out like a classic
+            # panel UI - narrow and tall. If not possible, then fall back on other
+            # built-in objects and use these to find a location.
+            #
+            # Note: on nuke versions prior to 9, a pane is required for the UI to appear.
+            
+            built_in_tabs = ["Properties.1",   # properties dialog - best choice to parent next to
+                             "DAG.1",          # node graph, so usually wide not tall
+                             "DopeSheet.1",    # dope sheet, usually wide, not tall
+                             "Viewer.1",       # viewer
+                             "Toolbar.1"]      # nodes toolbar
+            
+            existing_pane = None
+            for tab_name in built_in_tabs:
+                self.log_debug("Parenting panel - looking for %s tab..." % tab_name)
+                existing_pane = nuke.getPaneFor(tab_name)
+                if existing_pane:
+                    break
+    
+            if existing_pane is None and nuke.env.get("NukeVersionMajor") < 9:
+                # couldn't find anything to parent next to!
+                # nuke 9 will automatically handle this situation
+                # but older versions will not show the UI!
+                # tell the user that they need to have the property
+                # pane present in the UI
+                nuke.message("Cannot find any of the standard Nuke UI panels to anchor against. "
+                             "Please add a Properties Bin to your Nuke UI layout and try again.")
+                return
+    
+            # ok all good - we are running nuke 9 and/or 
+            # have existing panes to parent against.
+            panel_widget.addToPane(existing_pane)   
+        
+        else:
+            # we are either calling this from a pane restore
+            # callback or from the pane menu in Nuke. In both
+            # these cases, the current pane is already established
+            # by the system, so just add our widget.
+            # add it to the current pane
+            panel_widget.addToPane()
+
+        
+        # return the created widget
+        return panel_widget     
+        
+    
+    ##########################################################################################
     # managing favorite dirs            
     
     def __setup_favorite_dirs(self):
@@ -210,7 +311,7 @@ class NukeEngine(tank.platform.Engine):
         """
         
         engine_root_dir = self.disk_location
-        tank_logo_small = os.path.abspath(os.path.join(engine_root_dir, "resources", "logo_color_16.png"))
+        sg_logo = os.path.abspath(os.path.join(engine_root_dir, "resources", "sg_logo_80px.png"))
         
         # Ensure old favorites we used to use are removed. 
         supported_entity_types = ["Shot", "Sequence", "Scene", "Asset", "Project"]
@@ -239,7 +340,7 @@ class NukeEngine(tank.platform.Engine):
                 nuke.addFavoriteDir(dir_name, 
                                     directory=root_path,  
                                     type=(nuke.IMAGE|nuke.SCRIPT|nuke.GEO), 
-                                    icon=tank_logo_small, 
+                                    icon=sg_logo, 
                                     tooltip=root_path)
 
         # add favorites directories from the config
@@ -259,7 +360,7 @@ class NukeEngine(tank.platform.Engine):
             # add new directory 
             icon_path = favorite.get('icon')
             if not os.path.isfile(icon_path) or not os.path.exists(icon_path):
-                icon_path = tank_logo_small
+                icon_path = sg_logo
 
             nuke.addFavoriteDir(favorite['display_name'], 
                                 directory=path,  

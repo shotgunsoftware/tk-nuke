@@ -1,4 +1,4 @@
-# Copyright (c) 2013 Shotgun Software Inc.
+# Copyright (c) 2015 Shotgun Software Inc.
 # 
 # CONFIDENTIAL AND PROPRIETARY
 # 
@@ -85,5 +85,5 @@ description: "Shotgun Integration in Nuke"
 
 # Required minimum versions for this item to run
 requires_shotgun_version:
-requires_core_version: "v0.12.11"
+requires_core_version: "v0.16.15"
 
