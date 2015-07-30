@@ -126,9 +126,17 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
         # destroy the current container.
         # this will keep the widget around but destroy the nuke tab 
         # that it was sitting in.
+        
         self.toolkit_widget = None
+        
+        widget_name = "%s.widget" % panel_id
+        
         for widget in QtGui.QApplication.allWidgets():
-            if type(widget) == PanelClass:
+            
+            # if the widget has got the unique widget name,
+            # it's our previously created object!
+            if widget.objectName() == widget_name:
+                
                 # found an existing panel widget!
                 self.toolkit_widget = widget
                 
@@ -153,6 +161,10 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
             # keep a python side reference
             # and also parent it to this widget
             self.toolkit_widget = PanelClass(*args, **kwargs)
+            
+            # give our main widget a name so that we can identify it later
+            self.toolkit_widget.setObjectName(widget_name)
+            
             bundle.log_debug("Created new toolkit panel widget %s" % self.toolkit_widget)
             
             # now let the core apply any external stylesheets
