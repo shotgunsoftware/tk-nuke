@@ -21,7 +21,6 @@ import re
 import traceback
 import unicodedata
 import nukescripts
-from tank_vendor import yaml
 
 class NukeEngine(tank.platform.Engine):
 
@@ -89,7 +88,7 @@ class NukeEngine(tank.platform.Engine):
             
         # Store data needed for bootstrapping Tank in env vars. Used in startup/menu.py
         os.environ["TANK_NUKE_ENGINE_INIT_NAME"] = self.instance_name
-        os.environ["TANK_NUKE_ENGINE_INIT_CONTEXT"] = yaml.dump(self.context)
+        os.environ["TANK_NUKE_ENGINE_INIT_CONTEXT"] = tank.context.serialize(self.context)
         os.environ["TANK_NUKE_ENGINE_INIT_PROJECT_ROOT"] = self.tank.project_path
         
         # add our startup path to the nuke init path

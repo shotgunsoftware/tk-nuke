@@ -23,7 +23,6 @@ import nuke
 import tank
 import sys
 import traceback
-from tank_vendor import yaml
 
 from .menu_generation import MenuGenerator
 
@@ -153,10 +152,10 @@ def __tank_startup_node_callback():
             project_root = os.environ.get("TANK_NUKE_ENGINE_INIT_PROJECT_ROOT")
             tk = tank.Tank(project_root)
             
-            ctx_yaml = os.environ.get("TANK_NUKE_ENGINE_INIT_CONTEXT")
-            if ctx_yaml:
+            ctx_str = os.environ.get("TANK_NUKE_ENGINE_INIT_CONTEXT")
+            if ctx_str:
                 try:
-                    new_ctx = yaml.load(ctx_yaml)
+                    new_ctx = tank.context.deserialize(ctx_str)
                 except:
                     new_ctx = tk.context_empty()
             else:
