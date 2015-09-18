@@ -238,12 +238,11 @@ class NukeEngine(tank.platform.Engine):
         
         Additional parameters specified will be passed through to the widget_class constructor.
         """
-        # note! not using the import as this confuses nuke's calback system
-        # (several of the key scene callbacks are in the main init file...)
-        import tk_nuke
+        # note! not using the import_module call as this confuses nuke's callback system
+        import tk_nuke_qt
         
         # create the panel
-        panel_widget = tk_nuke.NukePanelWidget(bundle, title, panel_id, widget_class, *args, **kwargs)
+        panel_widget = tk_nuke_qt.NukePanelWidget(bundle, title, panel_id, widget_class, *args, **kwargs)
         
         if hasattr(tank, "_callback_from_non_pane_menu"):
             # this global flag is set by the menu callback system

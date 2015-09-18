@@ -11,6 +11,11 @@
 """
 Callbacks to manage the engine when a new file is loaded in tank.
 
+Please note that this module is imported  during Nuke's setup 
+phase to handle automatic context switching. At this point, QT is 
+not necessarily fully initialized. Therefore, any modules that require
+QT to be imported should be placed in the tk_nuke_qt module instead
+in order to avoid import errors at startup and context switch.
 """
 import os
 import textwrap
@@ -21,7 +26,6 @@ import traceback
 from tank_vendor import yaml
 
 from .menu_generation import MenuGenerator
-from .panels import NukePanelWidget
 
 
 def __show_tank_disabled_message(details):
