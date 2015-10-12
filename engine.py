@@ -8,10 +8,6 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights 
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
-"""
-A Nuke engine for Tank.
-"""
-
 import tank
 import platform
 import time
@@ -23,6 +19,9 @@ import unicodedata
 import nukescripts
 
 class NukeEngine(tank.platform.Engine):
+    """
+    An engine that supports Nuke 6.3v5+ and Hiero 9.0v*+.
+    """
     # Define the different areas where menu events can occur in Hiero.
     (HIERO_BIN_AREA, HIERO_SPREADSHEET_AREA, HIERO_TIMELINE_AREA) = range(3)
 
@@ -33,7 +32,7 @@ class NukeEngine(tank.platform.Engine):
     
     def init_engine(self):
         """
-        Called at Engine startup
+        Called at Engine startup.
         """
         self.log_debug("%s: Initializing..." % self)
 
@@ -94,17 +93,20 @@ class NukeEngine(tank.platform.Engine):
     @property
     def has_ui(self):
         """
-        Detect and return if nuke is running in batch mode
+        Whether Nuke is running a GUI session.
         """
         return self._ui_enabled
 
     @property
     def hiero(self):
+        """
+        Whether Nuke is running in Hiero mode.
+        """
         return self._hiero
 
     def pre_app_init(self):
         """
-        Called at startup, but after QT has been initialized
+        Called at startup, but after QT has been initialized.
         """
         if self.hiero:
             return
@@ -118,7 +120,7 @@ class NukeEngine(tank.platform.Engine):
 
     def post_app_init(self):
         """
-        Called when all apps have initialized
+        Called when all apps have initialized.
         """
         # Render the menu!
         if self.has_ui:
@@ -188,7 +190,7 @@ class NukeEngine(tank.platform.Engine):
 
     def destroy_engine(self):
         """
-        Runs when the engine is unloaded, e.g. typically at context switch.
+        Runs when the engine is unloaded, typically at context switch.
         """
         self.log_debug("%s: Destroying..." % self)
         if self.has_ui:
@@ -196,11 +198,13 @@ class NukeEngine(tank.platform.Engine):
 
     def _get_dialog_parent(self):
         """
-        Return the QWidget parent for all dialogs created through show_dialog & show_modal.
+        Return the QWidget parent for all dialogs created through
+        show_dialog and show_modal.
         """
         # See https://github.com/shotgunsoftware/tk-nuke/commit/35ca540d152cc5357dc7e347b5efc728a3a89f4a 
-        # for more info. There have been instability issues with nuke 7 causing various crashes, so 
-        # window parenting on Nuke versions above 6 is currently disabled.
+        # for more info. There have been instability issues with nuke 7 causing
+        # various crashes, so window parenting on Nuke versions above 6 is
+        # currently disabled.
         if nuke.env.get("NukeVersionMajor") > 6:
             return None
         return super(NukeEngine, self)._get_dialog_parent()

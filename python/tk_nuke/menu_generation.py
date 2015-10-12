@@ -8,10 +8,7 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights 
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
-"""
-Menu handling for Nuke and Hiero.
-
-"""
+"""Menu handling for Nuke and Hiero."""
 
 import tank
 import sys
@@ -26,6 +23,13 @@ from PySide import QtGui
 # -----------------------------------------------------------------------------
 
 class MenuGenerator(object):
+    """
+    The factory base class for Nuke base menu generators. Since Nuke
+    Now operates multiple modes (Nuke, Nuke Studio, and Hiero), we are
+    required to supply menu generation logic for each. Instantiating
+    this class will provide the correct implementation for the currently
+    running Nuke mode.
+    """
     def __new__(cls, *args, **kwargs):
         if cls is MenuGenerator:
             if nuke.env.get("hiero"):
@@ -36,20 +40,56 @@ class MenuGenerator(object):
             return super(MenuGenerator, cls).__new__(cls, *args, **kwargs)
 
     def __init__(self, engine, menu_name):
+        """
+        Initializes a new menu generator.
+
+        :param engine: The currently-running engine.
+        :type engine: :class:`tank.platform.Engine`
+        :param menu_name: The name of the menu to be created.
+        """
         self._engine = engine
         self._menu_name = menu_name
 
     @property
     def engine(self):
+        """The currently-running engine."""
         return self._engine
 
     @property
     def menu_name(self):
+        """The name of the menu to be generated."""
         return self._menu_name
+
+    def _jump_to_sg(self):
+        """Jump from a context to Shotgun."""
+        from tank.platform.qt import QtCore, QtGui
+        url = self.engine.context.shotgun_url
+        QtGui.QDesktopServices.openUrl(QtCore.QUrl(url))
+
+    def _jump_to_fs(self):
+        """Jump from a context to the filesystem."""
+        paths = self.engine.context.filesystem_locations
+        for disk_location in paths:
+            system = sys.platform
+            if system == "linux2":
+                cmd = 'xdg-open "%s"' % disk_location
+            elif system == "darwin":
+                cmd = 'open "%s"' % disk_location
+            elif system == "win32":
+                cmd = 'cmd.exe /C start "Folder" "%s"' % disk_location
+            else:
+                raise OSError("Platform '%s' is not supported." % system)
+
+            exit_code = os.system(cmd)
+            if exit_code != 0:
+                self.engine.log_error("Failed to launch '%s'!" % cmd)
 
 # -----------------------------------------------------------------------------
 
 class HieroMenuGenerator(MenuGenerator):
+    """
+    A Hiero specific menu generator.
+    """
     def __init__(self, *args, **kwargs):
         super(HieroMenuGenerator, self).__init__(*args, **kwargs)
         self._menu_handle = None
@@ -57,7 +97,7 @@ class HieroMenuGenerator(MenuGenerator):
 
     def create_menu(self):
         """
-        Create the Tank Menu
+        Creates the "Shotgun" menu in Hiero.
         """
         import hiero
         if self._menu_handle is not None:
@@ -70,28 +110,28 @@ class HieroMenuGenerator(MenuGenerator):
 
         self._menu_handle.clear()
 
-        # now add the context item on top of the main menu
+        # Now add the context item on top of the main menu.
         self._context_menu = self._add_context_menu()
         self._menu_handle.addSeparator()
 
-        # now enumerate all items and create menu objects for them
+        # Now enumerate all items and create menu objects for them.
         menu_items = []
         for (cmd_name, cmd_details) in self.engine.commands.items():
             menu_items.append(HieroAppCommand(self.engine, cmd_name, cmd_details))
 
-        # now add favourites
+        # Now add favourites.
         for fav in self.engine.get_setting("menu_favourites"):
             app_instance_name = fav["app_instance"]
             menu_name = fav["name"]
-            # scan through all menu items
+            # Scan through all menu items.
             for cmd in menu_items:
                 if cmd.app_instance_name == app_instance_name and cmd.name == menu_name:
-                    # found our match!
+                    # Found our match!
                     cmd.add_command_to_menu(self._menu_handle)
-                    # mark as a favourite item
+                    # Mark as a favourite item.
                     cmd.favourite = True
 
-        # get the apps for the various context menus
+        # Get the apps for the various context menus.
         self._context_menus_to_apps = {
             "bin_context_menu": [],
             "timeline_context_menu": [],
@@ -104,10 +144,10 @@ class HieroMenuGenerator(MenuGenerator):
             for item in items:
                 app_instance_name = item["app_instance"]
                 menu_name = item["name"]
-                # scan through all menu items
+                # Scan through all menu items.
                 for (i, cmd) in enumerate(menu_items):
                     if cmd.app_instance_name == app_instance_name and cmd.name == menu_name:
-                        # found th match
+                        # Found the match.
                         apps.append(cmd)
                         cmd.requires_selection = item["requires_selection"]
                         if not item["keep_in_menu"]:
@@ -117,7 +157,7 @@ class HieroMenuGenerator(MenuGenerator):
         for index in sorted(remove, reverse=True):
             del menu_items[index]
 
-        # register for the interesting events
+        # Register for the interesting events.
         hiero.core.events.registerInterest(
             "kShowContextMenu/kBin",
             self.eventHandler,
@@ -126,37 +166,39 @@ class HieroMenuGenerator(MenuGenerator):
             "kShowContextMenu/kTimeline",
             self.eventHandler,
         )
-        # note that the kViewer works differently than the other things
+        # Note that the kViewer works differently than the other things
         # (returns a hiero.ui.Viewer object: http://docs.thefoundry.co.uk/hiero/10/hieropythondevguide/api/api_ui.html#hiero.ui.Viewer)
-        # so we cannot support this easily using the same principles as for the other things....
+        # so we cannot support this easily using the same principles as for the other things.
         hiero.core.events.registerInterest(
             "kShowContextMenu/kSpreadsheet",
             self.eventHandler,
         )
         self._menu_handle.addSeparator()
 
-        # now go through all of the menu items.
-        # separate them out into various sections
+        # Now go through all of the menu items.
+        # Separate them out into various sections.
         commands_by_app = {}
 
         for cmd in menu_items:
             if cmd.type == "context_menu":
-                # context menu!
                 cmd.add_command_to_menu(self._context_menu)
             else:
-                # normal menu
+                # Normal menu.
                 app_name = cmd.app_name
                 if app_name is None:
-                    # un-parented app
+                    # Unparented app.
                     app_name = "Other Items"
                 if not app_name in commands_by_app:
                     commands_by_app[app_name] = []
                 commands_by_app[app_name].append(cmd)
 
-        # now add all apps to main menu
+        # Now add all apps to main menu.
         self._add_app_menu(commands_by_app)
 
     def destroy_menu(self):
+        """
+        Destroys the "Shotgun" menu.
+        """
         import hiero
         menuBar = hiero.ui.menuBar()
         menuBar.removeAction(self._menu_handle.menuAction())
@@ -190,7 +232,7 @@ class HieroMenuGenerator(MenuGenerator):
 
     def _add_context_menu(self):
         """
-        Adds a context menu which displays the current context
+        Adds a context menu which displays the current context.
         """
         ctx = self.engine.context
 
@@ -218,43 +260,11 @@ class HieroMenuGenerator(MenuGenerator):
         action = ctx_menu.addAction("Jump to File System")
         action.triggered.connect(self._jump_to_fs)
         ctx_menu.addSeparator()
-
         return ctx_menu
-
-    def _jump_to_sg(self):
-        """
-        Jump from context to Sg
-        """
-        from tank.platform.qt import QtCore, QtGui
-        url = self.engine.context.shotgun_url
-        QtGui.QDesktopServices.openUrl(QtCore.QUrl(url))
-
-    def _jump_to_fs(self):
-        """
-        Jump from context to Fs
-        """
-        paths = self.engine.context.filesystem_locations
-        for disk_location in paths:
-            # get the setting
-            system = sys.platform
-
-            # run the app
-            if system == "linux2":
-                cmd = 'xdg-open "%s"' % disk_location
-            elif system == "darwin":
-                cmd = 'open "%s"' % disk_location
-            elif system == "win32":
-                cmd = 'cmd.exe /C start "Folder" "%s"' % disk_location
-            else:
-                raise Exception("Platform '%s' is not supported." % system)
-
-            exit_code = os.system(cmd)
-            if exit_code != 0:
-                self.engine.log_error("Failed to launch '%s'!" % cmd)
 
     def _add_app_menu(self, commands_by_app):
         """
-        Add all apps to the main menu, process them one by one.
+        Add all apps to the main menu.
         """
         for app_name in sorted(commands_by_app.keys()):
             if len(commands_by_app[app_name]) > 1:
@@ -277,9 +287,8 @@ class HieroMenuGenerator(MenuGenerator):
 
 class NukeMenuGenerator(MenuGenerator):
     """
-    Menu generation functionality for Nuke
+    A Nuke specific menu generator.
     """
-
     def __init__(self, *args, **kwargs):
         super(NukeMenuGenerator, self).__init__(*args, **kwargs)
         self._dialogs = []
@@ -301,146 +310,116 @@ class NukeMenuGenerator(MenuGenerator):
 
     def create_menu(self):
         """
-        Render the entire Shotgun menu.
+        Creates the "Shotgun" menu in Nuke.
         """
-        # create main Shotgun menu
+        # Create main Shotgun menu.
         menu_handle = nuke.menu("Nuke").addMenu(self._menu_name)
-
-        # create tank side menu
         node_menu_handle = nuke.menu("Nodes").addMenu(self._menu_name, icon=self._shotgun_logo)
 
-        # slight hack here but first ensure that menus are empty
-        # this is to ensure we can recover from weird context switches
-        # where the engine didn't clean up after itself properly
+        # Slight hack here, but first ensure that menus are empty.
+        # This is to ensure we can recover from weird context switches
+        # where the engine didn't clean up after itself properly.
         menu_handle.clearMenu()
         node_menu_handle.clearMenu()
 
-        # now add the context item on top of the main menu
+        # Now add the context item on top of the main menu.
         self._context_menu = self._add_context_menu(menu_handle)
         menu_handle.addSeparator()
 
-        # now enumerate all items and create menu objects for them
+        # Now enumerate all items and create menu objects for them.
         menu_items = []
         for (cmd_name, cmd_details) in self.engine.commands.items():
              menu_items.append(NukeAppCommand(self.engine, cmd_name, cmd_details))
 
-        # sort list of commands in name order
+        # Sort the list of commands in name order.
         menu_items.sort(key=lambda x: x.name)
 
-        # now add favourites
+        # Now add favourites.
         for fav in self.engine.get_setting("menu_favourites"):
             app_instance_name = fav["app_instance"]
             menu_name = fav["name"]
 
-            # scan through all menu items
+            # Scan through all menu items.
             for cmd in menu_items:
                  if cmd.app_instance_name == app_instance_name and cmd.name == menu_name:
-                     # found our match!
+                     # Found our match!
                      cmd.add_command_to_menu(menu_handle)
-                     # mark as a favourite item
+                     # Mark as a favourite item.
                      cmd.favourite = True
         menu_handle.addSeparator()
         
-        # now go through all of the menu items.
-        # separate them out into various sections
+        # Now go through all of the menu items.
+        # Separate them out into various sections.
         commands_by_app = {}
         
         for cmd in menu_items:
             if cmd.type == "node":
-                # add to the node menu
-                # get icon if specified - default to tank icon if not specified
+                # Get icon if specified - default to tank icon if not specified.
                 icon = cmd.properties.get("icon", self._shotgun_logo)
                 node_menu_handle.addCommand(cmd.name, cmd.callback, icon=icon)
             elif cmd.type == "context_menu":
-                # context menu!
                 cmd.add_command_to_menu(self._context_menu)
             else:
-                # normal menu
+                # Normal menu.
                 app_name = cmd.app_name
                 if app_name is None:
-                    # un-parented app
+                    # Unparented app.
                     app_name = "Other Items" 
                 if not app_name in commands_by_app:
                     commands_by_app[app_name] = []
                 commands_by_app[app_name].append(cmd)
 
-            # in addition to being added to the normal menu above,
-            # panel menu items are also added to the pane menu
+            # In addition to being added to the normal menu above,
+            # panel menu items are also added to the pane menu.
             if cmd.type == "panel":
-                # first make sure the Shotgun pane menu exists
-                pane_menu = nuke.menu("Pane").addMenu("Shotgun", icon=self._shotgun_logo)
-                # now set up the callback
+                # First make sure the Shotgun pane menu exists.
+                pane_menu = nuke.menu("Pane").addMenu(
+                    "Shotgun",
+                    icon=self._shotgun_logo,
+                )
+                # Now set up the callback.
                 cmd.add_command_to_pane_menu(pane_menu)
         
-        # now add all apps to main menu
+        # Now add all apps to main menu.
         self._add_app_menu(commands_by_app, menu_handle)
 
     def destroy_menu(self):
-        # important!
-        # the menu code in nuke seems quite unstable, so make sure to test 
+        """
+        Destroys any menus that were created.
+        """
+        # Important!
+        # The menu code in nuke seems quite unstable, so make sure to test 
         # any changes done in relation to menu deletion carefully.
         # the removeItem() method seems to work on some version of Nuke, but not all.
-        # for example the following code works in nuke 7, not nuke 6:
+        # For example, the following code works in nuke 7, not nuke 6:
         # nuke.menu("Nuke").removeItem("Shotgun")
         
-        # the strategy below is to be as safe as possible, acquire a handle to 
+        # The strategy below is to be as safe as possible, acquire a handle to 
         # the menu by iteration (if you store the handle object, they may expire
         # and when you try to access them they underlying object is gone and things 
-        # will crash). clearMenu() seems to work on both v6 and v7.
+        # will crash). The clearMenu() method seems to work on both v6 and v7.
         menus = ["Nuke", "Pane", "Nodes"]
         for menu in menus:
-            # find the menu and iterate over all items
+            # Find the menu and iterate over all items.
             for mh in nuke.menu(menu).items():
-                # look for the shotgun menu
+                # Look for the shotgun menu.
                 if mh.name() == self._menu_name:
-                    # and clear it
+                    # Clear it.
                     mh.clearMenu()
 
     def _add_context_menu(self, menu_handle):
         """
-        Adds a context menu which displays the current context
+        Adds a context menu which displays the current context.
         """        
         ctx = self.engine.context
         ctx_name = str(ctx)
 
-        # create the menu object        
+        # Create the menu object.
         ctx_menu = menu_handle.addMenu(ctx_name, icon=self._shotgun_logo_blue)
         ctx_menu.addCommand("Jump to Shotgun", self._jump_to_sg)
         ctx_menu.addCommand("Jump to File System", self._jump_to_fs)
         ctx_menu.addSeparator()
         return ctx_menu
-
-    def _jump_to_sg(self):
-        """
-        Jump to shotgun, launch web browser
-        """
-        from tank.platform.qt import QtCore, QtGui        
-        url = self.engine.context.shotgun_url
-        nukescripts.openurl.start(url)        
-
-    def _jump_to_fs(self):
-        
-        """
-        Jump from context to FS
-        """
-        # launch one window for each location on disk
-        paths = self.engine.context.filesystem_locations
-        for disk_location in paths:
-            # get the setting        
-            system = sys.platform
-            # run the app
-            if system == "linux2":
-                cmd = 'xdg-open "%s"' % disk_location
-            elif system == "darwin":
-                cmd = 'open "%s"' % disk_location
-            elif system == "win32":
-                cmd = 'cmd.exe /C start "Folder" "%s"' % disk_location
-            else:
-                raise Exception("Platform '%s' is not supported." % system)
-            
-            exit_code = os.system(cmd)
-            if exit_code != 0:
-                self.engine.log_error("Failed to launch '%s'!" % cmd)
 
     def _add_app_menu(self, commands_by_app, menu_handle):
         """
@@ -448,31 +427,42 @@ class NukeMenuGenerator(MenuGenerator):
         """
         for app_name in sorted(commands_by_app.keys()):
             if len(commands_by_app[app_name]) > 1:
-                # more than one menu entry fort his app
-                # make a sub menu and put all items in the sub menu
+                # More than one menu entry for this app.
+                # Make a sub menu and put all items in the sub menu.
                 app_menu = menu_handle.addMenu(app_name)
                 
-                # get the list of menu cmds for this app
+                # Get the list of menu cmds for this app.
                 cmds = commands_by_app[app_name]
-                # make sure it is in alphabetical order
+                # Make sure it is in alphabetical order.
                 cmds.sort(key=lambda x: x.name) 
                 
                 for cmd in cmds:
                     cmd.add_command_to_menu(app_menu)
             else:
-                # this app only has a single entry. 
-                # display that on the menu
-                # todo: Should this be labelled with the name of the app 
+                # This app only has a single entry.
+                # TODO: Should this be labelled with the name of the app 
                 # or the name of the menu item? Not sure.
                 cmd_obj = commands_by_app[app_name][0]
                 if not cmd_obj.favourite:
-                    # skip favourites since they are alreay on the menu
+                    # Skip favourites since they are already on the menu.
                     cmd_obj.add_command_to_menu(menu_handle)
 
 # -----------------------------------------------------------------------------
 
 class AppCommand(object):
+    """
+    The base class for command wrappers for various Nuke modes.
+    This wraps a single command that is received from engine.commands.
+    """
     def __init__(self, engine, name, command_dict):
+        """
+        Initializes a new AppCommand.
+
+        :param engine: The currently-running engine.
+        :type engine: :class:`tank.platform.Engine`
+        :param name: The name of the command.
+        :param command_dict: The properties dictionary of the command.
+        """
         self._name = name
         self._engine = engine
         self._properties = command_dict["properties"]
@@ -480,12 +470,10 @@ class AppCommand(object):
         self._favourite = False
         self._app = self._properties.get("app")
         self._type = self._properties.get("type", "default")
-
         try:
             self._app_name = self._app.display_name
         except AttributeError:
             self._app_name = None
-
         self._app_instance_name = None
         if self._app:
             for (app_instance_name, app_instance_obj) in engine.apps.items():
@@ -494,18 +482,22 @@ class AppCommand(object):
 
     @property
     def app(self):
+        """The command's parent app."""
         return self._app
 
     @property
     def app_instance_name(self):
+        """The instance name of the parent app."""
         return self._app_instance_name
 
     @property
     def app_name(self):
+        """The name of the parent app."""
         return self._app_name
 
     @property
     def name(self):
+        """The name of the command."""
         return self._name
 
     @name.setter
@@ -514,18 +506,22 @@ class AppCommand(object):
 
     @property
     def engine(self):
+        """The currently-running engine."""
         return self._engine
 
     @property
     def properties(self):
+        """The command's properties dictionary."""
         return self._properties
 
     @property
     def callback(self):
+        """The callback function associated with the command."""
         return self._callback
 
     @property
     def favourite(self):
+        """Whether the command is a favourite."""
         return self._favourite
 
     @favourite.setter
@@ -534,6 +530,7 @@ class AppCommand(object):
 
     @property
     def type(self):
+        """The command's type as a string."""
         return self._type
 
     def add_command_to_menu(self, menu, enabled=True):
@@ -544,7 +541,7 @@ class AppCommand(object):
 
     def get_documentation_url_str(self):
         """
-        Returns the documentation as a str.
+        Returns the documentation URL.
         """
         if self.app:
             doc_url = self.app.documentation_url
@@ -558,7 +555,7 @@ class AppCommand(object):
 
 class HieroAppCommand(AppCommand):
     """
-    Wraps around a single command that you get from engine.commands
+    Wraps a single command that you get from engine.commands.
     """
     def __init__(self, engine, name, command_dict):
         super(HieroAppCommand, self).__init__(engine, name, command_dict)
@@ -569,6 +566,10 @@ class HieroAppCommand(AppCommand):
 
     @property
     def requires_selection(self):
+        """
+        Whether the command requires something to be selected
+        in order to be executed.
+        """
         return self._requires_selection
 
     @requires_selection.setter
@@ -601,7 +602,7 @@ class HieroAppCommand(AppCommand):
 
     def add_command_to_menu(self, menu, enabled=True):
         """
-        Adds an app command to the menu
+        Adds the command to the menu.
         """
         icon = self.properties.get("icon")
         action = menu.addAction(self.name)
@@ -610,10 +611,8 @@ class HieroAppCommand(AppCommand):
             action.setIcon(QtGui.QIcon(icon))
 
         def handler():
-            # populate special action context
-            # this is read by apps and hooks 
-            
-            # in hiero, sender parameter for hiero.core.events.EventType.kShowContextMenu
+            # Populate special action context, which is read by apps and hooks.
+            # In hiero, the sender parameter for hiero.core.events.EventType.kShowContextMenu
             # is supposed to always of class binview:
             #
             # http://docs.thefoundry.co.uk/hiero/10/hieropythondevguide/api/api_ui.html?highlight=sender#hiero.ui.BinView
@@ -626,14 +625,14 @@ class HieroAppCommand(AppCommand):
             # These objects all have a selection property that returns a list of objects.
             # We extract the selected objects and set the engine "last clicked" state:
             
-            # set the engine last clicked selection state
+            # Set the engine last clicked selection state.
             if self.sender:
                 self.engine._last_clicked_selection = self.sender.selection()
             else:
-                # main menu
+                # Main menu.
                 self.engine._last_clicked_selection = []
             
-            # set the engine last clicked selection area
+            # Set the engine last clicked selection area.
             if self.event_type == "kBin":
                 self.engine._last_clicked_area = self.engine.HIERO_BIN_AREA
             elif self.event_type == "kTimeline":
@@ -653,7 +652,7 @@ class HieroAppCommand(AppCommand):
                 self.engine.log_debug("- %r" % x)
             self.engine.log_debug("--------------------------------------------")
             
-            # and fire the callback
+            # Fire the callback.
             self.callback()
         action.triggered.connect(handler)
 
@@ -661,23 +660,23 @@ class HieroAppCommand(AppCommand):
 
 class NukeAppCommand(AppCommand):
     """
-    Wraps around a single command that you get from engine.commands
-    """   
+    Wraps a single command that you get from engine.commands.
+    """
     def _non_pane_menu_callback_wrapper(self, callback):
         """
-        Callback for all non pane menu commands
+        Callback for all non-pane menu commands.
         """
-        # this is a wrapped menu callback for whenever an item is clicked
+        # This is a wrapped menu callback for whenever an item is clicked
         # in a menu which isn't the standard nuke pane menu. This ie because 
         # the standard pane menu in nuke provides nuke with an implicit state
         # so that nuke knows where to put the panel when it is created.
-        # if the command is called from a non-pane menu however, this implicity
+        # If the command is called from a non-pane menu however, this implicity
         # state does not exist and needs to be explicity defined.
         #
-        # for this purpose, we set a global flag to hint to the panelling 
+        # For this purpose, we set a global flag to hint to the panelling 
         # logic to run its special window logic in this case.
         #
-        # note that because of nuke not using the import_module()
+        # Note that because of nuke not using the import_module()
         # system, it's hard to obtain a reference to the engine object
         # right here - this is why we set a flag on the main tank
         # object like this.
@@ -689,30 +688,28 @@ class NukeAppCommand(AppCommand):
         
     def add_command_to_pane_menu(self, menu):
         """
-        Add a command to the pane menu
+        Add a command to the pane menu.
         
-        :param menu: Menu object to add the new item to
+        :param menu: The menu object to add the new item to.
         """
         icon = self.properties.get("icon")
         menu.addCommand(self.name, self.callback, icon=icon)
         
     def add_command_to_menu(self, menu, enabled=True):
         """
-        Adds an app command to the menu
+        Adds a command to the menu.
         
-        :param menu: Menu object to add the new item to
+        :param menu: The menu object to add the new item to.
         """
-        # std shotgun menu
         icon = self.properties.get("icon")
         hotkey = self.properties.get("hotkey")
         
-        # now wrap the command callback in a wrapper (see above)
+        # Now wrap the command callback in a wrapper (see above)
         # which sets a global state variable. This is detected
         # by the show_panel so that it can correctly establish 
         # the flow for when a pane menu is clicked and you want
         # the potential new panel to open in that window.
         cb = lambda: self._non_pane_menu_callback_wrapper(self.callback)
-
         if hotkey:
             menu.addCommand(self.name, cb, hotkey, icon=icon)
         else:

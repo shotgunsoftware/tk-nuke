@@ -13,6 +13,62 @@
 # expected fields in the configuration file for this engine
 configuration:
 
+    bin_context_menu:
+        type: list
+        allows_empty: true
+        values:
+            type: dict
+            items:
+                name: { type: str }
+                app_instance: { type: str }
+                keep_in_menu: { type: bool }
+                requires_selection: { type: bool }
+        description: "Controls which apps are added to the context menu for the bin view.
+                     This is a list and each item is a dictionary with keys app_instance,
+                     keep_in_menu, requires_select, and name. The app_instance parameter
+                     connects this entry to a particular app instance defined in the
+                     environment configuration file. The name is a menu name to add to
+                     the context menu. keep_in_menu is true if this item should be
+                     added to the main menu or not. requires_selection will disable the
+                     menu item when there are no items selected in the view."
+
+    timeline_context_menu:
+        type: list
+        allows_empty: true
+        values:
+            type: dict
+            items:
+                name: { type: str }
+                app_instance: { type: str }
+                keep_in_menu: { type: bool }
+                requires_selection: { type: bool }
+        description: "Controls which apps are added to the context menu for the timeilne view.
+                     This is a list and each item is a dictionary with keys app_instance,
+                     keep_in_menu, requires_select, and name. The app_instance parameter
+                     connects this entry to a particular app instance defined in the environment
+                     configuration file. The name is a menu name to add to the context menu.
+                     keep_in_menu is true if this item should be added to the main menu
+                     or not. requires_selection will disable the menu item when there are no
+                     items selected in the view."
+
+    spreadsheet_context_menu:
+        type: list
+        allows_empty: true
+        values:
+            type: dict
+            items:
+                name: { type: str }
+                app_instance: { type: str }
+                keep_in_menu: { type: bool }
+                requires_selection: { type: bool }
+        description: "Controls which apps are added to the context menu for the spreadsheet
+                     view. This is a list and each item is a dictionary with keys app_instance,
+                     keep_in_menu, requires_select, and name. The app_instance parameter connects
+                     this entry to a particular app instance defined in the environment configuration
+                     file. The name is a menu name to add to the context menu. keep_in_menu is true if
+                     this item should be added to the main menu or not. requires_selection will disable
+                     the menu item when there are no items selected in the view."
+
     favourite_directories:
         type: list
         description: Adds entries to the favourites section in the file chooser.
