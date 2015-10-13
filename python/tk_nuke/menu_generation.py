@@ -24,11 +24,11 @@ from PySide import QtGui
 
 class MenuGenerator(object):
     """
-    The factory base class for Nuke base menu generators. Since Nuke
-    Now operates multiple modes (Nuke, Nuke Studio, and Hiero), we are
+    The factory base class for Nuke based menu generators. Since Nuke
+    now provides multiple modes (Nuke, Nuke Studio, and Hiero), we are
     required to supply menu generation logic for each. Instantiating
-    this class will provide the correct implementation for the currently
-    running Nuke mode.
+    this class directly will provide the correct implementation for the
+    currently running Nuke mode.
     """
     def __new__(cls, *args, **kwargs):
         if cls is MenuGenerator:
