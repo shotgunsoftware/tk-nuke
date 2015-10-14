@@ -26,9 +26,29 @@ class NukeEngine(tank.platform.Engine):
     (HIERO_BIN_AREA, HIERO_SPREADSHEET_AREA, HIERO_TIMELINE_AREA) = range(3)
 
     def __init__(self, *args, **kwargs):
-        self._hiero = nuke.env.get("hiero")
+        self._hiero_enabled = nuke.env.get("hiero")
         self._ui_enabled = nuke.env.get("gui")
         super(NukeEngine, self).__init__(*args, **kwargs)
+
+    #####################################################################################
+    # Properties
+
+    @property
+    def ui_enabled(self):
+        """
+        Whether Nuke is running a GUI session.
+        """
+        return self._ui_enabled
+
+    @property
+    def hiero_enabled(self):
+        """
+        Whether Nuke is running in Hiero mode.
+        """
+        return self._hiero_enabled
+
+    #####################################################################################
+    # Engine Initialization and Destruction
     
     def init_engine(self):
         """
@@ -36,43 +56,74 @@ class NukeEngine(tank.platform.Engine):
         """
         self.log_debug("%s: Initializing..." % self)
 
+        # We need to check to make sure that we are using one of the
+        # supported versions of Nuke. Right now that is anything between
+        # 6.3v5 and 9.0v*. For versions higher than what we know we
+        # support we'll simply warn and continue. For older versions
+        # we will have to bail out, as we know they won't work properly.
+        nuke_version = (
+            nuke.env.get("NukeVersionMajor"),
+            nuke.env.get("NukeVersionMinor"),
+            nuke.env.get("NukeVersionRelease")
+        )
+
+        msg = "Nuke 6.3v5 is the minimum version supported!"
+        if nuke_version[0] < 6:
+            self.log_error(msg)
+            return
+        elif nuke_version[0] == 6 and nuke_version[1] < 3:
+            self.log_error(msg)
+            return
+        elif nuke_version[0] == 6 and nuke_version[1] == 3 and nuke_version[2] < 5:
+            self.log_error(msg)
+            return
+
+        # Versions > 9.0 have not yet been tested so show a message to that effect.
+        if nuke_version[0] > 9 or (nuke_version[0] == 9 and nuke_version[1] > 0):
+            # This is an untested version of Nuke.
+            msg = ("The Shotgun Pipeline Toolkit has not yet been fully tested with Nuke %d.%dv%d. "
+                   "You can continue to use the Toolkit but you may experience bugs or "
+                   "instability.  Please report any issues you see to support@shotgunsoftware.com" 
+                   % (nuke_version[0], nuke_version[1], nuke_version[2]))
+            
+            # Show nuke message if in UI mode, this is the first time the engine has been started
+            # and the warning dialog isn't overriden by the config.
+            if (self._ui_enabled 
+                and not "TANK_NUKE_ENGINE_INIT_NAME" in os.environ
+                and nuke_version[0] >= self.get_setting("compatibility_dialog_min_version", 10)):
+                nuke.message("Warning - Shotgun Pipeline Toolkit!\n\n%s" % msg)
+                           
+            # Log the warning.
+            self.log_warning(msg)
+
         # Make sure we are not running Nuke PLE!
         if nuke.env.get("ple"):
             self.log_error("The Nuke Engine does not work with the Nuke PLE!")
             return
 
-        # Startup for Hiero is very simple. If we're in that mode then
-        # do it and bug out, since the rest of this is specific to Nuke.
-        if self.hiero:
-            # Tracking where a menu click took place.
-            self._last_clicked_selection = []
-            self._last_clicked_area = None
-            return
+        # Do our mode-specific initializations.
+        if self.hiero_enabled:
+            self.init_engine_hiero()
+        else:
+            self.init_engine_nuke()
 
+    def init_engine_hiero(self):
+        """
+        The Hiero-specific portion of engine initialization.
+        """
+        self._last_clicked_selection = []
+        self._last_clicked_area = None
+
+    def init_engine_nuke(self):
+        """
+        The Nuke-specific portion of engine initialization.
+        """
         # Now check that there is a location on disk which corresponds to the context.
         if self.context.project is None:
             # Must have at least a project in the context to even start!
             raise tank.TankError("The nuke engine needs at least a project"
                                  "in the context in order to start! Your "
                                  "context: %s" % self.context)
-        
-        # Make sure that nuke has a higher version than 6.3v5.
-        # This is because of PySide.
-        nuke_version = (
-            nuke.env.get("NukeVersionMajor"),
-            nuke.env.get("NukeVersionMinor"),
-            nuke.env.get("NukeVersionRelease")
-        )
-        
-        if nuke_version[0] < 6:
-            self.log_error("Nuke 6.3v5 is the minimum version supported!")
-            return
-        elif nuke_version[0] == 6 and nuke_version[1] < 3:
-            self.log_error("Nuke 6.3v5 is the minimum version supported!")
-            return
-        elif nuke_version[0] == 6 and nuke_version[1] == 3 and nuke_version[2] < 5:
-            self.log_error("Nuke 6.3v5 is the minimum version supported!")
-            return
 
         # Now prepare tank so that it will be picked up by any new processes
         # created by file->new or file->open.
@@ -90,25 +141,11 @@ class NukeEngine(tank.platform.Engine):
         local_python_path = os.path.abspath(os.path.join( os.path.dirname(__file__), "python"))
         os.environ["TANK_NUKE_ENGINE_MOD_PATH"] = local_python_path
 
-    @property
-    def has_ui(self):
-        """
-        Whether Nuke is running a GUI session.
-        """
-        return self._ui_enabled
-
-    @property
-    def hiero(self):
-        """
-        Whether Nuke is running in Hiero mode.
-        """
-        return self._hiero
-
     def pre_app_init(self):
         """
         Called at startup, but after QT has been initialized.
         """
-        if self.hiero:
+        if self.hiero_enabled:
             return
 
         # Note! not using the import as this confuses nuke's calback system
@@ -122,57 +159,64 @@ class NukeEngine(tank.platform.Engine):
         """
         Called when all apps have initialized.
         """
-        # Render the menu!
-        if self.has_ui:
-            # Note! not using the import as this confuses nuke's calback system
-            # (several of the key scene callbacks are in the main init file...)            
+        # Figure out what our menu will be named.
+        menu_name = "Shotgun"
+        if self.get_setting("use_sgtk_as_menu_name", False):
+            menu_name = "Sgtk"
+
+        # We have some mode-specific initialization to do.
+        if self.hiero_enabled:
+            self.post_app_init_hiero(menu_name)
+        else:
+            self.post_app_init_nuke(menu_name)
+
+    def post_app_init_hiero(self, menu_name="Shotgun"):
+        """
+        The Hiero-specific portion of the engine's post-init process.
+        """
+        if self.ui_enabled:
+            # Note! not using the import as this confuses Nuke's callback system
+            # (several of the key scene callbacks are in the main init file).
             import tk_nuke
 
-            menu_name = "Shotgun"
-            if self.get_setting("use_sgtk_as_menu_name", False):
-                menu_name = "Sgtk"
-
-            self._menu_generator = tk_nuke.MenuGenerator(self, menu_name)
+            # Create the menu!
+            self._menu_generator = tk_nuke.HieroMenuGenerator(self, menu_name)
             self._menu_generator.create_menu()
 
-            if self.hiero:
-                import hiero
-                def set_project_root(event):
-                    """Ensure any new projects get the project root or default startup 
-                    projects get the project root set
-                    """ 
-                    for p in hiero.core.projects():
-                        if not p.projectRoot():
-                            self.log_debug(
-                                "Setting projectRoot on %s to: %s" % (
-                                    p.name(),
-                                    self.tank.project_path
-                                )
-                            )
-                            p.setProjectRoot(self.tank.project_path)
-                hiero.core.events.registerInterest(
-                    'kAfterNewProjectCreated',
-                    set_project_root,
+            import hiero
+            hiero.core.events.registerInterest(
+                'kAfterNewProjectCreated',
+                self.set_project_root,
+            )
+
+    def post_app_init_nuke(self, menu_name="Shotgun"):
+        """
+        The Nuke-specific portion of the engine's post-init process.
+        """
+        if self.ui_enabled:
+            # Note! not using the import as this confuses Nuke's callback system
+            # (several of the key scene callbacks are in the main init file).
+            import tk_nuke
+
+            # Create the menu!
+            self._menu_generator = tk_nuke.NukeMenuGenerator(self, menu_name)
+            self._menu_generator.create_menu()
+
+            # Initialize favourite dirs in the file open/file save dialogs
+            self.__setup_favorite_dirs()
+            
+            # Register all panels with nuke's callback system
+            # this will be used at nuke startup in order
+            # for nuke to be able to restore panels 
+            # automatically. For all panels that exist as
+            # part of saved layouts, nuke will look through
+            # a global list of registered panels, try to locate
+            # the one it needs and then run the callback.
+            for (panel_id, panel_dict) in self.panels.iteritems():
+                nukescripts.panels.registerPanel(
+                    panel_id,
+                    panel_dict["callback"],
                 )
-                # We don't need to get into the Gizmo stuff after this block
-                # since that is specific to Nuke.
-                return
-            else:
-                # Initialize favourite dirs in the file open/file save dialogs
-                self.__setup_favorite_dirs()
-                
-                # Register all panels with nuke's callback system
-                # this will be used at nuke startup in order
-                # for nuke to be able to restore panels 
-                # automatically. For all panels that exist as
-                # part of saved layouts, nuke will look through
-                # a global list of registered panels, try to locate
-                # the one it needs and then run the callback.
-                for (panel_id, panel_dict) in self.panels.iteritems():
-                    nukescripts.panels.registerPanel(
-                        panel_id,
-                        panel_dict["callback"],
-                    )
 
         # Iterate over all apps, if there is a gizmo folder, add it to nuke path.
         for app in self.apps.values():
@@ -193,34 +237,28 @@ class NukeEngine(tank.platform.Engine):
         Runs when the engine is unloaded, typically at context switch.
         """
         self.log_debug("%s: Destroying..." % self)
-        if self.has_ui:
+        if self.ui_enabled:
             self._menu_generator.destroy_menu()
 
-    def _get_dialog_parent(self):
-        """
-        Return the QWidget parent for all dialogs created through
-        show_dialog and show_modal.
-        """
-        # See https://github.com/shotgunsoftware/tk-nuke/commit/35ca540d152cc5357dc7e347b5efc728a3a89f4a 
-        # for more info. There have been instability issues with nuke 7 causing
-        # various crashes, so window parenting on Nuke versions above 6 is
-        # currently disabled.
-        if nuke.env.get("NukeVersionMajor") > 6:
-            return None
-        return super(NukeEngine, self)._get_dialog_parent()
+    #####################################################################################
+    # Logging
 
     def log_debug(self, msg):
         if self.get_setting("debug_logging", False):
             msg = "Shotgun Debug: %s" % msg
-            if self.hiero:
+            # We will log it via the API, as well as print normally,
+            # which should make its way to the scripting console.
+            if self.hiero_enabled:
                 import hiero
                 hiero.core.log.setLogLevel(hiero.core.log.kDebug)
-                hiero.core.log.debug("Shotgun: %s" % msg)
+                hiero.core.log.debug(msg)
             print msg
 
     def log_info(self, msg):
         msg = "Shotgun Info: %s" % msg
-        if self.hiero:
+        # We will log it via the API, as well as print normally,
+        # which should make its way to the scripting console.
+        if self.hiero_enabled:
             # NOTE! By default, info logging is turned OFF in hiero
             # meaning that no info messages (nor warning, since they use info to output too)
             # will be output in the console.
@@ -233,26 +271,33 @@ class NukeEngine(tank.platform.Engine):
             # causing it to hang or crash. By keeping the info and warning logging off
             # we are avoiding such hangs and working around this known issue.
             import hiero
-            hiero.core.log.info("Shotgun: %s" % msg)
+            hiero.core.log.info(msg)
         print msg
 
     def log_warning(self, msg):
         msg = "Shotgun Warning: %s" % msg
-        if self.hiero:
+        # We will log it via the API, as well as print normally,
+        # which should make its way to the scripting console.
+        if self.hiero_enabled:
             import hiero
-            hiero.core.log.info("Shotgun Warning: %s" % msg)
+            hiero.core.log.info(msg)
         else:
             nuke.warning(msg)
         print msg
 
     def log_error(self, msg):
         msg = "Shotgun Error: %s" % msg
-        if self.hiero:
+        # We will log it via the API, as well as print normally,
+        # which should make its way to the scripting console.
+        if self.hiero_enabled:
             import hiero
-            hiero.core.log.error("Shotgun: %s" % msg)
+            hiero.core.log.error(msg)
         else:
             nuke.error(msg)
         print msg
+
+    #####################################################################################
+    # Panel Support
 
     def show_panel(self, panel_id, title, bundle, widget_class, *args, **kwargs):
         """
@@ -295,7 +340,7 @@ class NukeEngine(tank.platform.Engine):
             # panel UI - narrow and tall. If not possible, then fall back on other
             # built-in objects and use these to find a location.
             #
-            # Note: on nuke versions prior to 9, a pane is required for the UI to appear.
+            # Note: on Nuke versions prior to 9, a pane is required for the UI to appear.
             built_in_tabs = [
                 "Properties.1", # properties dialog - best choice to parent next to
                 "DAG.1",        # node graph, so usually wide not tall
@@ -331,12 +376,79 @@ class NukeEngine(tank.platform.Engine):
             # by the system, so just add our widget.
             # Add it to the current pane
             panel_widget.addToPane()
-        return panel_widget                
+        return panel_widget
+
+    #####################################################################################
+    # Menu Utilities
+
+    def get_menu_selection(self):
+        """
+        Returns the list of hiero objects selected in the most recent menu click.
+        This list may contain items of various types. To see exactly what is being 
+        returned by which methods, turn on debug logging - this will print out details
+        of what is going on.
+        
+        Examples of types that are being returned are:
+        
+        Selecting a project in the bin view:
+        http://docs.thefoundry.co.uk/hiero/10/hieropythondevguide/api/api_core.html#hiero.core.Bin
+        
+        Selecting an item in a bin view:
+        http://docs.thefoundry.co.uk/hiero/10/hieropythondevguide/api/api_core.html#hiero.core.BinItem
+        
+        Selecting a track:
+        http://docs.thefoundry.co.uk/hiero/10/hieropythondevguide/api/api_core.html#hiero.core.TrackItem
+        """
+        return self._last_clicked_selection
+        
+    def get_menu_category(self):
+        """
+        Returns the UI area where the last menu click took place.
+        
+        Returns one of the following constants:
+        
+        - HieroEngine.HIERO_BIN_AREA
+        - HieroEngine.HIERO_SPREADSHEET_AREA
+        - HieroEngine.HIERO_TIMELINE_AREA
+        - None for unknown or undefined
+        """
+        return self._last_clicked_area
+
+    #####################################################################################
+    # General Utilities
+
+    @staticmethod
+    def set_project_root(event):
+        """Ensure any new projects get the project root or default startup 
+        projects get the project root set
+        """ 
+        for p in hiero.core.projects():
+            if not p.projectRoot():
+                self.log_debug(
+                    "Setting projectRoot on %s to: %s" % (
+                        p.name(),
+                        self.tank.project_path
+                    )
+                )
+                p.setProjectRoot(self.tank.project_path)
+
+    def _get_dialog_parent(self):
+        """
+        Return the QWidget parent for all dialogs created through
+        show_dialog and show_modal.
+        """
+        # See https://github.com/shotgunsoftware/tk-nuke/commit/35ca540d152cc5357dc7e347b5efc728a3a89f4a 
+        # for more info. There have been instability issues with nuke 7 causing
+        # various crashes, so window parenting on Nuke versions above 6 is
+        # currently disabled.
+        if nuke.env.get("NukeVersionMajor") > 6:
+            return None
+        return super(NukeEngine, self)._get_dialog_parent()
     
     def __setup_favorite_dirs(self):
         """
         Sets up nuke shortcut "favorite dirs" that are presented in the left hand side of 
-        nuke common dialogs (open, save)
+        Nuke common dialogs (open, save).
 
         Nuke currently only writes favorites to disk in ~/.nuke/folders.nk. If you add/remove 
         one in the UI. Doing them via the api only updates them for the session (Nuke bug #3740). 

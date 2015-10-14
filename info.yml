@@ -15,6 +15,7 @@ configuration:
 
     bin_context_menu:
         type: list
+        default_value: []
         allows_empty: true
         values:
             type: dict
@@ -34,6 +35,7 @@ configuration:
 
     timeline_context_menu:
         type: list
+        default_value: []
         allows_empty: true
         values:
             type: dict
@@ -53,6 +55,7 @@ configuration:
 
     spreadsheet_context_menu:
         type: list
+        default_value: []
         allows_empty: true
         values:
             type: dict
@@ -106,6 +109,7 @@ configuration:
 
     menu_favourites:
         type: list
+        default_value: []
         description: "Controls the favourites section on the main menu. This is a list
                      and each menu item is a dictionary with keys app_instance and name.
                      The app_instance parameter connects this entry to a particular

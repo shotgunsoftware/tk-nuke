@@ -22,22 +22,10 @@ from PySide import QtGui
 
 # -----------------------------------------------------------------------------
 
-class MenuGenerator(object):
+class BaseMenuGenerator(object):
     """
-    The factory base class for Nuke based menu generators. Since Nuke
-    now provides multiple modes (Nuke, Nuke Studio, and Hiero), we are
-    required to supply menu generation logic for each. Instantiating
-    this class directly will provide the correct implementation for the
-    currently running Nuke mode.
+    The base class for Nuke based menu generators.
     """
-    def __new__(cls, *args, **kwargs):
-        if cls is MenuGenerator:
-            if nuke.env.get("hiero"):
-                return HieroMenuGenerator(*args, **kwargs)
-            else:
-                return NukeMenuGenerator(*args, **kwargs)
-        else:
-            return super(MenuGenerator, cls).__new__(cls, *args, **kwargs)
 
     def __init__(self, engine, menu_name):
         """
@@ -86,12 +74,12 @@ class MenuGenerator(object):
 
 # -----------------------------------------------------------------------------
 
-class HieroMenuGenerator(MenuGenerator):
+class HieroMenuGenerator(BaseMenuGenerator):
     """
     A Hiero specific menu generator.
     """
-    def __init__(self, *args, **kwargs):
-        super(HieroMenuGenerator, self).__init__(*args, **kwargs)
+    def __init__(self, engine, menu_name):
+        super(HieroMenuGenerator, self).__init__(engine, menu_name)
         self._menu_handle = None
         self._context_menus_to_apps = dict()
 
@@ -285,12 +273,12 @@ class HieroMenuGenerator(MenuGenerator):
 
 # -----------------------------------------------------------------------------
 
-class NukeMenuGenerator(MenuGenerator):
+class NukeMenuGenerator(BaseMenuGenerator):
     """
     A Nuke specific menu generator.
     """
-    def __init__(self, *args, **kwargs):
-        super(NukeMenuGenerator, self).__init__(*args, **kwargs)
+    def __init__(self, engine, menu_name):
+        super(NukeMenuGenerator, self).__init__(engine, menu_name)
         self._dialogs = []
         engine_root_dir = self.engine.disk_location
         self._shotgun_logo = os.path.abspath(
@@ -449,14 +437,14 @@ class NukeMenuGenerator(MenuGenerator):
 
 # -----------------------------------------------------------------------------
 
-class AppCommand(object):
+class BaseAppCommand(object):
     """
     The base class for command wrappers for various Nuke modes.
     This wraps a single command that is received from engine.commands.
     """
     def __init__(self, engine, name, command_dict):
         """
-        Initializes a new AppCommand.
+        Initializes a new BaseAppCommand.
 
         :param engine: The currently-running engine.
         :type engine: :class:`tank.platform.Engine`
@@ -553,7 +541,7 @@ class AppCommand(object):
 
 # -----------------------------------------------------------------------------
 
-class HieroAppCommand(AppCommand):
+class HieroAppCommand(BaseAppCommand):
     """
     Wraps a single command that you get from engine.commands.
     """
@@ -658,7 +646,7 @@ class HieroAppCommand(AppCommand):
 
 # -----------------------------------------------------------------------------
 
-class NukeAppCommand(AppCommand):
+class NukeAppCommand(BaseAppCommand):
     """
     Wraps a single command that you get from engine.commands.
     """
