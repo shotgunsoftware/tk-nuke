@@ -184,9 +184,11 @@ class NukeEngine(tank.platform.Engine):
             self._menu_generator.create_menu()
 
             import hiero
+            def _set_project_root_callback(event):
+                self.set_project_root(event)
             hiero.core.events.registerInterest(
                 'kAfterNewProjectCreated',
-                self.set_project_root,
+                _set_project_root_callback,
             )
 
     def post_app_init_nuke(self, menu_name="Shotgun"):
@@ -417,8 +419,7 @@ class NukeEngine(tank.platform.Engine):
     #####################################################################################
     # General Utilities
 
-    @staticmethod
-    def set_project_root(event):
+    def set_project_root(self, event):
         """
         Ensure any new projects get the project root or default startup 
         projects get the project root set properly.
@@ -426,7 +427,8 @@ class NukeEngine(tank.platform.Engine):
         :param event: A Nuke event object. It is a standard argument for
             event callbacks in Nuke, which is what this method is registered
             as on engine initialization.
-        """ 
+        """
+        import hiero
         for p in hiero.core.projects():
             if not p.projectRoot():
                 self.log_debug(
