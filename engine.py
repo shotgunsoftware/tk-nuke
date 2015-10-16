@@ -34,9 +34,9 @@ class NukeEngine(tank.platform.Engine):
     # Properties
 
     @property
-    def ui_enabled(self):
+    def has_ui(self):
         """
-        Whether Nuke is running a GUI session.
+        Whether Nuke is running as a GUI/interactive session.
         """
         return self._ui_enabled
 
@@ -88,7 +88,7 @@ class NukeEngine(tank.platform.Engine):
             
             # Show nuke message if in UI mode, this is the first time the engine has been started
             # and the warning dialog isn't overriden by the config.
-            if (self._ui_enabled 
+            if (self.has_ui 
                 and not "TANK_NUKE_ENGINE_INIT_NAME" in os.environ
                 and nuke_version[0] >= self.get_setting("compatibility_dialog_min_version", 10)):
                 nuke.message("Warning - Shotgun Pipeline Toolkit!\n\n%s" % msg)
@@ -100,6 +100,13 @@ class NukeEngine(tank.platform.Engine):
         if nuke.env.get("ple"):
             self.log_error("The Nuke Engine does not work with the Nuke PLE!")
             return
+
+        # Now check that there is a location on disk which corresponds to the context.
+        if self.context.project is None:
+            # Must have at least a project in the context to even start!
+            raise tank.TankError("The nuke engine needs at least a project"
+                                 "in the context in order to start! Your "
+                                 "context: %s" % self.context)
 
         # Do our mode-specific initializations.
         if self.hiero_enabled:
@@ -118,13 +125,6 @@ class NukeEngine(tank.platform.Engine):
         """
         The Nuke-specific portion of engine initialization.
         """
-        # Now check that there is a location on disk which corresponds to the context.
-        if self.context.project is None:
-            # Must have at least a project in the context to even start!
-            raise tank.TankError("The nuke engine needs at least a project"
-                                 "in the context in order to start! Your "
-                                 "context: %s" % self.context)
-
         # Now prepare tank so that it will be picked up by any new processes
         # created by file->new or file->open.
         # Store data needed for bootstrapping Tank in env vars. Used in startup/menu.py.
@@ -174,7 +174,7 @@ class NukeEngine(tank.platform.Engine):
         """
         The Hiero-specific portion of the engine's post-init process.
         """
-        if self.ui_enabled:
+        if self.has_ui:
             # Note! not using the import as this confuses Nuke's callback system
             # (several of the key scene callbacks are in the main init file).
             import tk_nuke
@@ -193,7 +193,7 @@ class NukeEngine(tank.platform.Engine):
         """
         The Nuke-specific portion of the engine's post-init process.
         """
-        if self.ui_enabled:
+        if self.has_ui:
             # Note! not using the import as this confuses Nuke's callback system
             # (several of the key scene callbacks are in the main init file).
             import tk_nuke
@@ -237,7 +237,7 @@ class NukeEngine(tank.platform.Engine):
         Runs when the engine is unloaded, typically at context switch.
         """
         self.log_debug("%s: Destroying..." % self)
-        if self.ui_enabled:
+        if self.has_ui:
             self._menu_generator.destroy_menu()
 
     #####################################################################################
@@ -419,8 +419,13 @@ class NukeEngine(tank.platform.Engine):
 
     @staticmethod
     def set_project_root(event):
-        """Ensure any new projects get the project root or default startup 
-        projects get the project root set
+        """
+        Ensure any new projects get the project root or default startup 
+        projects get the project root set properly.
+
+        :param event: A Nuke event object. It is a standard argument for
+            event callbacks in Nuke, which is what this method is registered
+            as on engine initialization.
         """ 
         for p in hiero.core.projects():
             if not p.projectRoot():
