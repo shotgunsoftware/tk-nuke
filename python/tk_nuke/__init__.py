@@ -24,7 +24,7 @@ import tank
 import sys
 import traceback
 
-from .menu_generation import MenuGenerator
+from .menu_generation import NukeMenuGenerator, HieroMenuGenerator
 
 
 def __show_tank_disabled_message(details):
