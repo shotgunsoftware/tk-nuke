@@ -26,7 +26,10 @@ class NukeEngine(tank.platform.Engine):
     (HIERO_BIN_AREA, HIERO_SPREADSHEET_AREA, HIERO_TIMELINE_AREA) = range(3)
 
     def __init__(self, *args, **kwargs):
-        self._hiero_enabled = nuke.env.get("hiero")
+        # For the short term, we will treat Nuke Studio as if it
+        # is Hiero. This logic will change once we have true Nuke
+        # Studio support for this engine.
+        self._hiero_enabled = nuke.env.get("hiero") or nuke.env.get("studio")
         self._ui_enabled = nuke.env.get("gui")
         super(NukeEngine, self).__init__(*args, **kwargs)
 
