@@ -31,6 +31,7 @@ class NukeEngine(tank.platform.Engine):
         # Studio support for this engine.
         self._hiero_enabled = nuke.env.get("hiero") or nuke.env.get("studio")
         self._ui_enabled = nuke.env.get("gui")
+
         super(NukeEngine, self).__init__(*args, **kwargs)
 
     #####################################################################################
@@ -148,6 +149,9 @@ class NukeEngine(tank.platform.Engine):
         """
         Called at startup, but after QT has been initialized.
         """
+        # We will support context changing on the fly.
+        self._context_change_allowed = True
+
         if self.hiero_enabled:
             return
 
@@ -244,6 +248,16 @@ class NukeEngine(tank.platform.Engine):
         self.log_debug("%s: Destroying..." % self)
         if self.has_ui:
             self._menu_generator.destroy_menu()
+
+    def change_context(self, new_context):
+        """
+        Changes the context that the engine is running in.
+        """
+        # Most of the effort for the context change comes from the Application
+        # base class. Once we've run that all we have to do is to rebuild the
+        # menu.
+        super(NukeEngine, self).change_context(new_context)
+        self._menu_generator.create_menu()
 
     #####################################################################################
     # Logging
