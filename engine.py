@@ -29,8 +29,10 @@ class NukeEngine(tank.platform.Engine):
         # For the short term, we will treat Nuke Studio as if it
         # is Hiero. This logic will change once we have true Nuke
         # Studio support for this engine.
-        self._hiero_enabled = nuke.env.get("hiero") or nuke.env.get("studio")
+        self._hiero_enabled = nuke.env.get("hiero")
+        self._studio_enabled = nuke.env.get("studio")
         self._ui_enabled = nuke.env.get("gui")
+        self._context_switcher = None
 
         super(NukeEngine, self).__init__(*args, **kwargs)
 
@@ -50,6 +52,13 @@ class NukeEngine(tank.platform.Engine):
         Whether Nuke is running in Hiero mode.
         """
         return self._hiero_enabled
+
+    @property
+    def studio_enabled(self):
+        """
+        Whether Nuke is running in Studio mode.
+        """
+        return self._studio_enabled
 
     #####################################################################################
     # Engine Initialization and Destruction
@@ -115,8 +124,21 @@ class NukeEngine(tank.platform.Engine):
         # Do our mode-specific initializations.
         if self.hiero_enabled:
             self.init_engine_hiero()
+        elif self.studio_enabled:
+            self.init_engine_studio()
         else:
             self.init_engine_nuke()
+
+    def init_engine_studio(self):
+        """
+        The Nuke Studio specific portion of engine initialization.
+        """
+        # First thing we need is the Hiero stuff.
+        self.init_engine_hiero()
+
+        # Then we need to setup our context switcher.
+        import tk_nuke
+        self._context_switcher = tk_nuke.StudioContextSwitcher(self)
 
     def init_engine_hiero(self):
         """
@@ -152,7 +174,7 @@ class NukeEngine(tank.platform.Engine):
         # We will support context changing on the fly.
         self._context_change_allowed = True
 
-        if self.hiero_enabled:
+        if self.hiero_enabled or self.studio_enabled:
             return
 
         # Note! not using the import as this confuses nuke's calback system
@@ -176,6 +198,13 @@ class NukeEngine(tank.platform.Engine):
             self.post_app_init_hiero(menu_name)
         else:
             self.post_app_init_nuke(menu_name)
+
+    def post_app_init_studio(self, menu_name="Shotgun"):
+        """
+        The Nuke Studio specific portion of the engine's post-init process.
+        """
+        # We do the same as for Hiero when in Nuke Studio.
+        self.post_app_init_hiero(menu_name)
 
     def post_app_init_hiero(self, menu_name="Shotgun"):
         """
@@ -246,6 +275,10 @@ class NukeEngine(tank.platform.Engine):
         Runs when the engine is unloaded, typically at context switch.
         """
         self.log_debug("%s: Destroying..." % self)
+
+        if self._context_switcher:
+            self._context_switcher.destroy()
+
         if self.has_ui:
             self._menu_generator.destroy_menu()
 
