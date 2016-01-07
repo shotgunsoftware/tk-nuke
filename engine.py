@@ -33,6 +33,7 @@ class NukeEngine(tank.platform.Engine):
         self._studio_enabled = nuke.env.get("studio")
         self._ui_enabled = nuke.env.get("gui")
         self._context_switcher = None
+        self._menu_generator = None
 
         super(NukeEngine, self).__init__(*args, **kwargs)
 
@@ -59,6 +60,17 @@ class NukeEngine(tank.platform.Engine):
         Whether Nuke is running in Studio mode.
         """
         return self._studio_enabled
+
+    @property
+    def context_change_allowed(self):
+        """
+        Whether the engine allows a context change without the need for a restart.
+        """
+        return True
+
+    @property
+    def menu_generator(self):
+        return self._menu_generator
 
     #####################################################################################
     # Engine Initialization and Destruction
@@ -136,10 +148,6 @@ class NukeEngine(tank.platform.Engine):
         # First thing we need is the Hiero stuff.
         self.init_engine_hiero()
 
-        # Then we need to setup our context switcher.
-        import tk_nuke
-        self._context_switcher = tk_nuke.StudioContextSwitcher(self)
-
     def init_engine_hiero(self):
         """
         The Hiero-specific portion of engine initialization.
@@ -171,9 +179,6 @@ class NukeEngine(tank.platform.Engine):
         """
         Called at startup, but after QT has been initialized.
         """
-        # We will support context changing on the fly.
-        self._context_change_allowed = True
-
         if self.hiero_enabled or self.studio_enabled:
             return
 
@@ -196,6 +201,8 @@ class NukeEngine(tank.platform.Engine):
         # We have some mode-specific initialization to do.
         if self.hiero_enabled:
             self.post_app_init_hiero(menu_name)
+        elif self.studio_enabled:
+            self.post_app_init_studio(menu_name)
         else:
             self.post_app_init_nuke(menu_name)
 
@@ -203,8 +210,27 @@ class NukeEngine(tank.platform.Engine):
         """
         The Nuke Studio specific portion of the engine's post-init process.
         """
-        # We do the same as for Hiero when in Nuke Studio.
-        self.post_app_init_hiero(menu_name)
+        if self.has_ui:
+            # Note! not using the import as this confuses Nuke's callback system
+            # (several of the key scene callbacks are in the main init file).
+            import tk_nuke
+
+            # Create the menu!
+            self._menu_generator = tk_nuke.NukeStudioMenuGenerator(self, menu_name)
+            self._menu_generator.create_menu()
+
+            import hiero
+            def _set_project_root_callback(event):
+                self.set_project_root(event)
+
+            hiero.core.events.registerInterest(
+                'kAfterNewProjectCreated',
+                _set_project_root_callback,
+            )
+
+        # Then we need to setup our context switcher.
+        import tk_nuke
+        self._context_switcher = tk_nuke.StudioContextSwitcher(self)
 
     def post_app_init_hiero(self, menu_name="Shotgun"):
         """
@@ -222,6 +248,7 @@ class NukeEngine(tank.platform.Engine):
             import hiero
             def _set_project_root_callback(event):
                 self.set_project_root(event)
+
             hiero.core.events.registerInterest(
                 'kAfterNewProjectCreated',
                 _set_project_root_callback,
@@ -282,15 +309,9 @@ class NukeEngine(tank.platform.Engine):
         if self.has_ui:
             self._menu_generator.destroy_menu()
 
-    def change_context(self, new_context):
-        """
-        Changes the context that the engine is running in.
-        """
-        # Most of the effort for the context change comes from the Application
-        # base class. Once we've run that all we have to do is to rebuild the
-        # menu.
-        super(NukeEngine, self).change_context(new_context)
-        self._menu_generator.create_menu()
+    def post_context_change(self, old_context, new_context):
+        self.log_debug("tk-nuke context changed to %s" % str(new_context))
+        self.menu_generator.create_menu()
 
     #####################################################################################
     # Logging

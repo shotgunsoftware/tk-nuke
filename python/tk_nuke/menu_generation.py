@@ -38,24 +38,78 @@ class BaseMenuGenerator(object):
         self._engine = engine
         self._menu_name = menu_name
 
+        engine_root_dir = self.engine.disk_location
+        self._shotgun_logo = os.path.abspath(
+            os.path.join(
+                engine_root_dir,
+                "resources",
+                "sg_logo_80px.png",
+            ),
+        )
+        self._shotgun_logo_blue = os.path.abspath(
+            os.path.join(
+                engine_root_dir,
+                "resources",
+                "sg_logo_blue_32px.png",
+            ),
+        )
+
     @property
     def engine(self):
-        """The currently-running engine."""
+        """
+        The currently-running engine.
+        """
         return self._engine
 
     @property
     def menu_name(self):
-        """The name of the menu to be generated."""
+        """
+        The name of the menu to be generated.
+        """
         return self._menu_name
 
+    def create_tank_disabled_menu(self, details):
+        """
+        Creates a std "disabled" Shotgun menu.
+        """
+        msg = ("Shotgun integration is currently disabled because the file you "
+               "have opened is not recognized. Shotgun cannot "
+               "determine which Context the currently open file belongs to. "
+               "In order to enable the Shotgun functionality, try opening another "
+               "file. <br><br><i>Details:</i> %s" % details)
+        self._disable_menu("[Toolkit is disabled - Click for details]", msg)
+
+    def create_disabled_menu(self, cmd_name, msg):
+        """
+        Implemented in deriving classes to create a "disabled" menu.
+        """
+        self.engine.log_debug(
+            'Not implemented: %s.%s' % (
+                self.__class__.__name__,
+                'create_disabled_menu',
+            ),
+        )
+
+    def _disable_menu(self, cmd_name, msg):
+        """
+        Disables the Shotgun menu.
+        """
+        if self._menu_handle:
+            self.destroy_menu()
+        self.create_disabled_menu(cmd_name, msg)
+
     def _jump_to_sg(self):
-        """Jump from a context to Shotgun."""
+        """
+        Jump from a context to Shotgun.
+        """
         from tank.platform.qt import QtCore, QtGui
         url = self.engine.context.shotgun_url
         QtGui.QDesktopServices.openUrl(QtCore.QUrl(url))
 
     def _jump_to_fs(self):
-        """Jump from a context to the filesystem."""
+        """
+        Jump from a context to the filesystem.
+        """
         paths = self.engine.context.filesystem_locations
         for disk_location in paths:
             system = sys.platform
@@ -83,7 +137,7 @@ class HieroMenuGenerator(BaseMenuGenerator):
         self._menu_handle = None
         self._context_menus_to_apps = dict()
 
-    def create_menu(self):
+    def create_menu(self, add_commands=True):
         """
         Creates the "Shotgun" menu in Hiero.
         """
@@ -97,6 +151,11 @@ class HieroMenuGenerator(BaseMenuGenerator):
         menuBar.insertMenu(help, self._menu_handle)
 
         self._menu_handle.clear()
+
+        # If we were asked not to add any commands to the menu,
+        # the bail out.
+        if not add_commands:
+            return
 
         # Now add the context item on top of the main menu.
         self._context_menu = self._add_context_menu()
@@ -273,6 +332,27 @@ class HieroMenuGenerator(BaseMenuGenerator):
 
 # -----------------------------------------------------------------------------
 
+class NukeStudioMenuGenerator(HieroMenuGenerator):
+    """
+    A Nuke Studio specific menu generator.
+    """
+    def create_disabled_menu(self, cmd_name, msg):
+        """
+        Creates the contents of the "disabled" menu in Nuke Studio.
+        """
+        self.create_menu(add_commands=False)
+
+        import nuke
+        callback = lambda m = msg: nuke.message(m)
+        cmd = HieroAppCommand(
+            self.engine,
+            cmd_name,
+            dict(properties=dict(), callback=callback),
+        )
+        cmd.add_command_to_menu(self._menu_handle, icon=self._shotgun_logo_blue)
+
+# -----------------------------------------------------------------------------
+
 class NukeMenuGenerator(BaseMenuGenerator):
     """
     A Nuke specific menu generator.
@@ -280,23 +360,8 @@ class NukeMenuGenerator(BaseMenuGenerator):
     def __init__(self, engine, menu_name):
         super(NukeMenuGenerator, self).__init__(engine, menu_name)
         self._dialogs = []
-        engine_root_dir = self.engine.disk_location
-        self._shotgun_logo = os.path.abspath(
-            os.path.join(
-                engine_root_dir,
-                "resources",
-                "sg_logo_80px.png",
-            ),
-        )
-        self._shotgun_logo_blue = os.path.abspath(
-            os.path.join(
-                engine_root_dir,
-                "resources",
-                "sg_logo_blue_32px.png",
-            ),
-        )
 
-    def create_menu(self):
+    def create_menu(self, add_commands=True):
         """
         Creates the "Shotgun" menu in Nuke.
         """
@@ -309,6 +374,11 @@ class NukeMenuGenerator(BaseMenuGenerator):
         # where the engine didn't clean up after itself properly.
         menu_handle.clearMenu()
         node_menu_handle.clearMenu()
+
+        # If we were asked not to add any commands to the menu,
+        # the bail out.
+        if not add_commands:
+            return
 
         # Now add the context item on top of the main menu.
         self._context_menu = self._add_context_menu(menu_handle)
@@ -370,6 +440,21 @@ class NukeMenuGenerator(BaseMenuGenerator):
         
         # Now add all apps to main menu.
         self._add_app_menu(commands_by_app, menu_handle)
+
+    def create_disabled_menu(self, cmd_name, msg):
+        """
+        Creates the contents of the "disabled" menu in Nuke.
+        """
+        self.create_menu(add_commands=False)
+
+        import nuke
+        callback = lambda m = msg: nuke.message(m)
+        cmd = NukeAppCommand(
+            self.engine,
+            cmd_name,
+            dict(properties=dict(), callback=callback),
+        )
+        cmd.add_command_to_menu(self._menu_handle, icon=self._shotgun_logo_blue)
 
     def destroy_menu(self):
         """
@@ -521,7 +606,7 @@ class BaseAppCommand(object):
         """The command's type as a string."""
         return self._type
 
-    def add_command_to_menu(self, menu, enabled=True):
+    def add_command_to_menu(self, menu, enabled=True, icon=None):
         raise NotImplementedError()
 
     def add_command_to_pane_menu(self, menu):
@@ -588,11 +673,11 @@ class HieroAppCommand(BaseAppCommand):
     def event_subtype(self, event_subtype):
         self._event_subtype = event_subtype
 
-    def add_command_to_menu(self, menu, enabled=True):
+    def add_command_to_menu(self, menu, enabled=True, icon=None):
         """
         Adds the command to the menu.
         """
-        icon = self.properties.get("icon")
+        icon = icon or self.properties.get("icon")
         action = menu.addAction(self.name)
         action.setEnabled(enabled)
         if icon:
@@ -683,13 +768,13 @@ class NukeAppCommand(BaseAppCommand):
         icon = self.properties.get("icon")
         menu.addCommand(self.name, self.callback, icon=icon)
         
-    def add_command_to_menu(self, menu, enabled=True):
+    def add_command_to_menu(self, menu, enabled=True, icon=None):
         """
         Adds a command to the menu.
         
         :param menu: The menu object to add the new item to.
         """
-        icon = self.properties.get("icon")
+        icon = icon or self.properties.get("icon")
         hotkey = self.properties.get("hotkey")
         
         # Now wrap the command callback in a wrapper (see above)

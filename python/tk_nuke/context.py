@@ -19,14 +19,16 @@ import copy
 import nuke
 import tank
 
+from tank import TankError
+
 
 class ContextSwitcherBase(object):
-    INIT_CONTEXT = None
-
     def __init__(self, engine):
         self._engine = engine
-        self._context_cache = {}
-        self.register_events()
+        self._context_cache = dict()
+        self._init_project_root = engine.tank.project_path
+        self._init_context = engine.context
+        self.register_events(reregister=True)
 
     ##########################################################################
     # properties
@@ -45,9 +47,11 @@ class ContextSwitcherBase(object):
 
     @property
     def init_context(self):
-        if not ContextSwitcherBase.INIT_CONTEXT:
-            ContextSwitcherBase.INIT_CONTEXT = self.engine.context
-        return ContextSwitcherBase.INIT_CONTEXT
+        return self._init_context
+
+    @property
+    def init_project_root(self):
+        return self._init_project_root
 
     ##########################################################################
     # private
@@ -77,12 +81,17 @@ class ContextSwitcherBase(object):
         # create new tank instance in case the script is located under another
         # project
         tk = tank.tank_from_path(script)
-        context = tk.context_from_path(script,
-                                       previous_context=self.engine.context)
+
+        context = tk.context_from_path(
+            script,
+            previous_context=self.engine.context,
+        )
+
         if context.project is None:
-            raise tank.TankError("The Nukestudio engine needs at least a project "
-                                 "in the context in order to start! Your context: %s"
-                                 % context)
+            raise tank.TankError(
+                "The Nukestudio engine needs at least a project "
+                "in the context in order to start! Your context: %s" % context
+            )
         else:
             return context
 
@@ -94,7 +103,7 @@ class ContextSwitcherBase(object):
         try:
             tank.platform.change_context(new_context)
         except tank.TankEngineInitError, e:
-            # context was not sufficient! - disable tank!
+            # Context was not sufficient!
             self.engine.menu_generator.create_tank_disabled_menu(e)
 
     ##########################################################################
@@ -103,7 +112,7 @@ class ContextSwitcherBase(object):
     def destroy(self):
         self.unregister_events()
 
-    def register_events(self, unregister=False):
+    def register_events(self, reregister=False):
         pass
 
     def unregister_events(self):
@@ -111,22 +120,27 @@ class ContextSwitcherBase(object):
 
 
 class NukeContextSwitcher(ContextSwitcherBase):
-
     """
     Make sure that we have callbacks tracking context state changes for New Comp
     and Open Comp calls
     """
-
     def __init__(self, engine):
+        self._event_desc = [
+            dict(
+                add=nuke.addOnCreate,
+                remove=nuke.removeOnCreate,
+                registrar=nuke.callbacks.onCreates,
+                function=self._tank_startup_node_callback,
+            ),
+            dict(
+                add=nuke.addOnScriptSave,
+                remove=nuke.removeOnScriptSave,
+                registrar=nuke.callbacks.onScriptSaves,
+                function=self._tank_on_save_callback,
+            ),
+        ]
+
         super(NukeContextSwitcher, self).__init__(engine)
-        self._event_desc = [{'add': nuke.addOnCreate,
-                             'remove': nuke.removeOnCreate,
-                             'registrar': nuke.callbacks.onCreates,
-                             'function': self._tank_startup_node_callback},
-                            {'add': nuke.addOnScriptSave,
-                             'remove': nuke.removeOnScriptSave,
-                             'registrar': nuke.callbacks.onScriptSaves,
-                             'function': self._tank_on_save_callback}]
 
     ##########################################################################
     # private
@@ -163,13 +177,16 @@ class NukeContextSwitcher(ContextSwitcherBase):
                 return
 
             # and now extract a new context based on the file
-            new_ctx = tk.context_from_path(file_name,
-                                           previous_context=self.context)
+            new_context = tk.context_from_path(
+                file_name,
+                previous_context=self.context,
+            )
 
             # now restart the engine with the new context
-            self._restart_engine(tk, new_ctx)
+            self._change_context(new_context)
         except Exception:
-            self.engine.menu_generator.create_tank_error_menu()
+            # self.engine.menu_generator.create_tank_error_menu()
+            raise
 
     def _tank_startup_node_callback(self):
         """
@@ -189,7 +206,7 @@ class NukeContextSwitcher(ContextSwitcherBase):
                 # base it on the context we 'inherited' from the prev session
                 # get the context from the previous session - this is helpful if
                 # user does file->new
-                tk = tank.Tank(self._init_project_root)
+                tk = tank.Tank(self.init_project_root)
 
                 if self.init_context:
                     new_ctx = self.init_context
@@ -204,42 +221,55 @@ class NukeContextSwitcher(ContextSwitcherBase):
                     self.engine.menu_generator.create_tank_disabled_menu(e)
                     return
 
-                new_ctx = tk.context_from_path(file_name,
-                                               previous_context=self.context)
+                new_ctx = tk.context_from_path(
+                    file_name,
+                    previous_context=self.context,
+                )
 
-            # now restart the engine with the new context
-            self._restart_engine(tk, new_ctx)
+            # Now change the context for the engine and apps.
+            self._change_context(new_ctx)
         except Exception:
-            self.engine.menu_generator.create_tank_error_menu()
+            # self.engine.menu_generator.create_tank_error_menu()
+            raise
 
     ##########################################################################
     # public overrides
 
-    def register_events(self, unregister=False):
-
+    def register_events(self, reregister=False):
         for func_desc in self._event_desc:
             # this is the variable that gets a dict of currently registered
             # callbacks
             registrar = func_desc.get('registrar')
+
             # the function we wish to un-/register
             function = func_desc.get('function')
+
             # the function used to register the callback
             add = func_desc.get('add')
+
+            # check if the call back is already registered or not
+            if self._check_if_registered(function, registrar):
+                if reregister:
+                    self._unregister_events(only=[func_desc])
+                else:
+                    continue
+
+            add(function)
+
+    def unregister_events(self, only=None):
+        func_descs = only or self._event_desc
+
+        for func_desc in func_descs:
+            registrar = func_desc.get('registrar')
+
+            # the function we wish to un-/register
+            function = func_desc.get('function')
+
             # the function used to unregister the callback
             remove = func_desc.get('remove')
 
-            # select the function to use according to the unregister flag
-            reg_func = [add, remove][unregister]
-            # check if the call back is already registered or not
-            found = self._check_if_registered(function, registrar)
-
-            # only execute the register if the callback is not found in the registrar
-            # or unregister if it is
-            if unregister == found:
-                reg_func(function)
-
-    def unregister_events(self):
-        self.register_events(unregister=True)
+            if self._check_if_registered(function, registrar):
+                remove(function)
 
 
 class StudioContextSwitcher(NukeContextSwitcher):
@@ -263,8 +293,7 @@ class StudioContextSwitcher(NukeContextSwitcher):
 
     def _eventHandler(self, event):
         """
-        Event handler for context switch event in nukestudio. Switching from Hiero
-        to Nuke
+        Event handler for context switch event in Nuke Studio.
         """
         focusInNuke = event.focusInNuke
         # testing if we actually changed context or if the event got fired without
@@ -281,7 +310,7 @@ class StudioContextSwitcher(NukeContextSwitcher):
             # we switched from hiero to a nuke node graph
             try:
                 script_path = nuke.scriptName()
-            except:
+            except Exception:
                 script_path = None
 
             if script_path:
@@ -303,27 +332,46 @@ class StudioContextSwitcher(NukeContextSwitcher):
                 # context
                 self.engine.menu_generator.create_tank_disabled_menu()
         else:
-            self._change_context(self.init_context)
+            # This is a switch back to the project-level timeline,
+            # so change to that context based on that project file
+            # path.
+            self._change_context(self._get_new_context(self._get_current_project()))
 
     ##########################################################################
     # public overrides
 
-    def register_events(self, unregister=False):
+    def register_events(self, reregister=False):
         import hiero.core
 
-        # switch between the function to register/unregister the event interest
-        reg_func = [
-            hiero.core.events.registerInterest,
-            hiero.core.events.unregisterInterest,
-        ][unregister]
-
         # event for context switching from hiero to nuke
-        reg_func(
+        hiero.core.events.registerInterest(
             hiero.core.events.EventType.kContextChanged,
             self._eventHandler,
         )
 
-        super(StudioContextSwitcher, self).register_events(unregister)
+        super(StudioContextSwitcher, self).register_events(reregister)
 
     def unregister_events(self):
-        self.register_events(unregister=True)
+        import hiero.core
+
+        hiero.core.events.unregisterInterest(
+            hiero.core.events.EventType.kContextChanged,
+            self._eventHandler,
+        )
+
+        super(StudioContextSwitcher, self).unregister_events()
+
+    def _get_current_project(self):
+        """
+        Returns the current project based on where in the UI the user clicked 
+        """
+        import hiero.core
+        import hiero.ui
+
+        view = hiero.ui.activeView()
+        if isinstance(view, hiero.ui.TimelineEditor):
+            sequence = view.sequence()
+            project = sequence.binItem().project()
+            return project.path()
+        else:
+            return None

@@ -24,7 +24,8 @@ import tank
 import sys
 import traceback
 
-from .menu_generation import NukeMenuGenerator, HieroMenuGenerator
+from .menu_generation import NukeMenuGenerator, HieroMenuGenerator, NukeStudioMenuGenerator
+from .context import StudioContextSwitcher
 
 
 def __show_tank_disabled_message(details):
