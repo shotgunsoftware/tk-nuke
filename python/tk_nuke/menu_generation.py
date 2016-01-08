@@ -391,7 +391,7 @@ class NukeMenuGenerator(BaseMenuGenerator):
             # Find the menu and iterate over all items.
             for mh in nuke.menu(menu).items():
                 # Look for the shotgun menu.
-                if mh.name() == self._menu_name:
+                if isinstance(mh, nuke.Menu) and mh.name() == self._menu_name:
                     # Clear it.
                     mh.clearMenu()
 
