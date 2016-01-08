@@ -24,7 +24,12 @@ import tank
 import sys
 import traceback
 
-from .menu_generation import NukeMenuGenerator, HieroMenuGenerator, NukeStudioMenuGenerator
+from .menu_generation import (
+    NukeMenuGenerator,
+    HieroMenuGenerator,
+    NukeStudioMenuGenerator,
+)
+
 from .context import StudioContextSwitcher
 
 

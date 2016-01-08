@@ -68,14 +68,27 @@ class BaseMenuGenerator(object):
         """
         return self._menu_name
 
-    def create_tank_disabled_menu(self, details):
+    def create_sgtk_error_menu(self):
         """
-        Creates a std "disabled" Shotgun menu.
+        Creates an "error" menu item.
+        """
+        (exc_type, exc_value, exc_traceback) = sys.exc_info()
+        msg = ("Message: Shotgun encountered a problem starting the Engine.\n"
+               "Exception: %s - %s\n"
+               "Traceback (most recent call last): %s" % (exc_type,
+                                                          exc_value,
+                                                          "\n".join(traceback.format_tb(exc_traceback))))
+
+        self._disable_menu("[Toolkit Error - Click for details]", msg)
+
+    def create_sgtk_disabled_menu(self, details):
+        """
+        Creates a "disabled" Shotgun menu item.
         """
         msg = ("Shotgun integration is currently disabled because the file you "
                "have opened is not recognized. Shotgun cannot "
-               "determine which Context the currently open file belongs to. "
-               "In order to enable the Shotgun functionality, try opening another "
+               "determine which Context the currently-open file belongs to. "
+               "In order to enable Toolkit integration, try opening another "
                "file. <br><br><i>Details:</i> %s" % details)
         self._disable_menu("[Toolkit is disabled - Click for details]", msg)
 
@@ -153,7 +166,7 @@ class HieroMenuGenerator(BaseMenuGenerator):
         self._menu_handle.clear()
 
         # If we were asked not to add any commands to the menu,
-        # the bail out.
+        # then bail out.
         if not add_commands:
             return
 
@@ -250,6 +263,23 @@ class HieroMenuGenerator(BaseMenuGenerator):
         menuBar = hiero.ui.menuBar()
         menuBar.removeAction(self._menu_handle.menuAction())
         self._menu_handle = None
+
+        # Register for the interesting events.
+        hiero.core.events.unregisterInterest(
+            "kShowContextMenu/kBin",
+            self.eventHandler,
+        )
+        hiero.core.events.unregisterInterest(
+            "kShowContextMenu/kTimeline",
+            self.eventHandler,
+        )
+        # Note that the kViewer works differently than the other things
+        # (returns a hiero.ui.Viewer object: http://docs.thefoundry.co.uk/hiero/10/hieropythondevguide/api/api_ui.html#hiero.ui.Viewer)
+        # so we cannot support this easily using the same principles as for the other things.
+        hiero.core.events.registerInterest(
+            "kShowContextMenu/kSpreadsheet",
+            self.eventHandler,
+        )
 
     def eventHandler(self, event):
         if event.subtype == "kBin":
