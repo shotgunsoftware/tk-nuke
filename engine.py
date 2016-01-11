@@ -145,8 +145,8 @@ class NukeEngine(tank.platform.Engine):
         """
         The Nuke Studio specific portion of engine initialization.
         """
-        # First thing we need is the Hiero stuff.
         self.init_engine_hiero()
+        self.init_engine_nuke()
 
     def init_engine_hiero(self):
         """
@@ -167,12 +167,12 @@ class NukeEngine(tank.platform.Engine):
         os.environ["TANK_NUKE_ENGINE_INIT_PROJECT_ROOT"] = self.tank.project_path
         
         # Add our startup path to the nuke init path
-        startup_path = os.path.abspath(os.path.join( os.path.dirname(__file__), "startup"))
+        startup_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "startup"))
         tank.util.append_path_to_env_var("NUKE_PATH", startup_path)        
     
         # We also need to pass the path to the python folder down to the init script
         # because nuke python does not have a __file__ attribute for that file.
-        local_python_path = os.path.abspath(os.path.join( os.path.dirname(__file__), "python"))
+        local_python_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "python"))
         os.environ["TANK_NUKE_ENGINE_MOD_PATH"] = local_python_path
 
     def pre_app_init(self):
@@ -258,7 +258,7 @@ class NukeEngine(tank.platform.Engine):
         """
         The Nuke-specific portion of the engine's post-init process.
         """
-        if self.has_ui:
+        if self.has_ui and not self.studio_enabled:
             # Note! not using the import as this confuses Nuke's callback system
             # (several of the key scene callbacks are in the main init file).
             import tk_nuke
@@ -310,7 +310,19 @@ class NukeEngine(tank.platform.Engine):
             self._menu_generator.destroy_menu()
 
     def post_context_change(self, old_context, new_context):
+        """
+        Handles post-context-change requirements for Nuke, Hiero, and Nuke Studio.
+
+        :param old_context: The sgtk.context.Context being switched away from.
+        :param new_context: The sgtk.context.Context being switched to.
+        """
         self.log_debug("tk-nuke context changed to %s" % str(new_context))
+
+        # We also need to run the post init for Nuke, which will handle
+        # getting any gizmos setup.
+        if not self.hiero_enabled:
+            self.post_app_init_nuke()
+
         self.menu_generator.create_menu()
 
     #####################################################################################
