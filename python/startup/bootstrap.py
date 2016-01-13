@@ -27,7 +27,6 @@ def bootstrap(engine_name, context, app_path, app_args, extra_args):
         tank.util.append_path_to_env_var("HIERO_PLUGIN_PATH", startup_path)
     elif "nukestudio" in app_path.lower() or "--studio" in app_args:
         tank.util.append_path_to_env_var("HIERO_PLUGIN_PATH", startup_path)
-        tank.util.append_path_to_env_var("NUKE_PATH", startup_path)
     else:
         tank.util.append_path_to_env_var("NUKE_PATH", startup_path)
         file_to_open = os.environ.get("TANK_FILE_TO_OPEN")

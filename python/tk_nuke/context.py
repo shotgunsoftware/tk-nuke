@@ -44,11 +44,10 @@ class StudioContextSwitcher(object):
             ),
         ]
 
-        self._engine = engine
         self._context_cache = dict()
         self._init_project_root = engine.tank.project_path
         self._init_context = engine.context
-        self._current_studio_context = False
+        self._is_in_nuke = False
 
         self.register_events(reregister=True)
 
@@ -60,25 +59,21 @@ class StudioContextSwitcher(object):
         """
         The current sgtk.context.Context.
         """
-        if self.engine:
-            self._context = self.engine.context
-        return self._context
+        self._context = self.engine.context
 
     @property
-    def current_studio_context(self):
+    def is_in_nuke(self):
         """
-        Whether Nuke Studio is in "Hiero" or "Nuke" mode presently.
+        Whether Nuke Studio is current in "Nuke" mode or not.
         """
-        return ['Hiero', 'Nuke'][self._current_studio_context]
+        return self._is_in_nuke
 
     @property
     def engine(self):
         """
         The current engine that is running.
         """
-        if not self._engine:
-            self._engine = tank.platform.current_engine()
-        return self._engine
+        return tank.platform.current_engine()
 
     @property
     def init_context(self):
@@ -134,12 +129,12 @@ class StudioContextSwitcher(object):
         # Testing if we actually changed context or if the event got fired without
         # the user switching to the node graph. Early exit if it's still the
         # same context.
-        if self._current_studio_context == focusInNuke:
+        if self._is_in_nuke == focusInNuke:
             return
 
         # Set the current context to be remembered for the next context
         # change.
-        self._current_studio_context = focusInNuke
+        self._is_in_nuke = focusInNuke
 
         if focusInNuke:
             # We switched from the project timeline to a Nuke node graph.

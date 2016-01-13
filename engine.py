@@ -20,7 +20,7 @@ import nukescripts
 
 class NukeEngine(tank.platform.Engine):
     """
-    An engine that supports Nuke 6.3v5+ and Hiero 9.0v*+.
+    An engine that supports Nuke 6.3v5+, Hiero 9.0+, and Nuke Studio 9.0+
     """
     # Define the different areas where menu events can occur in Hiero.
     (HIERO_BIN_AREA, HIERO_SPREADSHEET_AREA, HIERO_TIMELINE_AREA) = range(3)
@@ -146,7 +146,6 @@ class NukeEngine(tank.platform.Engine):
         The Nuke Studio specific portion of engine initialization.
         """
         self.init_engine_hiero()
-        self.init_engine_nuke()
 
     def init_engine_hiero(self):
         """
@@ -209,6 +208,8 @@ class NukeEngine(tank.platform.Engine):
     def post_app_init_studio(self, menu_name="Shotgun"):
         """
         The Nuke Studio specific portion of the engine's post-init process.
+
+        :param menu_name:   The label/name of the menu to be created.
         """
         if self.has_ui:
             # Note! not using the import as this confuses Nuke's callback system
@@ -235,6 +236,8 @@ class NukeEngine(tank.platform.Engine):
     def post_app_init_hiero(self, menu_name="Shotgun"):
         """
         The Hiero-specific portion of the engine's post-init process.
+
+        :param menu_name:   The label/name of the menu to be created.
         """
         if self.has_ui:
             # Note! not using the import as this confuses Nuke's callback system
@@ -257,6 +260,8 @@ class NukeEngine(tank.platform.Engine):
     def post_app_init_nuke(self, menu_name="Shotgun"):
         """
         The Nuke-specific portion of the engine's post-init process.
+
+        :param menu_name:   The label/name of the menu to be created.
         """
         if self.has_ui and not self.studio_enabled:
             # Note! not using the import as this confuses Nuke's callback system
@@ -507,9 +512,9 @@ class NukeEngine(tank.platform.Engine):
         Ensure any new projects get the project root or default startup 
         projects get the project root set properly.
 
-        :param event: A Nuke event object. It is a standard argument for
-            event callbacks in Nuke, which is what this method is registered
-            as on engine initialization.
+        :param event:   A Nuke event object. It is a standard argument for
+                        event callbacks in Nuke, which is what this method is registered
+                        as on engine initialization.
         """
         import hiero
         for p in hiero.core.projects():
