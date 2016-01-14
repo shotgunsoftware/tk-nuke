@@ -205,6 +205,13 @@ class NukeEngine(tank.platform.Engine):
             self.post_app_init_hiero(menu_name)
         elif self.studio_enabled:
             self.post_app_init_studio(menu_name)
+
+            # We want to run the Nuke init, as well, to load up
+            # any gizmos, but we don't want it to be part of the
+            # post_app_init_studio method, since we'll also need
+            # to call just the gizmo stuff on context changes and
+            # not the other Nuke Studio-related init stuff.
+            self.post_app_init_nuke(menu_name)
         else:
             self.post_app_init_nuke(menu_name)
 
