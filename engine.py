@@ -34,6 +34,9 @@ class NukeEngine(tank.platform.Engine):
         self._ui_enabled = nuke.env.get("gui")
         self._context_switcher = None
         self._menu_generator = None
+        self._context_change_menu_rebuild = True
+        self._processed_paths = []
+        self._processed_environments = []
 
         super(NukeEngine, self).__init__(*args, **kwargs)
 
@@ -215,23 +218,29 @@ class NukeEngine(tank.platform.Engine):
             # Note! not using the import as this confuses Nuke's callback system
             # (several of the key scene callbacks are in the main init file).
             import tk_nuke
+            import hiero
 
             # Create the menu!
             self._menu_generator = tk_nuke.NukeStudioMenuGenerator(self, menu_name)
             self._menu_generator.create_menu()
 
-            import hiero
-            def _set_project_root_callback(event):
-                self.set_project_root(event)
-
             hiero.core.events.registerInterest(
                 'kAfterNewProjectCreated',
-                _set_project_root_callback,
+                self.set_project_root,
             )
 
-        # Then we need to setup our context switcher.
-        import tk_nuke
-        self._context_switcher = tk_nuke.StudioContextSwitcher(self)
+            # Then we need to setup our context switcher.
+            import tk_nuke
+            self._context_switcher = tk_nuke.StudioContextSwitcher(self)
+
+            # On selection change we have to check what was selected and pre-load
+            # the context if that environment (ie: shot_step) hasn't already been
+            # processed. This ensure that all Nuke gizmos for the target environment
+            # will be available.
+            hiero.core.events.registerInterest(
+                'kSelectionChanged',
+                self._handle_studio_selection_change,
+            )
 
     def post_app_init_hiero(self, menu_name="Shotgun"):
         """
@@ -243,18 +252,15 @@ class NukeEngine(tank.platform.Engine):
             # Note! not using the import as this confuses Nuke's callback system
             # (several of the key scene callbacks are in the main init file).
             import tk_nuke
+            import hiero
 
             # Create the menu!
             self._menu_generator = tk_nuke.HieroMenuGenerator(self, menu_name)
             self._menu_generator.create_menu()
 
-            import hiero
-            def _set_project_root_callback(event):
-                self.set_project_root(event)
-
             hiero.core.events.registerInterest(
                 'kAfterNewProjectCreated',
-                _set_project_root_callback,
+                self.set_project_root,
             )
 
     def post_app_init_nuke(self, menu_name="Shotgun"):
@@ -328,7 +334,8 @@ class NukeEngine(tank.platform.Engine):
         if not self.hiero_enabled:
             self.post_app_init_nuke()
 
-        self.menu_generator.create_menu()
+        if self._context_change_menu_rebuild:
+            self.menu_generator.create_menu()
 
     #####################################################################################
     # Logging
@@ -539,6 +546,67 @@ class NukeEngine(tank.platform.Engine):
         if nuke.env.get("NukeVersionMajor") > 6:
             return None
         return super(NukeEngine, self)._get_dialog_parent()
+
+    def _handle_studio_selection_change(self, event):
+        """
+        An event handler that processes selection-change events in Nuke Studio.
+
+        :param event:   The event that triggered this callback's execution.
+        """
+        # Keep a copy of the current context since we'll need
+        # to get back to it after pre-loading the target.
+        current_context = self.context
+        sender = event.sender
+        import hiero
+
+        try:
+            for item in sender.selection():
+                # Depending on whether this is a BinItem or something
+                # else, we have different ways of getting to the Clip
+                # object for the item.
+                try:
+                    clip = item.source()
+                except AttributeError:
+                    clip = item.activeItem()
+
+                if isinstance(clip, hiero.core.Clip):
+                    media = clip.mediaSource()
+                    infos = media.fileinfos()
+                    file_path = str(infos[0].filename())
+
+                    # If we've already seen this file selected before, or if it's
+                    # not a .nk file, then we don't need to do anything.
+                    if file_path not in self._processed_paths and file_path.endswith(".nk"):
+                        self._processed_paths.append(file_path)
+                        self._context_change_menu_rebuild = False
+                        current_context = self.context
+                        target_context = self._context_switcher.get_new_context(file_path)
+
+                        if target_context:
+                            # If this environment has already been processed then
+                            # we don't need to do anything. There's only one "shot_step"
+                            # environment out there, regardless of what .nk file was
+                            # selected.
+                            env_name = target_context.tank.execute_core_hook(
+                                tank.constants.PICK_ENVIRONMENT_CORE_HOOK_NAME,
+                                context=target_context,
+                            )
+
+                            if env_name not in self._processed_environments:
+                                self._processed_environments.append(env_name)
+                                self._context_switcher.change_context(target_context)
+        except Exception, e:
+            # If anything went wrong, we can just let the finally block
+            # run, which will put things back to the way they were.
+            self.log_debug("Unable to pre-load environment: %s" % str(e))
+        finally:
+            # If the context was changed during the course of the handling
+            # of the selection event, we need to go back to what we had.
+            # Once we do we can then make sure that we re-enable menu rebuilds
+            # for future context changes.
+            if self.context is not current_context:
+                self._context_switcher.change_context(current_context)
+            self._context_change_menu_rebuild = True
     
     def __setup_favorite_dirs(self):
         """

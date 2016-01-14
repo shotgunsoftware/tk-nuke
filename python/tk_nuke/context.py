@@ -92,20 +92,6 @@ class StudioContextSwitcher(object):
     ##########################################################################
     # private
 
-    def _change_context(self, new_context):
-        """
-        Changes Toolkit's context, or creates a disabled menu item if
-        that is not possible.
-
-        :param new_context: The sgtk.context.Context to change to.
-        """
-        # try to create new engine
-        try:
-            tank.platform.change_context(new_context)
-        except tank.TankEngineInitError, e:
-            # Context was not sufficient!
-            self.engine.menu_generator.create_sgtk_disabled_menu(e)
-
     def _check_if_registered(self, func, registrar):
         """
         Checks if a callback is already registered with Nuke Studio.
@@ -124,19 +110,17 @@ class StudioContextSwitcher(object):
 
         :param event:   The Nuke Studio event that was triggered.
         """
-        focusInNuke = event.focusInNuke
-
         # Testing if we actually changed context or if the event got fired without
         # the user switching to the node graph. Early exit if it's still the
         # same context.
-        if self._is_in_nuke == focusInNuke:
+        if self._is_in_nuke == event.focusInNuke:
             return
 
         # Set the current context to be remembered for the next context
         # change.
-        self._is_in_nuke = focusInNuke
+        self._is_in_nuke = event.focusInNuke
 
-        if focusInNuke:
+        if self.is_in_nuke:
             # We switched from the project timeline to a Nuke node graph.
             try:
                 script_path = nuke.scriptName()
@@ -146,10 +130,10 @@ class StudioContextSwitcher(object):
             if script_path:
                 # Switched to nuke with a script open. We have a path and could try
                 # to figure out the sgtk context from that.
-                new_context = self._get_new_context(script_path)
+                new_context = self.get_new_context(script_path)
 
                 if new_context is not None and new_context != self.engine.context:
-                    self._change_context(new_context)
+                    self.change_context(new_context)
             else:
                 # There is no script open in the nuke node graph. Empty
                 # session so we won't switch to a new context, although we
@@ -161,7 +145,7 @@ class StudioContextSwitcher(object):
             # path.
             project_path = self._get_current_project()
             if project_path is not None:
-                self._change_context(self._get_new_context(project_path))
+                self.change_context(self.get_new_context(project_path))
 
     def _get_context_from_script(self, script):
         """
@@ -199,35 +183,6 @@ class StudioContextSwitcher(object):
         else:
             return None
 
-    def _get_new_context(self, script_path):
-        """
-        Returns a new sgtk.context.Context for the given script path.
-
-        If the context exists in the in-memory cache, then that is returned,
-        otherwise a new Context object is constructed, cached, and returned.
-
-        :param script_path: The path to a script file on disk.
-        """
-        context = self._context_cache.get(script_path)
-
-        if context:
-            return context
-
-        try:
-            context = self._get_context_from_script(script_path)
-            if context:
-                self._context_cache[script_path] = context
-                return context
-            else:
-                raise tank.TankError(
-                    'Toolkit could not determine the context associated with this script.'
-                )
-        except Exception, e:
-            self.engine.menu_generator.create_sgtk_disabled_menu(e)
-            self.engine.log_debug(e)
-
-        return None
-
     def _on_save_callback(self):
         """
         Callback that fires every time a file is saved.
@@ -250,7 +205,7 @@ class StudioContextSwitcher(object):
                 previous_context=self.context,
             )
 
-            self._change_context(new_context)
+            self.change_context(new_context)
         except Exception:
             self.engine.menu_generator.create_sgtk_error_menu()
 
@@ -289,18 +244,61 @@ class StudioContextSwitcher(object):
                 )
 
             # Now change the context for the engine and apps.
-            self._change_context(new_ctx)
+            self.change_context(new_ctx)
         except Exception, e:
             self.engine.menu_generator.create_sgtk_error_menu(e)
 
     ##########################################################################
     # public
 
+    def change_context(self, new_context):
+        """
+        Changes Toolkit's context, or creates a disabled menu item if
+        that is not possible.
+
+        :param new_context: The sgtk.context.Context to change to.
+        """
+        # try to create new engine
+        try:
+            tank.platform.change_context(new_context)
+        except tank.TankEngineInitError, e:
+            # Context was not sufficient!
+            self.engine.menu_generator.create_sgtk_disabled_menu(e)
+
     def destroy(self):
         """
         Tears down the context switcher by deregistering event handlers.
         """
         self.unregister_events()
+
+    def get_new_context(self, script_path):
+        """
+        Returns a new sgtk.context.Context for the given script path.
+
+        If the context exists in the in-memory cache, then that is returned,
+        otherwise a new Context object is constructed, cached, and returned.
+
+        :param script_path: The path to a script file on disk.
+        """
+        context = self._context_cache.get(script_path)
+
+        if context:
+            return context
+
+        try:
+            context = self._get_context_from_script(script_path)
+            if context:
+                self._context_cache[script_path] = context
+                return context
+            else:
+                raise tank.TankError(
+                    'Toolkit could not determine the context associated with this script.'
+                )
+        except Exception, e:
+            self.engine.menu_generator.create_sgtk_disabled_menu(e)
+            self.engine.log_debug(e)
+
+        return None
 
     def register_events(self, reregister=False):
         """
