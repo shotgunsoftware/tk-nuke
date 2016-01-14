@@ -1,4 +1,4 @@
-# Copyright (c) 2013 Shotgun Software Inc.
+# Copyright (c) 2016 Shotgun Software Inc.
 #
 # CONFIDENTIAL AND PROPRIETARY
 #
@@ -20,8 +20,17 @@ from tank import TankError
 class StudioContextSwitcher(object):
     """
     A Toolkit context-switching manager.
-    """
 
+    This class operates by registering an event handler with Nuke Studio,
+    which allows it to detect when the user has changed from the top-level
+    "project" view to a Nuke node graph, and vice versa. When changing to
+    the "Nuke" portion of Nuke Studio, the .nk script being shown will be
+    checked against Shotgun Toolkit to determine whether it resides in a
+    known context, and if it does the tk-nuke engine will switch to that
+    on the fly. When the user comes out of the "Nuke" portion of Nuke Studio
+    and is once again at the project level, tk-nuke's context will again
+    be changed to match.
+    """
     def __init__(self, engine):
         """
         Initializes a StudioContextSwitcher object.
