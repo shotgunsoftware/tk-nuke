@@ -1,4 +1,4 @@
-# Copyright (c) 2015 Shotgun Software Inc.
+# Copyright (c) 2016 Shotgun Software Inc.
 # 
 # CONFIDENTIAL AND PROPRIETARY
 # 
@@ -20,7 +20,7 @@ import nukescripts
 
 class NukeEngine(tank.platform.Engine):
     """
-    An engine that supports Nuke 6.3v5+ and Hiero 9.0v*+.
+    An engine that supports Nuke 6.3v5+, Hiero 9.0+, and Nuke Studio 9.0+
     """
     # Define the different areas where menu events can occur in Hiero.
     (HIERO_BIN_AREA, HIERO_SPREADSHEET_AREA, HIERO_TIMELINE_AREA) = range(3)
@@ -29,8 +29,15 @@ class NukeEngine(tank.platform.Engine):
         # For the short term, we will treat Nuke Studio as if it
         # is Hiero. This logic will change once we have true Nuke
         # Studio support for this engine.
-        self._hiero_enabled = nuke.env.get("hiero") or nuke.env.get("studio")
+        self._hiero_enabled = nuke.env.get("hiero")
+        self._studio_enabled = nuke.env.get("studio")
         self._ui_enabled = nuke.env.get("gui")
+        self._context_switcher = None
+        self._menu_generator = None
+        self._context_change_menu_rebuild = True
+        self._processed_paths = []
+        self._processed_environments = []
+
         super(NukeEngine, self).__init__(*args, **kwargs)
 
     #####################################################################################
@@ -49,6 +56,24 @@ class NukeEngine(tank.platform.Engine):
         Whether Nuke is running in Hiero mode.
         """
         return self._hiero_enabled
+
+    @property
+    def studio_enabled(self):
+        """
+        Whether Nuke is running in Studio mode.
+        """
+        return self._studio_enabled
+
+    @property
+    def context_change_allowed(self):
+        """
+        Whether the engine allows a context change without the need for a restart.
+        """
+        return True
+
+    @property
+    def menu_generator(self):
+        return self._menu_generator
 
     #####################################################################################
     # Engine Initialization and Destruction
@@ -114,8 +139,16 @@ class NukeEngine(tank.platform.Engine):
         # Do our mode-specific initializations.
         if self.hiero_enabled:
             self.init_engine_hiero()
+        elif self.studio_enabled:
+            self.init_engine_studio()
         else:
             self.init_engine_nuke()
+
+    def init_engine_studio(self):
+        """
+        The Nuke Studio specific portion of engine initialization.
+        """
+        self.init_engine_hiero()
 
     def init_engine_hiero(self):
         """
@@ -136,19 +169,19 @@ class NukeEngine(tank.platform.Engine):
         os.environ["TANK_NUKE_ENGINE_INIT_PROJECT_ROOT"] = self.tank.project_path
         
         # Add our startup path to the nuke init path
-        startup_path = os.path.abspath(os.path.join( os.path.dirname(__file__), "startup"))
+        startup_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "startup"))
         tank.util.append_path_to_env_var("NUKE_PATH", startup_path)        
     
         # We also need to pass the path to the python folder down to the init script
         # because nuke python does not have a __file__ attribute for that file.
-        local_python_path = os.path.abspath(os.path.join( os.path.dirname(__file__), "python"))
+        local_python_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "python"))
         os.environ["TANK_NUKE_ENGINE_MOD_PATH"] = local_python_path
 
     def pre_app_init(self):
         """
         Called at startup, but after QT has been initialized.
         """
-        if self.hiero_enabled:
+        if self.hiero_enabled or self.studio_enabled:
             return
 
         # Note! not using the import as this confuses nuke's calback system
@@ -170,35 +203,80 @@ class NukeEngine(tank.platform.Engine):
         # We have some mode-specific initialization to do.
         if self.hiero_enabled:
             self.post_app_init_hiero(menu_name)
+        elif self.studio_enabled:
+            self.post_app_init_studio(menu_name)
+
+            # We want to run the Nuke init, as well, to load up
+            # any gizmos, but we don't want it to be part of the
+            # post_app_init_studio method, since we'll also need
+            # to call just the gizmo stuff on context changes and
+            # not the other Nuke Studio-related init stuff.
+            self.post_app_init_nuke(menu_name)
         else:
             self.post_app_init_nuke(menu_name)
 
-    def post_app_init_hiero(self, menu_name="Shotgun"):
+    def post_app_init_studio(self, menu_name="Shotgun"):
         """
-        The Hiero-specific portion of the engine's post-init process.
+        The Nuke Studio specific portion of the engine's post-init process.
+
+        :param menu_name:   The label/name of the menu to be created.
         """
         if self.has_ui:
             # Note! not using the import as this confuses Nuke's callback system
             # (several of the key scene callbacks are in the main init file).
             import tk_nuke
+            import hiero
+
+            # Create the menu!
+            self._menu_generator = tk_nuke.NukeStudioMenuGenerator(self, menu_name)
+            self._menu_generator.create_menu()
+
+            hiero.core.events.registerInterest(
+                'kAfterNewProjectCreated',
+                self.set_project_root,
+            )
+
+            # Then we need to setup our context switcher.
+            import tk_nuke
+            self._context_switcher = tk_nuke.StudioContextSwitcher(self)
+
+            # On selection change we have to check what was selected and pre-load
+            # the context if that environment (ie: shot_step) hasn't already been
+            # processed. This ensure that all Nuke gizmos for the target environment
+            # will be available.
+            hiero.core.events.registerInterest(
+                'kSelectionChanged',
+                self._handle_studio_selection_change,
+            )
+
+    def post_app_init_hiero(self, menu_name="Shotgun"):
+        """
+        The Hiero-specific portion of the engine's post-init process.
+
+        :param menu_name:   The label/name of the menu to be created.
+        """
+        if self.has_ui:
+            # Note! not using the import as this confuses Nuke's callback system
+            # (several of the key scene callbacks are in the main init file).
+            import tk_nuke
+            import hiero
 
             # Create the menu!
             self._menu_generator = tk_nuke.HieroMenuGenerator(self, menu_name)
             self._menu_generator.create_menu()
 
-            import hiero
-            def _set_project_root_callback(event):
-                self.set_project_root(event)
             hiero.core.events.registerInterest(
                 'kAfterNewProjectCreated',
-                _set_project_root_callback,
+                self.set_project_root,
             )
 
     def post_app_init_nuke(self, menu_name="Shotgun"):
         """
         The Nuke-specific portion of the engine's post-init process.
+
+        :param menu_name:   The label/name of the menu to be created.
         """
-        if self.has_ui:
+        if self.has_ui and not self.studio_enabled:
             # Note! not using the import as this confuses Nuke's callback system
             # (several of the key scene callbacks are in the main init file).
             import tk_nuke
@@ -242,8 +320,29 @@ class NukeEngine(tank.platform.Engine):
         Runs when the engine is unloaded, typically at context switch.
         """
         self.log_debug("%s: Destroying..." % self)
+
+        if self._context_switcher:
+            self._context_switcher.destroy()
+
         if self.has_ui:
             self._menu_generator.destroy_menu()
+
+    def post_context_change(self, old_context, new_context):
+        """
+        Handles post-context-change requirements for Nuke, Hiero, and Nuke Studio.
+
+        :param old_context: The sgtk.context.Context being switched away from.
+        :param new_context: The sgtk.context.Context being switched to.
+        """
+        self.log_debug("tk-nuke context changed to %s" % str(new_context))
+
+        # We also need to run the post init for Nuke, which will handle
+        # getting any gizmos setup.
+        if not self.hiero_enabled:
+            self.post_app_init_nuke()
+
+        if self._context_change_menu_rebuild:
+            self.menu_generator.create_menu()
 
     #####################################################################################
     # Logging
@@ -427,9 +526,9 @@ class NukeEngine(tank.platform.Engine):
         Ensure any new projects get the project root or default startup 
         projects get the project root set properly.
 
-        :param event: A Nuke event object. It is a standard argument for
-            event callbacks in Nuke, which is what this method is registered
-            as on engine initialization.
+        :param event:   A Nuke event object. It is a standard argument for
+                        event callbacks in Nuke, which is what this method is registered
+                        as on engine initialization.
         """
         import hiero
         for p in hiero.core.projects():
@@ -454,6 +553,67 @@ class NukeEngine(tank.platform.Engine):
         if nuke.env.get("NukeVersionMajor") > 6:
             return None
         return super(NukeEngine, self)._get_dialog_parent()
+
+    def _handle_studio_selection_change(self, event):
+        """
+        An event handler that processes selection-change events in Nuke Studio.
+
+        :param event:   The event that triggered this callback's execution.
+        """
+        # Keep a copy of the current context since we'll need
+        # to get back to it after pre-loading the target.
+        current_context = self.context
+        sender = event.sender
+        import hiero
+
+        try:
+            for item in sender.selection():
+                # Depending on whether this is a BinItem or something
+                # else, we have different ways of getting to the Clip
+                # object for the item.
+                try:
+                    clip = item.source()
+                except AttributeError:
+                    clip = item.activeItem()
+
+                if isinstance(clip, hiero.core.Clip):
+                    media = clip.mediaSource()
+                    infos = media.fileinfos()
+                    file_path = str(infos[0].filename())
+
+                    # If we've already seen this file selected before, or if it's
+                    # not a .nk file, then we don't need to do anything.
+                    if file_path not in self._processed_paths and file_path.endswith(".nk"):
+                        self._processed_paths.append(file_path)
+                        self._context_change_menu_rebuild = False
+                        current_context = self.context
+                        target_context = self._context_switcher.get_new_context(file_path)
+
+                        if target_context:
+                            # If this environment has already been processed then
+                            # we don't need to do anything. There's only one "shot_step"
+                            # environment out there, regardless of what .nk file was
+                            # selected.
+                            env_name = target_context.tank.execute_core_hook(
+                                tank.constants.PICK_ENVIRONMENT_CORE_HOOK_NAME,
+                                context=target_context,
+                            )
+
+                            if env_name not in self._processed_environments:
+                                self._processed_environments.append(env_name)
+                                self._context_switcher.change_context(target_context)
+        except Exception, e:
+            # If anything went wrong, we can just let the finally block
+            # run, which will put things back to the way they were.
+            self.log_debug("Unable to pre-load environment: %s" % str(e))
+        finally:
+            # If the context was changed during the course of the handling
+            # of the selection event, we need to go back to what we had.
+            # Once we do we can then make sure that we re-enable menu rebuilds
+            # for future context changes.
+            if self.context is not current_context:
+                self._context_switcher.change_context(current_context)
+            self._context_change_menu_rebuild = True
     
     def __setup_favorite_dirs(self):
         """

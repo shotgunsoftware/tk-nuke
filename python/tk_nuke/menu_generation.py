@@ -1,4 +1,4 @@
-# Copyright (c) 2015 Shotgun Software Inc.
+# Copyright (c) 2016 Shotgun Software Inc.
 # 
 # CONFIDENTIAL AND PROPRIETARY
 # 
@@ -38,24 +38,102 @@ class BaseMenuGenerator(object):
         self._engine = engine
         self._menu_name = menu_name
 
+        engine_root_dir = self.engine.disk_location
+        self._shotgun_logo = os.path.abspath(
+            os.path.join(
+                engine_root_dir,
+                "resources",
+                "sg_logo_80px.png",
+            ),
+        )
+        self._shotgun_logo_blue = os.path.abspath(
+            os.path.join(
+                engine_root_dir,
+                "resources",
+                "sg_logo_blue_32px.png",
+            ),
+        )
+
     @property
     def engine(self):
-        """The currently-running engine."""
+        """
+        The currently-running engine.
+        """
         return self._engine
 
     @property
     def menu_name(self):
-        """The name of the menu to be generated."""
+        """
+        The name of the menu to be generated.
+        """
         return self._menu_name
 
+    def create_sgtk_error_menu(self):
+        """
+        Creates an "error" menu item.
+        """
+        (exc_type, exc_value, exc_traceback) = sys.exc_info()
+        msg = ("Message: Shotgun encountered a problem starting the Engine.\n"
+               "Exception: %s - %s\n"
+               "Traceback (most recent call last): %s" % (exc_type,
+                                                          exc_value,
+                                                          "\n".join(traceback.format_tb(exc_traceback))))
+
+        self._disable_menu("[Toolkit Error - Click for details]", msg)
+
+    def create_sgtk_disabled_menu(self, details):
+        """
+        Creates a "disabled" Shotgun menu item.
+
+        :param details: A detailed message about why Toolkit has been
+                        disabled.
+        """
+        msg = ("Shotgun integration is currently disabled because the file you "
+               "have opened is not recognized. Shotgun cannot "
+               "determine which Context the currently-open file belongs to. "
+               "In order to enable Toolkit integration, try opening another "
+               "file. <br><br><i>Details:</i> %s" % details)
+        self._disable_menu("[Toolkit is disabled - Click for details]", msg)
+
+    def create_disabled_menu(self, cmd_name, msg):
+        """
+        Implemented in deriving classes to create a "disabled" menu.
+
+        :param cmd_name:    An AppCommand object to associate with the disabled
+                            menu command.
+        :param msg:         A message explaining why Toolkit is disabled.
+        """
+        self.engine.log_debug(
+            'Not implemented: %s.%s' % (
+                self.__class__.__name__,
+                'create_disabled_menu',
+            ),
+        )
+
+    def _disable_menu(self, cmd_name, msg):
+        """
+        Disables the Shotgun menu.
+
+        :param cmd_name:    An AppCommand object to associate with the disabled
+                            menu command.
+        :param msg:         A message explaining why Toolkit is disabled.
+        """
+        if self._menu_handle:
+            self.destroy_menu()
+        self.create_disabled_menu(cmd_name, msg)
+
     def _jump_to_sg(self):
-        """Jump from a context to Shotgun."""
+        """
+        Jump from a context to Shotgun.
+        """
         from tank.platform.qt import QtCore, QtGui
         url = self.engine.context.shotgun_url
         QtGui.QDesktopServices.openUrl(QtCore.QUrl(url))
 
     def _jump_to_fs(self):
-        """Jump from a context to the filesystem."""
+        """
+        Jump from a context to the filesystem.
+        """
         paths = self.engine.context.filesystem_locations
         for disk_location in paths:
             system = sys.platform
@@ -79,13 +157,25 @@ class HieroMenuGenerator(BaseMenuGenerator):
     A Hiero specific menu generator.
     """
     def __init__(self, engine, menu_name):
+        """
+        Initializes a new menu generator.
+
+        :param engine: The currently-running engine.
+        :type engine: :class:`tank.platform.Engine`
+        :param menu_name: The name of the menu to be created.
+        """
         super(HieroMenuGenerator, self).__init__(engine, menu_name)
         self._menu_handle = None
         self._context_menus_to_apps = dict()
 
-    def create_menu(self):
+    def create_menu(self, add_commands=True):
         """
         Creates the "Shotgun" menu in Hiero.
+
+        :param add_commands:    If True, menu commands will be added to
+                                the newly-created menu. If False, the menu
+                                will be created, but no contents will be
+                                added. Defaults to True.
         """
         import hiero
         if self._menu_handle is not None:
@@ -97,6 +187,11 @@ class HieroMenuGenerator(BaseMenuGenerator):
         menuBar.insertMenu(help, self._menu_handle)
 
         self._menu_handle.clear()
+
+        # If we were asked not to add any commands to the menu,
+        # then bail out.
+        if not add_commands:
+            return
 
         # Now add the context item on top of the main menu.
         self._context_menu = self._add_context_menu()
@@ -192,7 +287,31 @@ class HieroMenuGenerator(BaseMenuGenerator):
         menuBar.removeAction(self._menu_handle.menuAction())
         self._menu_handle = None
 
+        # Register for the interesting events.
+        hiero.core.events.unregisterInterest(
+            "kShowContextMenu/kBin",
+            self.eventHandler,
+        )
+        hiero.core.events.unregisterInterest(
+            "kShowContextMenu/kTimeline",
+            self.eventHandler,
+        )
+        # Note that the kViewer works differently than the other things
+        # (returns a hiero.ui.Viewer object: http://docs.thefoundry.co.uk/hiero/10/hieropythondevguide/api/api_ui.html#hiero.ui.Viewer)
+        # so we cannot support this easily using the same principles as for the other things.
+        hiero.core.events.registerInterest(
+            "kShowContextMenu/kSpreadsheet",
+            self.eventHandler,
+        )
+
     def eventHandler(self, event):
+        """
+        The engine's Hiero-specific event handler. This is called by Hiero when
+        events are triggered, which then handles running SGTK-specific event
+        behaviors.
+
+        :param event:   The Hiero event object that was triggered.
+        """
         if event.subtype == "kBin":
             cmds = self._context_menus_to_apps["bin_context_menu"]
         elif event.subtype == "kTimeline":
@@ -253,6 +372,10 @@ class HieroMenuGenerator(BaseMenuGenerator):
     def _add_app_menu(self, commands_by_app):
         """
         Add all apps to the main menu.
+
+        :param commands_by_app: A dict containing a key for each active
+                                app paired with its AppCommand object to be
+                                added to the menu.
         """
         for app_name in sorted(commands_by_app.keys()):
             if len(commands_by_app[app_name]) > 1:
@@ -273,32 +396,54 @@ class HieroMenuGenerator(BaseMenuGenerator):
 
 # -----------------------------------------------------------------------------
 
+class NukeStudioMenuGenerator(HieroMenuGenerator):
+    """
+    A Nuke Studio specific menu generator.
+    """
+    def create_disabled_menu(self, cmd_name, msg):
+        """
+        Creates the contents of the "disabled" menu in Nuke Studio.
+
+        :param cmd_name:    An AppCommand object to associate with the disabled
+                            menu command.
+        :param msg:         A message explaining why Toolkit is disabled.
+        """
+        self.create_menu(add_commands=False)
+
+        import nuke
+        callback = lambda m = msg: nuke.message(m)
+        cmd = HieroAppCommand(
+            self.engine,
+            cmd_name,
+            dict(properties=dict(), callback=callback),
+        )
+        cmd.add_command_to_menu(self._menu_handle, icon=self._shotgun_logo_blue)
+
+# -----------------------------------------------------------------------------
+
 class NukeMenuGenerator(BaseMenuGenerator):
     """
     A Nuke specific menu generator.
     """
     def __init__(self, engine, menu_name):
+        """
+        Initializes a new menu generator.
+
+        :param engine: The currently-running engine.
+        :type engine: :class:`tank.platform.Engine`
+        :param menu_name: The name of the menu to be created.
+        """
         super(NukeMenuGenerator, self).__init__(engine, menu_name)
         self._dialogs = []
-        engine_root_dir = self.engine.disk_location
-        self._shotgun_logo = os.path.abspath(
-            os.path.join(
-                engine_root_dir,
-                "resources",
-                "sg_logo_80px.png",
-            ),
-        )
-        self._shotgun_logo_blue = os.path.abspath(
-            os.path.join(
-                engine_root_dir,
-                "resources",
-                "sg_logo_blue_32px.png",
-            ),
-        )
 
-    def create_menu(self):
+    def create_menu(self, add_commands=True):
         """
         Creates the "Shotgun" menu in Nuke.
+
+        :param add_commands:    If True, menu commands will be added to
+                                the newly-created menu. If False, the menu
+                                will be created, but no contents will be
+                                added. Defaults to True.
         """
         # Create main Shotgun menu.
         menu_handle = nuke.menu("Nuke").addMenu(self._menu_name)
@@ -309,6 +454,11 @@ class NukeMenuGenerator(BaseMenuGenerator):
         # where the engine didn't clean up after itself properly.
         menu_handle.clearMenu()
         node_menu_handle.clearMenu()
+
+        # If we were asked not to add any commands to the menu,
+        # the bail out.
+        if not add_commands:
+            return
 
         # Now add the context item on top of the main menu.
         self._context_menu = self._add_context_menu(menu_handle)
@@ -371,6 +521,25 @@ class NukeMenuGenerator(BaseMenuGenerator):
         # Now add all apps to main menu.
         self._add_app_menu(commands_by_app, menu_handle)
 
+    def create_disabled_menu(self, cmd_name, msg):
+        """
+        Creates the contents of the "disabled" menu in Nuke.
+
+        :param cmd_name:    An AppCommand object to associate with the disabled
+                            menu command.
+        :param msg:         A message explaining why Toolkit is disabled.
+        """
+        self.create_menu(add_commands=False)
+
+        import nuke
+        callback = lambda m = msg: nuke.message(m)
+        cmd = NukeAppCommand(
+            self.engine,
+            cmd_name,
+            dict(properties=dict(), callback=callback),
+        )
+        cmd.add_command_to_menu(self._menu_handle, icon=self._shotgun_logo_blue)
+
     def destroy_menu(self):
         """
         Destroys any menus that were created.
@@ -398,6 +567,8 @@ class NukeMenuGenerator(BaseMenuGenerator):
     def _add_context_menu(self, menu_handle):
         """
         Adds a context menu which displays the current context.
+
+        :param menu_handle: A handle to Nuke's top-level menu manager object.
         """        
         ctx = self.engine.context
         ctx_name = str(ctx)
@@ -412,6 +583,11 @@ class NukeMenuGenerator(BaseMenuGenerator):
     def _add_app_menu(self, commands_by_app, menu_handle):
         """
         Add all apps to the main menu, process them one by one.
+
+        :param commands_by_app: A dict containing a key for each active
+                                app paired with its AppCommand object to be
+                                added to the menu.
+        :param menu_handle:     A handle to Nuke's top-level menu manager object.
         """
         for app_name in sorted(commands_by_app.keys()):
             if len(commands_by_app[app_name]) > 1:
@@ -521,7 +697,7 @@ class BaseAppCommand(object):
         """The command's type as a string."""
         return self._type
 
-    def add_command_to_menu(self, menu, enabled=True):
+    def add_command_to_menu(self, menu, enabled=True, icon=None):
         raise NotImplementedError()
 
     def add_command_to_pane_menu(self, menu):
@@ -546,6 +722,16 @@ class HieroAppCommand(BaseAppCommand):
     Wraps a single command that you get from engine.commands.
     """
     def __init__(self, engine, name, command_dict):
+        """
+        Initializes a new AppCommand object.
+
+        :param engine:  The SGTK engine controlling the session.
+        :param name:    The name of the command.
+        :command_dict:  A dict containing the information necessary to
+                        register a command with Hiero's menu manager. This
+                        includes a properties dict as well as a callback
+                        in the form of a callable object.
+        """
         super(HieroAppCommand, self).__init__(engine, name, command_dict)
         self._requires_selection = False
         self._sender = None
@@ -588,11 +774,17 @@ class HieroAppCommand(BaseAppCommand):
     def event_subtype(self, event_subtype):
         self._event_subtype = event_subtype
 
-    def add_command_to_menu(self, menu, enabled=True):
+    def add_command_to_menu(self, menu, enabled=True, icon=None):
         """
         Adds the command to the menu.
+
+        :param menu:    A handle to the menu to add the command to.
+        :param enabled: Whether the command is to be enabled once it
+                        is added to the menu. Defaults to True.
+        :param icon:    The path to an image to use as the icon for the
+                        command.
         """
-        icon = self.properties.get("icon")
+        icon = icon or self.properties.get("icon")
         action = menu.addAction(self.name)
         action.setEnabled(enabled)
         if icon:
@@ -653,6 +845,9 @@ class NukeAppCommand(BaseAppCommand):
     def _non_pane_menu_callback_wrapper(self, callback):
         """
         Callback for all non-pane menu commands.
+
+        :param callback:    A callable object that is triggered
+                            when the wrapper is invoked.
         """
         # This is a wrapped menu callback for whenever an item is clicked
         # in a menu which isn't the standard nuke pane menu. This ie because 
@@ -683,13 +878,17 @@ class NukeAppCommand(BaseAppCommand):
         icon = self.properties.get("icon")
         menu.addCommand(self.name, self.callback, icon=icon)
         
-    def add_command_to_menu(self, menu, enabled=True):
+    def add_command_to_menu(self, menu, enabled=True, icon=None):
         """
         Adds a command to the menu.
         
-        :param menu: The menu object to add the new item to.
+        :param menu:    The menu object to add the new item to.
+        :param enabled: Whether the command will be enabled after it
+                        is added to the menu. Defaults to True.
+        :param icon:    The path to an image file to use as the icon
+                        for the menu command.
         """
-        icon = self.properties.get("icon")
+        icon = icon or self.properties.get("icon")
         hotkey = self.properties.get("hotkey")
         
         # Now wrap the command callback in a wrapper (see above)
