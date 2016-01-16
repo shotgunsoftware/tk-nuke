@@ -347,10 +347,14 @@ class StudioContextSwitcher(object):
 
             add(function)
 
-    def unregister_events(self):
+    def unregister_events(self, only=None):
         """
         Unregisters any event handlers that the context switcher
         created during a register_events call.
+
+        :param only:    A list of callback functions to unregister. If
+                        not provided, all known event callbacks will be
+                        unregistered.
         """
         import hiero.core
 
