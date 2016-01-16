@@ -285,6 +285,7 @@ class HieroMenuGenerator(BaseMenuGenerator):
         import hiero
         menuBar = hiero.ui.menuBar()
         menuBar.removeAction(self._menu_handle.menuAction())
+        self._menu_handle.clear()
         self._menu_handle = None
 
         # Register for the interesting events.
@@ -299,7 +300,7 @@ class HieroMenuGenerator(BaseMenuGenerator):
         # Note that the kViewer works differently than the other things
         # (returns a hiero.ui.Viewer object: http://docs.thefoundry.co.uk/hiero/10/hieropythondevguide/api/api_ui.html#hiero.ui.Viewer)
         # so we cannot support this easily using the same principles as for the other things.
-        hiero.core.events.registerInterest(
+        hiero.core.events.unregisterInterest(
             "kShowContextMenu/kSpreadsheet",
             self.eventHandler,
         )
