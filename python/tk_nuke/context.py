@@ -144,16 +144,19 @@ class StudioContextSwitcher(object):
                 if new_context is not None and new_context != self.engine.context:
                     self.change_context(new_context)
             else:
-                # There is no script open in the nuke node graph. Empty
-                # session so we won't switch to a new context, although we
-                # should rebuild the menu to reflect that.
-                self.engine.menu_generator.create_sgtk_disabled_menu()
+                # There is no script open in the node graph. Because of that, we
+                # will stay in the current context since we're essentially just in
+                # a non-special state of Nuke Studio where we're on the empty node
+                # graph tab.
+                return
         else:
             # This is a switch back to the project-level timeline,
             # so change to that context based on that project file's
             # path.
             project_path = self._get_current_project()
-            if project_path is not None:
+            if project_path is None:
+                self.change_context(self._init_context)
+            else:
                 self.change_context(self.get_new_context(project_path))
 
     def _get_context_from_script(self, script):
@@ -187,10 +190,11 @@ class StudioContextSwitcher(object):
         view = hiero.ui.activeView()
         if isinstance(view, hiero.ui.TimelineEditor):
             sequence = view.sequence()
-            project = sequence.binItem().project()
-            return project.path()
-        else:
-            return None
+            if sequence:
+                bin_item = sequence.binItem()
+                if bin_item:
+                    return bin_item.project().path()
+        return None
 
     def _on_save_callback(self):
         """
@@ -301,7 +305,7 @@ class StudioContextSwitcher(object):
                 return context
             else:
                 raise tank.TankError(
-                    'Toolkit could not determine the context associated with this script.'
+                    "Toolkit could not determine the context associated with this script."
                 )
         except Exception, e:
             self.engine.menu_generator.create_sgtk_disabled_menu(e)

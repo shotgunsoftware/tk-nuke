@@ -81,7 +81,7 @@ class BaseMenuGenerator(object):
 
         self._disable_menu("[Toolkit Error - Click for details]", msg)
 
-    def create_sgtk_disabled_menu(self, details):
+    def create_sgtk_disabled_menu(self, details=""):
         """
         Creates a "disabled" Shotgun menu item.
 
