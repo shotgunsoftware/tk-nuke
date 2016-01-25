@@ -154,10 +154,17 @@ class StudioContextSwitcher(object):
             # so change to that context based on that project file's
             # path.
             project_path = self._get_current_project()
-            if project_path is None:
-                self.change_context(self._init_context)
-            else:
-                self.change_context(self.get_new_context(project_path))
+            if project_path:
+                new_context = self.get_new_context(project_path)
+                if new_context:
+                    self.change_context(new_context)
+                    return
+
+            # If all else fails here, then we just go back to the init
+            # context that we have cached. Since we know we're not in
+            # the Nuke node graph, then we should be fine to go ahead
+            # with what we had at launch.
+            self.change_context(self._init_context)
 
     def _get_context_from_script(self, script):
         """
