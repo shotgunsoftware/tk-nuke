@@ -559,6 +559,10 @@ class NukeMenuGenerator(BaseMenuGenerator):
         menus = ["Nuke", "Pane", "Nodes"]
         for menu in menus:
             # Find the menu and iterate over all items.
+            
+            # remove self.menu_name if exist as MenuItem
+            nuke.menu(menu).removeItem(self._menu_name)
+            
             for mh in nuke.menu(menu).items():
                 # Look for the shotgun menu.
                 if mh.name() == self._menu_name:
