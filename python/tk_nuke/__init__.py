@@ -152,19 +152,13 @@ def __tank_startup_node_callback():
             return
             
         if nuke.root().name() == "Root":
-            # file->new
-            # base it on the context we 'inherited' from the prev session
-            # get the context from the previous session - this is helpful if user does file->new
+            # file->new or clear
+            # load a default project context
             project_root = os.environ.get("TANK_NUKE_ENGINE_INIT_PROJECT_ROOT")
             tk = tank.Tank(project_root)
-            
-            ctx_str = os.environ.get("TANK_NUKE_ENGINE_INIT_CONTEXT")
-            if ctx_str:
-                try:
-                    new_ctx = tk.context_from_path(project_root, tk.context_empty())
-                except:
-                    new_ctx = tk.context_empty()
-            else:
+            try:
+                new_ctx = tk.context_from_path(project_root, tk.context_empty())
+            except:
                 new_ctx = tk.context_empty()
     
         else:
@@ -174,6 +168,7 @@ def __tank_startup_node_callback():
             try:
                 tk = tank.tank_from_path(file_name)
             except tank.TankError, e:
+                 # load a default project context
                 project_root = os.environ.get("TANK_NUKE_ENGINE_INIT_PROJECT_ROOT")
                 tk = tank.Tank(project_root)
                 file_name = project_root
