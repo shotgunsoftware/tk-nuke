@@ -250,12 +250,16 @@ class NukeEngine(tank.platform.Engine):
                 self._handle_studio_selection_change,
             )
 
-            hiero_ver_str = "%s.%s%s" % (
-                hiero_env["VersionMajor"],
-                hiero_env["VersionMinor"],
-                hiero_env["VersionRelease"],
-            )
-            self.log_user_attribute_metric("Nuke Studio version", hiero_ver_str)
+            try:
+                hiero_ver_str = "%s.%s%s" % (
+                    hiero_env["VersionMajor"],
+                    hiero_env["VersionMinor"],
+                    hiero_env["VersionRelease"],
+                )
+                self.log_user_attribute_metric("Nuke Studio version", hiero_ver_str)
+            except:
+                # ignore all errors. ex: using a core that doesn't support metrics
+                pass
 
     def post_app_init_hiero(self, menu_name="Shotgun"):
         """
@@ -278,12 +282,16 @@ class NukeEngine(tank.platform.Engine):
                 self.set_project_root,
             )
 
-            hiero_ver_str = "%s.%s%s" % (
-                hiero_env["VersionMajor"],
-                hiero_env["VersionMinor"],
-                hiero_env["VersionRelease"],
-            )
-            self.log_user_attribute_metric("Hiero version", hiero_ver_str)
+            try:
+                hiero_ver_str = "%s.%s%s" % (
+                    hiero_env["VersionMajor"],
+                    hiero_env["VersionMinor"],
+                    hiero_env["VersionRelease"],
+                )
+                self.log_user_attribute_metric("Hiero version", hiero_ver_str)
+            except:
+                # ignore all errors. ex: using a core that doesn't support metrics
+                pass
 
     def post_app_init_nuke(self, menu_name="Shotgun"):
         """
@@ -331,7 +339,12 @@ class NukeEngine(tank.platform.Engine):
                 # (for example if you do file->open or file->new)
                 tank.util.append_path_to_env_var("NUKE_PATH", app_gizmo_folder)
 
-        self.log_user_attribute_metric("Nuke version", nuke.env.get("NukeVersionString"))
+        try:
+            self.log_user_attribute_metric("Nuke version",
+                nuke.env.get("NukeVersionString"))
+        except:
+            # ignore all errors. ex: using a core that doesn't support metrics
+            pass
 
     def destroy_engine(self):
         """

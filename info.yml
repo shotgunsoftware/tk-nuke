@@ -147,4 +147,3 @@ description: "Shotgun Integration in Nuke"
 requires_shotgun_version:
 requires_core_version: "v0.17.0"
 
-# XXX will require core version with metrics logging
