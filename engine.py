@@ -226,6 +226,7 @@ class NukeEngine(tank.platform.Engine):
             # (several of the key scene callbacks are in the main init file).
             import tk_nuke
             import hiero
+            from hiero.core import env as hiero_env
 
             # Create the menu!
             self._menu_generator = tk_nuke.NukeStudioMenuGenerator(self, menu_name)
@@ -249,6 +250,17 @@ class NukeEngine(tank.platform.Engine):
                 self._handle_studio_selection_change,
             )
 
+            try:
+                hiero_ver_str = "%s.%s%s" % (
+                    hiero_env["VersionMajor"],
+                    hiero_env["VersionMinor"],
+                    hiero_env["VersionRelease"],
+                )
+                self.log_user_attribute_metric("Nuke Studio version", hiero_ver_str)
+            except:
+                # ignore all errors. ex: using a core that doesn't support metrics
+                pass
+
     def post_app_init_hiero(self, menu_name="Shotgun"):
         """
         The Hiero-specific portion of the engine's post-init process.
@@ -270,12 +282,24 @@ class NukeEngine(tank.platform.Engine):
                 self.set_project_root,
             )
 
+            try:
+                hiero_ver_str = "%s.%s%s" % (
+                    hiero_env["VersionMajor"],
+                    hiero_env["VersionMinor"],
+                    hiero_env["VersionRelease"],
+                )
+                self.log_user_attribute_metric("Hiero version", hiero_ver_str)
+            except:
+                # ignore all errors. ex: using a core that doesn't support metrics
+                pass
+
     def post_app_init_nuke(self, menu_name="Shotgun"):
         """
         The Nuke-specific portion of the engine's post-init process.
 
         :param menu_name:   The label/name of the menu to be created.
         """
+
         if self.has_ui and not self.studio_enabled:
             # Note! not using the import as this confuses Nuke's callback system
             # (several of the key scene callbacks are in the main init file).
@@ -314,6 +338,13 @@ class NukeEngine(tank.platform.Engine):
                 # new processes spawned from this one will have access too.
                 # (for example if you do file->open or file->new)
                 tank.util.append_path_to_env_var("NUKE_PATH", app_gizmo_folder)
+
+        try:
+            self.log_user_attribute_metric("Nuke version",
+                nuke.env.get("NukeVersionString"))
+        except:
+            # ignore all errors. ex: using a core that doesn't support metrics
+            pass
 
     def destroy_engine(self):
         """
