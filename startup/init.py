@@ -9,13 +9,9 @@
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 """
-This file is loaded automatically by Nuke when file->new or file->open is triggered.
+This file is loaded automatically by Nuke on startup (and file>new)
 
-Note however that this does not automatically run *the first* time nuke starts up,
-despite being an auto-start script. 
-
-This is to overcome the fact that file->new in nuke typically results in a completely new
-process being launched.
+Note This file enable use tank engine in batch mode (nuke -t) to process automatic precomp, publish...
 """
 
 import nuke
