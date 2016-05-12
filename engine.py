@@ -107,7 +107,7 @@ class NukeEngine(tank.platform.Engine):
             return
 
         # Versions > 9.0 have not yet been tested so show a message to that effect.
-        if nuke_version[0] > 9 or (nuke_version[0] == 9 and nuke_version[1] > 0):
+        if nuke_version[0] > 10 or (nuke_version[0] == 10 and nuke_version[1] > 1):
             # This is an untested version of Nuke.
             msg = ("The Shotgun Pipeline Toolkit has not yet been fully tested with Nuke %d.%dv%d. "
                    "You can continue to use the Toolkit but you may experience bugs or "
@@ -115,10 +115,12 @@ class NukeEngine(tank.platform.Engine):
                    % (nuke_version[0], nuke_version[1], nuke_version[2]))
             
             # Show nuke message if in UI mode, this is the first time the engine has been started
-            # and the warning dialog isn't overriden by the config.
+            # and the warning dialog isn't overriden by the config. Note that nuke.message isn't
+            # available in Hiero, so we have to skip this there.
             if (self.has_ui 
                 and not "TANK_NUKE_ENGINE_INIT_NAME" in os.environ
-                and nuke_version[0] >= self.get_setting("compatibility_dialog_min_version", 10)):
+                and nuke_version[0] >= self.get_setting("compatibility_dialog_min_version", 11)
+                and not self.hiero_enabled):
                 nuke.message("Warning - Shotgun Pipeline Toolkit!\n\n%s" % msg)
                            
             # Log the warning.
