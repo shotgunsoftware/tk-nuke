@@ -455,6 +455,18 @@ class NukeEngine(tank.platform.Engine):
         
         Additional parameters specified will be passed through to the widget_class constructor.
         """
+        if self.hiero_enabled:
+            self.log_info(
+                "Panels are not supported in Hiero. Launching as a dialog..."
+            )
+            return self.show_dialog(
+                title,
+                bundle,
+                widget_class,
+                *args,
+                **kwargs
+            )
+
         # Note! Not using the import_module call as this confuses nuke's callback system
         import tk_nuke_qt
         
