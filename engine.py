@@ -239,6 +239,11 @@ class NukeEngine(tank.platform.Engine):
                 self.set_project_root,
             )
 
+            hiero.core.events.registerInterest(
+                "kAfterProjectLoad",
+                self._on_project_load_callback,
+            )
+
             # Then we need to setup our context switcher.
             import tk_nuke
             self._context_switcher = tk_nuke.StudioContextSwitcher(self)
@@ -282,6 +287,11 @@ class NukeEngine(tank.platform.Engine):
             hiero.core.events.registerInterest(
                 'kAfterNewProjectCreated',
                 self.set_project_root,
+            )
+
+            hiero.core.events.registerInterest(
+                "kAfterProjectLoad",
+                self._on_project_load_callback,
             )
 
             try:
@@ -659,6 +669,42 @@ class NukeEngine(tank.platform.Engine):
             if self.context is not current_context:
                 self._context_switcher.change_context(current_context)
             self._context_change_menu_rebuild = True
+
+    def _on_project_load_callback(self, event):
+        """
+        Callback executed after project load in Hiero and Nuke Studio. This
+        triggers an attempt to change the SGTK context to that of the newly
+        opened project file.
+
+        :param event:   The event object from Hiero/NS.
+        """
+        import hiero.core
+
+        project = hiero.core.projects()[-1]
+        script_path = project.path()
+
+        try:
+            try:
+                # This file could be in another project altogether, so 
+                # create a new Tank instance.
+                tk = tank.tank_from_path(script_path)
+            except tank.TankError, e:
+                self.menu_generator.create_sgtk_disabled_menu(e)
+                return
+
+            # Extract a new context based on the file and change to that
+            # context.
+            new_context = tk.context_from_path(
+                script_path,
+                previous_context=self.context,
+            )
+
+            try:
+                tank.platform.change_context(new_context)
+            except tank.TankEngineInitError, e:
+                self.menu_generator.create_sgtk_disabled_menu(e)
+        except Exception:
+            self.menu_generator.create_sgtk_error_menu()
     
     def __setup_favorite_dirs(self):
         """
