@@ -683,14 +683,16 @@ class NukeEngine(tank.platform.Engine):
         project = hiero.core.projects()[-1]
         script_path = project.path()
 
+        # We're going to just skip doing anything if this fails
+        # for any reason. It would be nice to swap to the error
+        # menu item, but unfortunately a project open event is
+        # triggered on launch when Hiero/Nuke Studio loads the
+        # "Untitled" project from the Nuke install location. There
+        # isn't a way to distinguish between that and something the
+        # user purposefully opened, and we don't want to hose the
+        # toolkit context with that.
         try:
-            try:
-                # This file could be in another project altogether, so 
-                # create a new Tank instance.
-                tk = tank.tank_from_path(script_path)
-            except tank.TankError, e:
-                self.menu_generator.create_sgtk_disabled_menu(e)
-                return
+            tk = tank.tank_from_path(script_path)
 
             # Extract a new context based on the file and change to that
             # context.
@@ -699,12 +701,9 @@ class NukeEngine(tank.platform.Engine):
                 previous_context=self.context,
             )
 
-            try:
-                tank.platform.change_context(new_context)
-            except tank.TankEngineInitError, e:
-                self.menu_generator.create_sgtk_disabled_menu(e)
+            tank.platform.change_context(new_context)
         except Exception:
-            self.menu_generator.create_sgtk_error_menu()
+            pass
     
     def __setup_favorite_dirs(self):
         """
