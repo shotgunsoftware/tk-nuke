@@ -278,7 +278,9 @@ class StudioContextSwitcher(object):
 
         :param new_context: The sgtk.context.Context to change to.
         """
-        # try to create new engine
+        if new_context == self.engine.context:
+            return
+
         try:
             tank.platform.change_context(new_context)
         except tank.TankEngineInitError, e:
