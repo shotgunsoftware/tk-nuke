@@ -371,6 +371,8 @@ class NukeEngine(tank.platform.Engine):
             self._menu_generator.destroy_menu()
 
         if self.hiero_enabled or self.studio_enabled:
+            import hiero.core
+
             hiero.core.events.unregisterInterest(
                 "kAfterNewProjectCreated",
                 self.set_project_root,
@@ -380,11 +382,11 @@ class NukeEngine(tank.platform.Engine):
                 self._on_project_load_callback,
             )
 
-        if self.studio_enabled:
-            hiero.core.events.unregisterInterest(
-                "kSelectionChanged",
-                self._handle_studio_selection_change,
-            )
+            if self.studio_enabled:
+                hiero.core.events.unregisterInterest(
+                    "kSelectionChanged",
+                    self._handle_studio_selection_change,
+                )
 
     def post_context_change(self, old_context, new_context):
         """
@@ -720,7 +722,8 @@ class NukeEngine(tank.platform.Engine):
             if new_context != self.context:
                 tank.platform.change_context(new_context)
         except Exception:
-            pass
+            import traceback
+            self.log_warning("Unable to change context: %s" % traceback.format_exc())
     
     def __setup_favorite_dirs(self):
         """
