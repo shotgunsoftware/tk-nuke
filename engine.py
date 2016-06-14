@@ -235,7 +235,7 @@ class NukeEngine(tank.platform.Engine):
             self._menu_generator.create_menu()
 
             hiero.core.events.registerInterest(
-                'kAfterNewProjectCreated',
+                "kAfterNewProjectCreated",
                 self.set_project_root,
             )
 
@@ -253,7 +253,7 @@ class NukeEngine(tank.platform.Engine):
             # processed. This ensure that all Nuke gizmos for the target environment
             # will be available.
             hiero.core.events.registerInterest(
-                'kSelectionChanged',
+                "kSelectionChanged",
                 self._handle_studio_selection_change,
             )
 
@@ -285,7 +285,7 @@ class NukeEngine(tank.platform.Engine):
             self._menu_generator.create_menu()
 
             hiero.core.events.registerInterest(
-                'kAfterNewProjectCreated',
+                "kAfterNewProjectCreated",
                 self.set_project_root,
             )
 
@@ -369,6 +369,22 @@ class NukeEngine(tank.platform.Engine):
 
         if self.has_ui:
             self._menu_generator.destroy_menu()
+
+        if self.hiero_enabled or self.studio_enabled:
+            hiero.core.events.unregisterInterest(
+                "kAfterNewProjectCreated",
+                self.set_project_root,
+            )
+            hiero.core.events.unregisterInterest(
+                "kAfterProjectLoad",
+                self._on_project_load_callback,
+            )
+
+        if self.studio_enabled:
+            hiero.core.events.unregisterInterest(
+                "kSelectionChanged",
+                self._handle_studio_selection_change,
+            )
 
     def post_context_change(self, old_context, new_context):
         """
@@ -701,7 +717,8 @@ class NukeEngine(tank.platform.Engine):
                 previous_context=self.context,
             )
 
-            tank.platform.change_context(new_context)
+            if new_context != self.context:
+                tank.platform.change_context(new_context)
         except Exception:
             pass
     
