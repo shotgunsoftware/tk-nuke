@@ -235,8 +235,13 @@ class NukeEngine(tank.platform.Engine):
             self._menu_generator.create_menu()
 
             hiero.core.events.registerInterest(
-                'kAfterNewProjectCreated',
+                "kAfterNewProjectCreated",
                 self.set_project_root,
+            )
+
+            hiero.core.events.registerInterest(
+                "kAfterProjectLoad",
+                self._on_project_load_callback,
             )
 
             # Then we need to setup our context switcher.
@@ -248,7 +253,7 @@ class NukeEngine(tank.platform.Engine):
             # processed. This ensure that all Nuke gizmos for the target environment
             # will be available.
             hiero.core.events.registerInterest(
-                'kSelectionChanged',
+                "kSelectionChanged",
                 self._handle_studio_selection_change,
             )
 
@@ -280,8 +285,13 @@ class NukeEngine(tank.platform.Engine):
             self._menu_generator.create_menu()
 
             hiero.core.events.registerInterest(
-                'kAfterNewProjectCreated',
+                "kAfterNewProjectCreated",
                 self.set_project_root,
+            )
+
+            hiero.core.events.registerInterest(
+                "kAfterProjectLoad",
+                self._on_project_load_callback,
             )
 
             try:
@@ -359,6 +369,24 @@ class NukeEngine(tank.platform.Engine):
 
         if self.has_ui:
             self._menu_generator.destroy_menu()
+
+        if self.hiero_enabled or self.studio_enabled:
+            import hiero.core
+
+            hiero.core.events.unregisterInterest(
+                "kAfterNewProjectCreated",
+                self.set_project_root,
+            )
+            hiero.core.events.unregisterInterest(
+                "kAfterProjectLoad",
+                self._on_project_load_callback,
+            )
+
+            if self.studio_enabled:
+                hiero.core.events.unregisterInterest(
+                    "kSelectionChanged",
+                    self._handle_studio_selection_change,
+                )
 
     def post_context_change(self, old_context, new_context):
         """
@@ -659,6 +687,43 @@ class NukeEngine(tank.platform.Engine):
             if self.context is not current_context:
                 self._context_switcher.change_context(current_context)
             self._context_change_menu_rebuild = True
+
+    def _on_project_load_callback(self, event):
+        """
+        Callback executed after project load in Hiero and Nuke Studio. This
+        triggers an attempt to change the SGTK context to that of the newly
+        opened project file.
+
+        :param event:   The event object from Hiero/NS.
+        """
+        import hiero.core
+
+        project = hiero.core.projects()[-1]
+        script_path = project.path()
+
+        # We're going to just skip doing anything if this fails
+        # for any reason. It would be nice to swap to the error
+        # menu item, but unfortunately a project open event is
+        # triggered on launch when Hiero/Nuke Studio loads the
+        # "Untitled" project from the Nuke install location. There
+        # isn't a way to distinguish between that and something the
+        # user purposefully opened, and we don't want to hose the
+        # toolkit context with that.
+        try:
+            tk = tank.tank_from_path(script_path)
+
+            # Extract a new context based on the file and change to that
+            # context.
+            new_context = tk.context_from_path(
+                script_path,
+                previous_context=self.context,
+            )
+
+            if new_context != self.context:
+                tank.platform.change_context(new_context)
+        except Exception:
+            import traceback
+            self.log_warning("Unable to change context: %s" % traceback.format_exc())
     
     def __setup_favorite_dirs(self):
         """
