@@ -722,8 +722,7 @@ class NukeEngine(tank.platform.Engine):
             if new_context != self.context:
                 tank.platform.change_context(new_context)
         except Exception:
-            import traceback
-            self.log_warning("Unable to change context: %s" % traceback.format_exc())
+            self.log_debug("Unable to determine context for file: %s" % script_path)
     
     def __setup_favorite_dirs(self):
         """
