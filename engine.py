@@ -623,7 +623,7 @@ class NukeEngine(tank.platform.Engine):
         # for more info. There have been instability issues with nuke 7 causing
         # various crashes, so window parenting on Nuke versions above 6 is
         # currently disabled.
-        if nuke.env.get("NukeVersionMajor") > 6:
+        if nuke.env.get("NukeVersionMajor") == 7:
             return None
         return super(NukeEngine, self)._get_dialog_parent()
 
