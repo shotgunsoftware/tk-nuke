@@ -39,4 +39,3 @@ if not nuke.env.get("hiero"):
 
 
 
-
