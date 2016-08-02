@@ -138,7 +138,7 @@ def __tank_on_save_callback():
         __create_tank_error_menu()
 
 
-def __tank_startup_node_callback():    
+def tank_startup_node_callback():    
     """
     Callback that fires every time a node gets created.
     
@@ -147,9 +147,9 @@ def __tank_startup_node_callback():
     """    
     try:
         # look for the root node - this is created only when a new or existing file is opened.
-        tn = nuke.thisNode()
-        if tn != nuke.root():
-            return
+        # tn = nuke.thisNode()
+        # if tn != nuke.root():
+        #     return
             
         if nuke.root().name() == "Root":
             # file->new
@@ -197,7 +197,8 @@ def tank_ensure_callbacks_registered():
     """
     global g_tank_callbacks_registered
     if not g_tank_callbacks_registered:
-        nuke.addOnCreate(__tank_startup_node_callback)
+        # nuke.addOnCreate(__tank_startup_node_callback)
+        nuke.addOnScriptLoad(tank_startup_node_callback)
         nuke.addOnScriptSave(__tank_on_save_callback)
         g_tank_callbacks_registered = True
 
