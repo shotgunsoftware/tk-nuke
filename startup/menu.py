@@ -25,6 +25,7 @@ import sys
 def handle_new_tank_session():
     import tk_nuke
     tk_nuke.tank_ensure_callbacks_registered()
+    tk_nuke.tank_startup_node_callback()
 
 if not nuke.env.get("hiero"):
     # now we need to add our callback module to the pythonpath manually.
