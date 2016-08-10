@@ -495,7 +495,13 @@ class NukeMenuGenerator(BaseMenuGenerator):
             if cmd.type == "node":
                 # Get icon if specified - default to tank icon if not specified.
                 icon = cmd.properties.get("icon", self._shotgun_logo)
-                node_menu_handle.addCommand(cmd.name, cmd.callback, icon=icon)
+                command_context = cmd.properties.get("context")
+
+                # If the app recorded a context that it wants the command to be associated
+                # with, we need to check it against the current engine context. If they
+                # don't match then we don't add it.
+                if command_context is None or command_context is self.engine.context:
+                    node_menu_handle.addCommand(cmd.name, cmd.callback, icon=icon)
             elif cmd.type == "context_menu":
                 cmd.add_command_to_menu(self._context_menu)
             else:
