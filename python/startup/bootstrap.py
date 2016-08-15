@@ -15,6 +15,10 @@ def bootstrap(engine_name, context, app_path, app_args, extra_args):
     """
     Prepares for the bootstrapping process that will run during startup of
     Nuke, Hiero, and Nuke Studio.
+
+    .. NOTE:: For detailed documentation of the bootstrap process for Nuke,
+              Hiero, and Nuke Studio, see the engine documentation in
+              `tk-nuke/engine.py`.
     """
     import tank
 

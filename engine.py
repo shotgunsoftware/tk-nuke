@@ -73,6 +73,13 @@ class NukeEngine(tank.platform.Engine):
               launch time, but NOT on script open. This is an important distinction, because
               each file open operation Nuke performs spawns a new process, which itself needs
               to then have the engine's `tk-nuke/python` directory added to `sys.path`.
+
+    **Nuke Event Callbacks**
+
+    During the bootstrap process described above, event callbacks are registered with
+    Nuke. The events of interest are OnScriptLoad and OnScriptSave. Interest is registered
+    in these events in `tk-nuke/python/tk_nuke/__init__.py`, which is also where the
+    callbacks themselves are defined.
     """
 
     # Define the different areas where menu events can occur in Hiero.
