@@ -21,7 +21,67 @@ import nukescripts
 class NukeEngine(tank.platform.Engine):
     """
     An engine that supports Nuke 6.3v5+, Hiero 9.0+, and Nuke Studio 9.0+
+
+    **Bootstrap Flow**
+
+    The code path for the bootstrap routine for Nuke, Nuke Studio, and Hiero is quite
+    complex due to the support of all three modes of the application.
+
+    - All three Nuke modes make use of the "generic" bootstrap routine in
+      tk-multi-launchapp. There is still Nuke- and Hiero-specific logic in
+      that app, but it is there for the sake of backwards compatibility
+      should someone still be using the tk-hiero engine or an old version
+      of tk-nuke.
+
+    - There are, in essence, two code paths for the bootstrap: Nuke in one and
+      Hiero/Nuke Studio in the other. Nuke Studio acts much more like Hiero than it
+      does Nuke, and as such shares many similarities when it comes to the bootstrap
+      process.
+
+    Step 1:
+        The tk-multi-launchapp app will go into its "generic" bootstrap routine and
+        will look in the engine structure for `tk-nuke/python/startup/bootstrap.py`.
+        This is the first block of logic that will be executed, regardless of whether
+        it is Nuke, Nuke Studio, or Hiero that is being launched. This logic handles
+        setting either the NUKE_PATH or HIERO_PLUGIN_PATH environment variables,
+        depending on which mode is being launched.
+
+    Step 2:
+        With the appropriate path variable set in #1, the `tk-nuke/python/startup`
+        directory is now available to Nuke at launch as a location to look for both
+        `init.py` and `menu.py` scripts to be run on launch. It's worth noting that
+        the order of operations for Nuke (regardless of mode) is to execute init.py
+        first, before the GUI is loaded, and menu.py later after most of the Nuke
+        application is up and running and any file loads have completed.
+
+    Step 3:
+        Startup of the DCC application is under way at this point. If Nuke is launching
+        in a no-UI mode, then the `init.py` is responsible for continuing the bootstrap,
+        otherwise `tk-nuke/python/startup/menu.py` is in charge. In either case, the
+        `tk-nuke/python/startup` directory is added to `sys.path` and its `sgtk_startup.py`
+        module is loaded, which executes its own `bootstrap_sgtk()` function.
+
+    Step 4:
+        The `bootstrap_sgtk()` function handles initializing SGTK and starting up
+        the tk-nuke engine.
+
+    .. NOTE:: There is also an addition made to the `NUKE_PATH` environment variable
+              in the engine initialization routine here in `engine.py`. This adds the
+              root-level `tk-nuke/startup` directory, which contains a `menu.py` that
+              is utilized during script load in the Nuke mode of the DCC. This is needed
+              because the bootstrap routine outlined in the steps above only occurs at
+              launch time, but NOT on script open. This is an important distinction, because
+              each file open operation Nuke performs spawns a new process, which itself needs
+              to then have the engine's `tk-nuke/python` directory added to `sys.path`.
+
+    **Nuke Event Callbacks**
+
+    During the bootstrap process described above, event callbacks are registered with
+    Nuke. The events of interest are OnScriptLoad and OnScriptSave. Interest is registered
+    in these events in `tk-nuke/python/tk_nuke/__init__.py`, which is also where the
+    callbacks themselves are defined.
     """
+
     # Define the different areas where menu events can occur in Hiero.
     (HIERO_BIN_AREA, HIERO_SPREADSHEET_AREA, HIERO_TIMELINE_AREA) = range(3)
 
