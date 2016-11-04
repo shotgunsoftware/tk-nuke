@@ -35,7 +35,8 @@ class NukePanelWidget(nukescripts.panels.PythonPanel):
         :param widget_class: The class to be instantiated. Its constructor 
                              should not take any parameters.
         """
-        
+        self.toolkit_widget = None
+
         # create a reference to the ToolkitWidgetWrapper class so that 
         # we can refer to it safely using a single line of fully qualified
         # python to return it:
@@ -47,7 +48,14 @@ class NukePanelWidget(nukescripts.panels.PythonPanel):
                 
         # we cannot pass parameters to the constructor of our wrapper class
         # directly, so instead pass them via a special class method
-        ToolkitWidgetWrapper.set_init_parameters(widget_class, panel_id, bundle, args, kwargs)
+        ToolkitWidgetWrapper.set_init_parameters(
+            widget_class,
+            panel_id,
+            bundle,
+            self,
+            args,
+            kwargs,
+        )
         
         # Run parent constructor
         nukescripts.panels.PythonPanel.__init__(self, dialog_name, panel_id)
@@ -59,6 +67,18 @@ class NukePanelWidget(nukescripts.panels.PythonPanel):
         self.customKnob = nuke.PyCustom_Knob(dialog_name, "", cmd)
         self.addKnob(self.customKnob)
 
+    def __getattr__(self, name):
+        """
+        Custom attribute lookup that will attempt to find the given attribute
+        on the wrapped Toolkit panel widget.
+
+        :param str name: The name of the attribute to get.
+        """
+        if self.toolkit_widget:
+            return getattr(self.toolkit_widget, name)
+        else:
+            raise AttributeError("NukePanelWidget has no attribute %s!" % name)
+
 
 class ToolkitWidgetWrapper(QtGui.QWidget):
     """
@@ -69,9 +89,10 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
     _init_kwargs = None
     _init_bundle = None
     _init_args = None
+    _nuke_panel = None
     
     @classmethod
-    def set_init_parameters(cls, widget_class, panel_id, bundle, args, kwargs):
+    def set_init_parameters(cls, widget_class, panel_id, bundle, nuke_panel, args, kwargs):
         """
         Specify construction arguments. Because we don't have direct access to 
         the arg list of the constructor, initialization happens though this mechanism
@@ -89,6 +110,7 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
         cls._init_bundle = bundle
         cls._init_args = args
         cls._init_kwargs = kwargs
+        cls._nuke_panel = nuke_panel
     
     
     def __init__(self):
@@ -108,9 +130,10 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
         args = self._init_args
         kwargs = self._init_kwargs
         bundle = self._init_bundle
+        self.nuke_panel = self._nuke_panel
         
         # and now clear the init parameters
-        self.set_init_parameters(None, None, None, None, None)
+        self.set_init_parameters(None, None, None, None, None, None)
         
         bundle.log_debug("Creating panel '%s' to host %s" % (panel_id, PanelClass))
         
@@ -198,7 +221,13 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
                 filter.parent_closed.connect(self._on_parent_closed)
                 widget.installEventFilter(filter)
                 bundle.log_debug("Installed close-event filter watcher on tab %s" % widget)
-                break     
+                break
+
+        # We should have a parent panel object. If we do, we can alert it to the
+        # concrete sgtk panel widget we're wrapping. This will allow is to provide
+        # the wrapped widget's interface to higher-level callers.
+        if self.nuke_panel:
+            self.nuke_panel.toolkit_widget = self.toolkit_widget
         
     def _find_panel_tab(self, widget):
         """
