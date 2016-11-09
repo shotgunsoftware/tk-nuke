@@ -79,6 +79,20 @@ class NukePanelWidget(nukescripts.panels.PythonPanel):
         else:
             raise AttributeError("NukePanelWidget has no attribute %s!" % name)
 
+    def __eq__(self, other):
+        """
+        Custom equality check. This will make the Nuke panel wrapper evaluate
+        as equal (== operator) to the panel widget that it is wrapping. This will
+        help panel apps quickly know whether this is the panel they're expecting,
+        like during Qt close events.
+
+        :param other: The object being compared to.
+        """
+        if self.toolkit_widget and self.toolkit_widget is other:
+            return True
+        else:
+            return False
+
 
 class ToolkitWidgetWrapper(QtGui.QWidget):
     """
