@@ -39,7 +39,7 @@ def bootstrap(engine_name, context, app_path, app_args, extra_args):
         # have to tack it onto the launch arguments instead.
         if file_to_open:
             if app_args:
-                app_args = "%s %s" % (file_to_open, app_args)
+                app_args = "%s %s" % (app_args, file_to_open)
             else:
                 app_args = file_to_open
 
