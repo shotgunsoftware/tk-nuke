@@ -155,19 +155,16 @@ class NukeEngine(tank.platform.Engine):
             nuke.env.get("NukeVersionRelease")
         )
 
-        msg = "Nuke 6.3v5 is the minimum version supported!"
-        if nuke_version[0] < 6:
+        msg = "Nuke 7.0v10 is the minimum version supported!"
+        if nuke_version[0] < 7:
             self.log_error(msg)
             return
-        elif nuke_version[0] == 6 and nuke_version[1] < 3:
-            self.log_error(msg)
-            return
-        elif nuke_version[0] == 6 and nuke_version[1] == 3 and nuke_version[2] < 5:
+        elif nuke_version[0] == 7 and nuke_version[1] == 0 and nuke_version[2] < 10:
             self.log_error(msg)
             return
 
-        # Versions > 9.0 have not yet been tested so show a message to that effect.
-        if nuke_version[0] > 10 or (nuke_version[0] == 10 and nuke_version[1] > 1):
+        # Versions > 10.5 have not yet been tested so show a message to that effect.
+        if nuke_version[0] > 10 or (nuke_version[0] == 10 and nuke_version[1] > 5):
             # This is an untested version of Nuke.
             msg = ("The Shotgun Pipeline Toolkit has not yet been fully tested with Nuke %d.%dv%d. "
                    "You can continue to use the Toolkit but you may experience bugs or "
