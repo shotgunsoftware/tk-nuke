@@ -190,10 +190,17 @@ class NukeEngine(tank.platform.Engine):
 
         # Now check that there is a location on disk which corresponds to the context.
         if self.context.project is None:
-            # Must have at least a project in the context to even start!
-            raise tank.TankError("The nuke engine needs at least a project"
-                                 "in the context in order to start! Your "
-                                 "context: %s" % self.context)
+            if self.context:
+                # Use pick environment hook to determine current context
+                env_name = self.context.tank.execute_core_hook(
+                    tank.platform.constants.PICK_ENVIRONMENT_CORE_HOOK_NAME,
+                    context=self.context)
+
+                if not env_name:
+                    # Must have at least a project in the context to even start!
+                    raise tank.TankError("The nuke engine needs at least a project"
+                                         "in the context in order to start! Your "
+                                         "context: %s" % self.context)
 
         # Do our mode-specific initializations.
         if self.hiero_enabled:
