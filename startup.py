@@ -40,11 +40,11 @@ class NukeLauncher(SoftwareLauncher):
     # strings, these allow us to alter the regex matching for any of the
     # variable components of the path in one place
     COMPONENT_REGEX_LOOKUP = {
-        "version": "(?P<version>[\d.v]+)",
-        "variant": "(?P<variant>[\w\s]+)",
-        "suffix": "(?P<suffix> Non-commercial){0,1}",
-        "same_version": "(?P=version)",
-        "major_minor_version": "(?P<major_minor_version>[\d.]+)"
+        "version": r"(?P<version>[\d.v]+)",
+        "variant": r"(?P<variant>[\w\s]+)",
+        "suffix": r"(?P<suffix> Non-commercial){0,1}",
+        "same_version": r"(?P=version)",
+        "major_minor_version": r"(?P<major_minor_version>[\d.]+)"
     }
 
     # This dictionary defines a list of executable template strings for each

@@ -73,8 +73,10 @@ class TestStartup(TankTestBase):
         )
 
     def _recursive_split(self, path):
-        if path == "/" or path == "C:\\":
+        if path == "/":
             return []
+        elif path.endswith(":\\"):
+            return [path]
         else:
             directory, basename = os.path.split(path)
             return self._recursive_split(directory) + [basename]
