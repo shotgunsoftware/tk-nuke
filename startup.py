@@ -31,7 +31,8 @@ class NukeLauncher(SoftwareLauncher):
         "version": "*",
         "variant": "*",
         "suffix": "*",
-        "same_version": "*"
+        "same_version": "*",
+        "major_minor_version": "*"
     }
 
     # Named regex strings to insert into the executable template paths when
@@ -42,7 +43,8 @@ class NukeLauncher(SoftwareLauncher):
         "version": "(?P<version>[\d.v]+)",
         "variant": "(?P<variant>[\w\s]+)",
         "suffix": "(?P<suffix> Non-commercial){0,1}",
-        "same_version": "(?P=version)"
+        "same_version": "(?P=version)",
+        "major_minor_version": "(?P<major_minor_version>[\d.]+)"
     }
 
     # This dictionary defines a list of executable template strings for each
@@ -56,47 +58,37 @@ class NukeLauncher(SoftwareLauncher):
             # /Applications/Nuke10.0v5/NukeStudio10.0v5.app
             "/Applications/Nuke{version}/{variant}{same_version}{suffix}.app",
         ],
-        # "win32": [
-        #     # C:\Program Files\Side Effects Software\Houdini 15.5.565\bin\houdinifx.exe
-        #     "C:\Program Files\Nuke{version}\Nuke{version}.exe",
-        # ],
+        "win32": [
+            # C:\Program Files\Nuke10.0v5\Nuke10.0.exe
+            "C:\\Program Files\\Nuke{version}\\Nuke{major_minor_version}.exe",
+        ],
         # "linux": [
         #     # example path: /opt/hfs14.0.444/bin/houdinifx
         #     "/opt/hfs{version}/bin/{executable}",
         # ]
     }
 
-    def scan_software(self, versions=None, display_name=None, icon=None):
+    def _get_icon_from_variant(self, variant):
         """
-        Performs a scan for software installations.
-
-        :param list versions: List of strings representing versions to search
-            for. If set to None, search for all versions.
-
-        :returns: List of :class:`SoftwareVersion` instances
+        Returns the icon based on the variant.
         """
+        if "studio" in variant.lower():
+            return os.path.join(
+                self.disk_location,
+                "icon_studio_256.png"
+            )
+        elif "hiero" in variant.lower():
+            return os.path.join(
+                self.disk_location,
+                "icon_hiero_256.png"
+            )
+        else:
+            return os.path.join(
+                self.disk_location,
+                "icon_256.png"
+            )
 
-        # TODO: tmp until available via args/settings
-        variations = ["Nuke", "NukeStudio", "NukeX", "NukeAssist", "Hiero"]
-
-        self.logger.debug("Scanning for Nuke versions...")
-        self.logger.debug("Version constraints: %s" % (versions,))
-        self.logger.debug("Variation constraints: %s" % (variations,))
-
-        # use the bundled icon
-        icon_path = os.path.join(
-            self.disk_location,
-            "icon_256.png"
-        )
-        self.logger.debug("Using icon path: %s" % (icon_path,))
-
-        if sys.platform not in ["darwin", "win32", "linux"]:
-            self.logger.debug("Nuke not supported on this platform.")
-            return []
-
-        # all the executable templates for the current OS
-        match_templates = self.EXECUTABLE_MATCH_TEMPLATES[sys.platform]
-
+    def _find_executables(self, match_templates):
         # build up a dictionary where the key is the match template and the
         # value is a list of matching executables. we'll need to keep the
         # association between template and matches for later when we extract
@@ -120,7 +112,12 @@ class NukeLauncher(SoftwareLauncher):
                     )
                 )
 
-        # all the executables matching the supplied filters.
+        return executable_matches
+
+    def _find_software_variations(self, executable_matches, variations, versions):
+        return self._find_software_variations_macOS(executable_matches, variations, versions)
+
+    def _find_software_variations_macOS(self, executable_matches, variations, versions):
         software_versions = []
 
         # now that we have a list of matching executables on disk and the
@@ -161,28 +158,6 @@ class NukeLauncher(SoftwareLauncher):
                 executable_variant = match.groupdict().get("variant")
                 executable_suffix = match.groupdict().get("suffix")
 
-                # version filter.
-                if versions and executable_version:
-
-                    # TODO: is supported, minimum version check
-
-                    if executable_version not in versions:
-                        self.logger.debug(
-                            "'%s' does not match the version constraint" % (
-                                executable_version,
-                            )
-                        )
-                        continue
-
-                # variant filter
-                if executable_variant and executable_variant not in variations:
-                    self.logger.debug(
-                        "'%s' does not match the variation constraint" % (
-                            executable_variant,
-                        )
-                    )
-                    continue
-
                 # if we're here then we know the version is valid or there is
                 # no version filter. we also know that the variant is a match.
                 # we can safely create a software version instance to return
@@ -191,6 +166,12 @@ class NukeLauncher(SoftwareLauncher):
                     display_name = "%s %s%s" % (executable_variant, executable_version, executable_suffix)
                 else:
                     display_name = "%s %s" % (executable_variant, executable_version)
+
+                if not self._keep_software(
+                    executable_variant, executable_version, variations, versions
+                ):
+                    continue
+
                 # Either we don't have a version constraint list of this
                 # version matches one of the constraints. Add this to the
                 # list of SW versions to return.
@@ -199,12 +180,46 @@ class NukeLauncher(SoftwareLauncher):
                         executable_version,
                         display_name,
                         executable_path,
-                        icon_path
+                        self._get_icon_from_variant(executable_variant)
                     )
                 )
                 self.logger.debug("Filter match: %s" % (display_name,))
 
         return software_versions
+
+    def scan_software(self, versions=None):
+        """
+        Performs a scan for software installations.
+
+        :param list versions: List of strings representing versions to search
+            for. If set to None, search for all versions.
+
+        :returns: List of :class:`SoftwareVersion` instances
+        """
+
+        # TODO: tmp until available via args/settings
+        VARIATIONS = ["Nuke", "NukeStudio", "NukeX", "NukeAssist", "Hiero"]
+
+        self.logger.debug("Scanning for Nuke versions...")
+        self.logger.debug("Version constraints: %s" % (versions,))
+        self.logger.debug("Variation constraints: %s" % (VARIATIONS,))
+
+        if sys.platform not in ["darwin", "win32", "linux"]:
+            self.logger.debug("Nuke not supported on this platform.")
+            return []
+
+        # all the executable templates for the current OS
+        executable_matches = self._find_executables(self.EXECUTABLE_MATCH_TEMPLATES[sys.platform])
+        return self._find_software_variations(executable_matches, VARIATIONS, versions)
+
+    def _keep_software(self, variant, version, variations, versions):
+        if versions and version not in versions:
+            return False
+
+        if variations and variant not in variations:
+            return False
+
+        return True
 
     def prepare_launch(self, exec_path, args, file_to_open=None):
         """

@@ -30,16 +30,16 @@ class TestStartup(TankTestBase):
 
     _mac_mock_hierarchy = {
         "Applications": {
-            "Nuke10.0v1": {
-                "Hiero10.0v1.app": {},
-                "HieroPlayer10.0v1.app": {},
-                "Nuke10.0v1 Non-commercial.app": {},
-                "Nuke10.0v1.app": {},
-                "NukeAssist10.0v1.app": {},
-                "NukeStudio10.0v1 Non-commercial.app": {},
-                "NukeStudio10.0v1.app": {},
-                "NukeX10.0v1 Non-commercial.app": {},
-                "NukeX10.0v1.app": {}
+            "Nuke10.0v5": {
+                "Hiero10.0v5.app": {},
+                "HieroPlayer10.0v5.app": {},
+                "Nuke10.0v5 Non-commercial.app": {},
+                "Nuke10.0v5.app": {},
+                "NukeAssist10.0v5.app": {},
+                "NukeStudio10.0v5 Non-commercial.app": {},
+                "NukeStudio10.0v5.app": {},
+                "NukeX10.0v5 Non-commercial.app": {},
+                "NukeX10.0v5.app": {}
             }
         }
     }
@@ -73,7 +73,7 @@ class TestStartup(TankTestBase):
         )
 
     def _recursive_split(self, path):
-        if path == "/":
+        if path == "/" or path == "C:\\":
             return []
         else:
             directory, basename = os.path.split(path)
@@ -95,13 +95,29 @@ class TestStartup(TankTestBase):
         return current_depth.keys()
 
     def test_nuke10(self):
-        softwares = self._nuke_launcher.scan_software("10.0v1")
+        self._test_nuke(
+            [
+                "Nuke 10.0v5", "NukeX 10.0v5", "NukeStudio 10.0v5", "NukeAssist 10.0v5", "Hiero 10.0v5",
+                "Nuke 10.0v5 Non-commercial", "NukeX 10.0v5 Non-commercial", "NukeStudio 10.0v5 Non-commercial"
+            ],
+            "10.0v5"
+        )
 
-        expected_variations = set([
-            "Nuke 10.0v1", "NukeX 10.0v1", "NukeStudio 10.0v1", "NukeAssist 10.0v1", "Hiero 10.0v1",
-            "Nuke 10.0v1 Non-commercial", "NukeX 10.0v1 Non-commercial", "NukeStudio 10.0v1 Non-commercial"
-        ])
+    def _test_nuke(self, expected_variations, expected_version):
+        # Ensure we are getting back the right variations.
 
-        found_variations = set(x.display_name for x in softwares)
+        software_versions = self._nuke_launcher.scan_software(expected_version)
 
+        expected_variations = set(expected_variations)
+        found_variations = set(x.display_name for x in software_versions)
         self.assertSetEqual(found_variations, expected_variations)
+
+        # Ensure the icon is correct.
+        for x in software_versions:
+            file_name = os.path.basename(x.icon)
+            if "studio" in x.display_name.lower():
+                self.assertEqual(file_name, "icon_studio_256.png")
+            elif "hiero" in x.display_name.lower():
+                self.assertEqual(file_name, "icon_hiero_256.png")
+            else:
+                self.assertEqual(file_name, "icon_256.png")
