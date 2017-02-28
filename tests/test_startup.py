@@ -44,8 +44,18 @@ class TestStartup(TankTestBase):
         }
     }
 
+    _windows_mock_hiearchy = {
+        "C:/": {
+            "Program Files": {
+                "Nuke10.0v5": {
+                    "Nuke10.0.exe": None
+                }
+            }
+        }
+    }
+
     _os_neutral_hierarchy = {
-        "win32": {},
+        "win32": _windows_mock_hiearchy,
         "linux2": {},
         "darwin": _mac_mock_hierarchy
     }
@@ -58,6 +68,12 @@ class TestStartup(TankTestBase):
         self.addCleanup(patch.stop)
         patch.start()
 
+        self.setup_fixtures()
+
+        self._nuke_launcher = sgtk.platform.create_engine_launcher(
+            self.tk, sgtk.context.create_empty(self.tk), "tk-nuke"
+        )
+
         # If we are not requesting to run on actual data.
         if "TK_NO_MOCK" not in os.environ:
             self._os_listdir = os.listdir
@@ -66,16 +82,10 @@ class TestStartup(TankTestBase):
             self.addCleanup(patch.stop)
             patch.start()
 
-        self.setup_fixtures()
-
-        self._nuke_launcher = sgtk.platform.create_engine_launcher(
-            self.tk, sgtk.context.create_empty(self.tk), "tk-nuke"
-        )
-
     def _recursive_split(self, path):
         if path == "/":
             return []
-        elif path.endswith(":\\"):
+        elif path.endswith(":\\") or path.endswith(":/"):
             return [path]
         else:
             directory, basename = os.path.split(path)
@@ -83,9 +93,8 @@ class TestStartup(TankTestBase):
 
     def _os_listdir_wrapper(self, directory):
         tokens = self._recursive_split(directory)
-
         # Start at the root of the mocked file system
-        current_depth = self._mac_mock_hierarchy
+        current_depth = self._os_neutral_hierarchy[sys.platform]
         for t in tokens:
             # If this isn't part of our mocked hierarchy, return the real result.
             if t not in current_depth:
@@ -107,7 +116,6 @@ class TestStartup(TankTestBase):
 
     def _test_nuke(self, expected_variations, expected_version):
         # Ensure we are getting back the right variations.
-
         software_versions = self._nuke_launcher.scan_software(expected_version)
 
         expected_variations = set(expected_variations)

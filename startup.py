@@ -47,6 +47,21 @@ class NukeLauncher(SoftwareLauncher):
         "major_minor_version": r"(?P<major_minor_version>[\d.]+)"
     }
 
+    VARIATION_DISPLAY_NAME_TEMPLATES = [
+        "Nuke %s",
+        "Nuke %s Non-commercial",
+        "NukeAssist %s",
+        "NukeStudio %s",
+        "NukeStudio %s Non-commercial",
+        "NukeX %s",
+        "NukeX %s Non-commercial",
+        "Hiero %s"
+    ]
+
+    VARIATIONS = [
+        x.replace("%s", "").replace("  ", " ").strip() for x in VARIATION_DISPLAY_NAME_TEMPLATES
+    ]
+
     # This dictionary defines a list of executable template strings for each
     # of the supported operating systems. The templates can are used for both
     # globbing and regex matches by replacing the named format placeholders
@@ -60,12 +75,12 @@ class NukeLauncher(SoftwareLauncher):
         ],
         "win32": [
             # C:\Program Files\Nuke10.0v5\Nuke10.0.exe
-            "C:\\Program Files\\Nuke{version}\\Nuke{major_minor_version}.exe",
+            "C:/Program Files/Nuke{version}/Nuke{major_minor_version}.exe",
         ],
-        # "linux": [
-        #     # example path: /opt/hfs14.0.444/bin/houdinifx
-        #     "/opt/hfs{version}/bin/{executable}",
-        # ]
+        "linux": [
+            # example path: /usr/local/Nuke10.0v5/Nuke10.0
+            "/usr/local/Nuke{version}/Nuke{major_minor_version}",
+        ]
     }
 
     def _get_icon_from_variant(self, variant):
@@ -104,7 +119,7 @@ class NukeLauncher(SoftwareLauncher):
             matching_paths = glob.glob(glob_pattern)
             if matching_paths:
                 # found matches, remember this association (template: matches)
-                executable_matches[match_template] = matching_paths
+                executable_matches[match_template] = [x.replace("\\", "/") for x in matching_paths]
                 self.logger.debug(
                     "Found %s matches: %s" % (
                         len(matching_paths),
@@ -114,11 +129,8 @@ class NukeLauncher(SoftwareLauncher):
 
         return executable_matches
 
-    def _find_software_variations(self, executable_matches, variations, versions):
-        return self._find_software_variations_macOS(executable_matches, variations, versions)
-
-    def _find_software_variations_macOS(self, executable_matches, variations, versions):
-        software_versions = []
+    def _find_software_variations(self):
+        executable_matches = self._find_executables(self.EXECUTABLE_MATCH_TEMPLATES[sys.platform])
 
         # now that we have a list of matching executables on disk and the
         # corresponding template used to find them, we can extract the component
@@ -153,39 +165,60 @@ class NukeLauncher(SoftwareLauncher):
                     self.logger.debug("Path did not match regex.")
                     continue
 
-                # extract the components (default to None if not included)
-                executable_version = match.groupdict().get("version")
-                executable_variant = match.groupdict().get("variant")
-                executable_suffix = match.groupdict().get("suffix")
+                for variation in self._extract_variations_from_path(executable_path, match):
+                    yield variation
 
-                # if we're here then we know the version is valid or there is
-                # no version filter. we also know that the variant is a match.
-                # we can safely create a software version instance to return
+    def _extract_variations_from_path(self, executable_path, match):
+        # Extract the variation from the file path, as each variation of the product has an actual
+        # executable associated to it.
 
-                if executable_suffix:
-                    display_name = "%s %s%s" % (executable_variant, executable_version, executable_suffix)
-                else:
-                    display_name = "%s %s" % (executable_variant, executable_version)
+        executable_version = match.groupdict().get("version")
+        if sys.platform == "darwin":
+            # extract the components (default to None if not included)
+            executable_variant = match.groupdict().get("variant")
+            # If there is no suffix (Non-commercial, we'll simply use an empty string).
+            executable_suffix = match.groupdict().get("suffix") or ""
 
-                if not self._keep_software(
-                    executable_variant, executable_version, variations, versions
-                ):
-                    continue
+            # if we're here then we know the version is valid or there is
+            # no version filter. we also know that the variant is a match.
+            # we can safely create a software version instance to return
+            display_name = "%s %s%s" % (executable_variant, executable_version, executable_suffix)
 
-                # Either we don't have a version constraint list of this
-                # version matches one of the constraints. Add this to the
-                # list of SW versions to return.
-                software_versions.append(
-                    SoftwareVersion(
-                        executable_version,
-                        display_name,
-                        executable_path,
-                        self._get_icon_from_variant(executable_variant)
-                    )
+            # Either we don't have a version constraint list of this
+            # version matches one of the constraints. Add this to the
+            # list of SW versions to return.
+            yield SoftwareVersion(
+                executable_variant,
+                executable_version,
+                display_name,
+                executable_path,
+                self._get_icon_from_variant(executable_variant)
+            )
+        else:
+            for variation_template in self.VARIATION_DISPLAY_NAME_TEMPLATES:
+
+                # Figure out the arguments required for each variation.
+                arguments = []
+                if "Studio" in variation_template:
+                    arguments.append("--studio")
+                elif "Assist" in variation_template:
+                    arguments.append("--nukeassit")
+                elif "NukeX" in variation_template:
+                    arguments.append("--nukex")
+                elif "Hiero" in variation_template:
+                    arguments.append("--hiero")
+
+                # If this is a non-commercial build, we need to add the special argument.
+                if "Non-commercial" in variation_template:
+                    arguments.append("--nc")
+
+                yield SoftwareVersion(
+                    variation_template.replace("%s", "").replace("  ", " ").strip(),
+                    executable_version,
+                    variation_template % (executable_version,),
+                    executable_path,
+                    self._get_icon_from_variant(variation_template)
                 )
-                self.logger.debug("Filter match: %s" % (display_name,))
-
-        return software_versions
 
     def scan_software(self, versions=None):
         """
@@ -196,27 +229,27 @@ class NukeLauncher(SoftwareLauncher):
 
         :returns: List of :class:`SoftwareVersion` instances
         """
-
-        # TODO: tmp until available via args/settings
-        VARIATIONS = ["Nuke", "NukeStudio", "NukeX", "NukeAssist", "Hiero"]
-
         self.logger.debug("Scanning for Nuke versions...")
-        self.logger.debug("Version constraints: %s" % (versions,))
-        self.logger.debug("Variation constraints: %s" % (VARIATIONS,))
 
         if sys.platform not in ["darwin", "win32", "linux"]:
-            self.logger.debug("Nuke not supported on this platform.")
+            self.logger.debug("Nuke not supported on platform %s.", sys.platform)
             return []
 
-        # all the executable templates for the current OS
-        executable_matches = self._find_executables(self.EXECUTABLE_MATCH_TEMPLATES[sys.platform])
-        return self._find_software_variations(executable_matches, VARIATIONS, versions)
+        software_versions = []
+        for software_version in self._find_software_variations():
+            if self._keep_software(software_version, versions):
+                self.logger.debug("Accepting %s", software_version)
+                software_versions.append(software_version)
 
-    def _keep_software(self, variant, version, variations, versions):
-        if versions and version not in versions:
+        return software_versions
+
+    def _keep_software(self, software_version, versions):
+        if versions and software_version.version not in versions:
+            self.logger.debug("Rejecting %s because version.", software_version)
             return False
 
-        if variations and variant not in variations:
+        if self.VARIATIONS and software_version.product not in self.VARIATIONS:
+            self.logger.debug("Rejecting %s because product.", software_version)
             return False
 
         return True
