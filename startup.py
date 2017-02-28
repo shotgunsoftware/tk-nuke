@@ -15,6 +15,9 @@ import sys
 
 from sgtk.platform import SoftwareLauncher, SoftwareVersion, LaunchInformation
 
+def template_to_variation_name(x):
+    return x.replace("%s", "").replace("  ", " ").strip()
+
 
 class NukeLauncher(SoftwareLauncher):
     """
@@ -42,12 +45,26 @@ class NukeLauncher(SoftwareLauncher):
     COMPONENT_REGEX_LOOKUP = {
         "version": r"(?P<version>[\d.v]+)",
         "variant": r"(?P<variant>[\w\s]+)",
-        "suffix": r"(?P<suffix> Non-commercial){0,1}",
+        "suffix": r"(?P<suffix> Non-commercial| PLE){0,1}",
         "same_version": r"(?P=version)",
         "major_minor_version": r"(?P<major_minor_version>[\d.]+)"
     }
 
-    VARIATION_DISPLAY_NAME_TEMPLATES = [
+    # Templates for all the display names of the variations supported by Nuke 7 and 8.
+    NUKE_7_8_VARIATION_DISPLAY_NAME_TEMPLATES = [
+        "Nuke %s",
+        "NukeX %s",
+        "Nuke %s PLE",
+        "NukeAssist %s",
+    ]
+
+    # Name of all the variations supported by Nuke 7 and 8.
+    NUKE_7_8_VARIATIONS = [
+        template_to_variation_name(x) for x in NUKE_7_8_VARIATION_DISPLAY_NAME_TEMPLATES
+    ]
+
+    # Templates for all the display names of the variations supported by Nuke 9 and onward.
+    NUKE_9_OR_HIGHER_VARIATION_DISPLAY_NAME_TEMPLATES = [
         "Nuke %s",
         "Nuke %s Non-commercial",
         "NukeAssist %s",
@@ -58,8 +75,9 @@ class NukeLauncher(SoftwareLauncher):
         "Hiero %s"
     ]
 
-    VARIATIONS = [
-        x.replace("%s", "").replace("  ", " ").strip() for x in VARIATION_DISPLAY_NAME_TEMPLATES
+    # Name for all the variations supported by Nuke 9 and onward.
+    NUKE_9_OR_HIGHER_VARIATIONS = [
+        template_to_variation_name(x) for x in NUKE_9_OR_HIGHER_VARIATION_DISPLAY_NAME_TEMPLATES
     ]
 
     # This dictionary defines a list of executable template strings for each
@@ -96,6 +114,11 @@ class NukeLauncher(SoftwareLauncher):
             return os.path.join(
                 self.disk_location,
                 "icon_hiero_256.png"
+            )
+        elif "nukex" in variant.lower():
+            return os.path.join(
+                self.disk_location,
+                "icon_x_256.png"
             )
         else:
             return os.path.join(
@@ -188,14 +211,14 @@ class NukeLauncher(SoftwareLauncher):
             # version matches one of the constraints. Add this to the
             # list of SW versions to return.
             yield SoftwareVersion(
-                executable_variant,
                 executable_version,
+                executable_variant,
                 display_name,
                 executable_path,
                 self._get_icon_from_variant(executable_variant)
             )
         else:
-            for variation_template in self.VARIATION_DISPLAY_NAME_TEMPLATES:
+            for variation_template in self._get_variations_teamplates_from_version(executable_version):
 
                 # Figure out the arguments required for each variation.
                 arguments = []
@@ -213,14 +236,30 @@ class NukeLauncher(SoftwareLauncher):
                     arguments.append("--nc")
 
                 yield SoftwareVersion(
-                    variation_template.replace("%s", "").replace("  ", " ").strip(),
                     executable_version,
+                    template_to_variation_name(variation_template),
                     variation_template % (executable_version,),
                     executable_path,
                     self._get_icon_from_variant(variation_template)
                 )
 
-    def scan_software(self, versions=None):
+    def _get_variation_templates_from_version(self, version):
+        # As of Nuke 6, Nuke versions formatting is <Major>.<Minor>v<patch>.
+        # This will grab the major version.
+        if version.split(".", 1)[0] in ["7", "8"]:
+            return self.NUKE_7_8_VARIATION_DISPLAY_NAME_TEMPLATES
+        else:
+            return self.NUKE_9_OR_HIGHER_VARIATION_DISPLAY_NAME_TEMPLATES
+
+    def _get_variations_from_version(self, version):
+        # As of Nuke 6, Nuke versions formatting is <Major>.<Minor>v<patch>.
+        # This will grab the major version.
+        if version.split(".", 1)[0] in ["7", "8"]:
+            return self.NUKE_7_8_VARIATIONS
+        else:
+            return self.NUKE_9_OR_HIGHER_VARIATIONS
+
+    def scan_software(self):
         """
         Performs a scan for software installations.
 
@@ -237,22 +276,24 @@ class NukeLauncher(SoftwareLauncher):
 
         software_versions = []
         for software_version in self._find_software_variations():
-            if self._keep_software(software_version, versions):
+            if self.is_version_supported(software_version):
                 self.logger.debug("Accepting %s", software_version)
                 software_versions.append(software_version)
 
         return software_versions
 
-    def _keep_software(self, software_version, versions):
-        if versions and software_version.version not in versions:
-            self.logger.debug("Rejecting %s because version.", software_version)
-            return False
+    def is_version_supported(self, version):
+        return (
+            # Make sure this is a product the software entity requested
+            super(NukeLauncher, self).is_version_supported(version) and
+            # And this is a product that Toolkit support. For example, HieroPlayer is not
+            # supported.
+            version.product in self._get_variations_from_version(version.version)
+        )
 
-        if self.VARIATIONS and software_version.product not in self.VARIATIONS:
-            self.logger.debug("Rejecting %s because product.", software_version)
-            return False
-
-        return True
+    @property
+    def minimum_supported_version(self):
+        return "7.0v0"
 
     def prepare_launch(self, exec_path, args, file_to_open=None):
         """

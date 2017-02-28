@@ -70,10 +70,6 @@ class TestStartup(TankTestBase):
 
         self.setup_fixtures()
 
-        self._nuke_launcher = sgtk.platform.create_engine_launcher(
-            self.tk, sgtk.context.create_empty(self.tk), "tk-nuke"
-        )
-
         # If we are not requesting to run on actual data.
         if "TK_NO_MOCK" not in os.environ:
             self._os_listdir = os.listdir
@@ -114,9 +110,41 @@ class TestStartup(TankTestBase):
             "10.0v5"
         )
 
+    def test_nuke9(self):
+        self._test_nuke(
+            [
+                "Nuke 9.0v8", "NukeX 9.0v8", "NukeStudio 9.0v8", "NukeAssist 9.0v8", "Hiero 9.0v8",
+                "Nuke 9.0v8 Non-commercial", "NukeX 9.0v8 Non-commercial", "NukeStudio 9.0v8 Non-commercial"
+            ],
+            "9.0v8"
+        )
+
+    def test_nuke8(self):
+        self._test_nuke(
+            [
+                "Nuke 8.0v4", "NukeX 8.0v4", "Nuke 8.0v4 PLE", "NukeAssist 8.0v4"
+            ],
+            "8.0v4"
+        )
+
+    def test_nuke7(self):
+        self._test_nuke(
+            [
+                "Nuke 7.0v10", "NukeX 7.0v10", "Nuke 7.0v10 PLE", "NukeAssist 7.0v10"
+            ],
+            "7.0v10"
+        )
+
+    def test_nuke6(self):
+        self._test_nuke([], "6.3v6")
+
     def _test_nuke(self, expected_variations, expected_version):
+
+        self._nuke_launcher = sgtk.platform.create_engine_launcher(
+            self.tk, sgtk.context.create_empty(self.tk), "tk-nuke", [expected_version]
+        )
         # Ensure we are getting back the right variations.
-        software_versions = self._nuke_launcher.scan_software(expected_version)
+        software_versions = self._nuke_launcher.scan_software()
 
         expected_variations = set(expected_variations)
         found_variations = set(x.display_name for x in software_versions)
@@ -129,5 +157,7 @@ class TestStartup(TankTestBase):
                 self.assertEqual(file_name, "icon_studio_256.png")
             elif "hiero" in x.display_name.lower():
                 self.assertEqual(file_name, "icon_hiero_256.png")
+            elif "nukex" in x.display_name.lower():
+                self.assertEqual(file_name, "icon_x_256.png")
             else:
                 self.assertEqual(file_name, "icon_256.png")
