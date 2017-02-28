@@ -95,7 +95,7 @@ class NukeLauncher(SoftwareLauncher):
             # C:\Program Files\Nuke10.0v5\Nuke10.0.exe
             "C:/Program Files/Nuke{version}/Nuke{major_minor_version}.exe",
         ],
-        "linux": [
+        "linux2": [
             # example path: /usr/local/Nuke10.0v5/Nuke10.0
             "/usr/local/Nuke{version}/Nuke{major_minor_version}",
         ]
@@ -272,7 +272,7 @@ class NukeLauncher(SoftwareLauncher):
         """
         self.logger.debug("Scanning for Nuke versions...")
 
-        if sys.platform not in ["darwin", "win32", "linux"]:
+        if sys.platform not in ["darwin", "win32", "linux2"]:
             self.logger.debug("Nuke not supported on platform %s.", sys.platform)
             return []
 

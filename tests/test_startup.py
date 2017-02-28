@@ -79,6 +79,28 @@ class TestStartup(TankTestBase):
             "Program Files": {
                 "Nuke10.0v5": {
                     "Nuke10.0.exe": None
+                },
+                "Nuke9.0v8": {
+                    "Nuke9.0.exe": None
+                },
+                "Nuke8.0v4": {
+                    "Nuke8.0.exe": None
+                },
+                "Nuke7.0v10": {
+                    "Nuke7.0.exe": None
+                },
+                "Nuke6.3v6": {
+                    "Nuke6.3.exe": None
+                }
+            }
+        }
+    }
+
+    _linux_mock_hierarchy = {
+        "usr": {
+            "local": {
+                "Nuke10.0v5": {
+                    "Nuke10.0": None
                 }
             }
         }
@@ -86,7 +108,7 @@ class TestStartup(TankTestBase):
 
     _os_neutral_hierarchy = {
         "win32": _windows_mock_hiearchy,
-        "linux2": {},
+        "linux2": _linux_mock_hierarchy,
         "darwin": _mac_mock_hierarchy
     }
 
@@ -118,7 +140,7 @@ class TestStartup(TankTestBase):
             # Remember where we are in the current hierarchy.
             current_depth = current_depth[t]
 
-        # We've reached the folder we wanted. Get its files.
+        # We've reached the folder we wanted. Get imports files.
         return current_depth.keys()
 
     def test_nuke10(self):
