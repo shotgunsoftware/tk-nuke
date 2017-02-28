@@ -218,7 +218,7 @@ class NukeLauncher(SoftwareLauncher):
                 self._get_icon_from_variant(executable_variant)
             )
         else:
-            for variation_template in self._get_variations_teamplates_from_version(executable_version):
+            for variation_template in self._get_variation_templates_from_version(executable_version):
 
                 # Figure out the arguments required for each variation.
                 arguments = []
@@ -230,6 +230,8 @@ class NukeLauncher(SoftwareLauncher):
                     arguments.append("--nukex")
                 elif "Hiero" in variation_template:
                     arguments.append("--hiero")
+                elif "PLE" in variation_template:
+                    arguments.append("--ple")
 
                 # If this is a non-commercial build, we need to add the special argument.
                 if "Non-commercial" in variation_template:
