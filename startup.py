@@ -16,7 +16,7 @@ import sys
 from sgtk.platform import SoftwareLauncher, SoftwareVersion
 
 
-def _template_to_variation_name(template):
+def _template_to_product_name(template):
     """
     Converts a display name template name to a product name.
 
@@ -70,21 +70,21 @@ class NukeLauncher(SoftwareLauncher):
         "major_minor_version": r"(?P<major_minor_version>[\d.]+)"
     }
 
-    # Templates for all the display names of the variations supported by Nuke 7 and 8.
-    NUKE_7_8_VARIATION_DISPLAY_NAME_TEMPLATES = [
+    # Templates for all the display names of the products supported by Nuke 7 and 8.
+    NUKE_7_8_PRODUCT_DISPLAY_NAME_TEMPLATES = [
         "Nuke %s",
         "NukeX %s",
         "Nuke %s PLE",
         "NukeAssist %s",
     ]
 
-    # Name of all the variations supported by Nuke 7 and 8.
-    NUKE_7_8_VARIATIONS = [
-        _template_to_variation_name(x) for x in NUKE_7_8_VARIATION_DISPLAY_NAME_TEMPLATES
+    # Name of all the products supported by Nuke 7 and 8.
+    NUKE_7_8_PRODUCTS = [
+        _template_to_product_name(x) for x in NUKE_7_8_PRODUCT_DISPLAY_NAME_TEMPLATES
     ]
 
-    # Templates for all the display names of the variations supported by Nuke 9 and onward.
-    NUKE_9_OR_HIGHER_VARIATION_DISPLAY_NAME_TEMPLATES = [
+    # Templates for all the display names of the products supported by Nuke 9 and onward.
+    NUKE_9_OR_HIGHER_PRODUCT_DISPLAY_NAME_TEMPLATES = [
         "Nuke %s",
         "Nuke %s Non-commercial",
         "NukeAssist %s",
@@ -95,9 +95,9 @@ class NukeLauncher(SoftwareLauncher):
         "Hiero %s"
     ]
 
-    # Name for all the variations supported by Nuke 9 and onward.
-    NUKE_9_OR_HIGHER_VARIATIONS = [
-        _template_to_variation_name(x) for x in NUKE_9_OR_HIGHER_VARIATION_DISPLAY_NAME_TEMPLATES
+    # Name for all the products supported by Nuke 9 and onward.
+    NUKE_9_OR_HIGHER_PRODUCTS = [
+        _template_to_product_name(x) for x in NUKE_9_OR_HIGHER_PRODUCT_DISPLAY_NAME_TEMPLATES
     ]
 
     # This dictionary defines a list of executable template strings for each
@@ -161,7 +161,7 @@ class NukeLauncher(SoftwareLauncher):
         # build up a dictionary where the key is the match template and the
         # value is a list of matching executables. we'll need to keep the
         # association between template and matches for later when we extract
-        # the components (version and variation)
+        # the components (version and product)
         executable_matches = {}
         for match_template in match_templates:
 
@@ -183,9 +183,9 @@ class NukeLauncher(SoftwareLauncher):
 
         return executable_matches
 
-    def _find_software_variations(self):
+    def _find_products(self):
         """
-        For each software executable that was found, get the software variations for it.
+        For each software executable that was found, get the software products for it.
 
         :returns: Generator that will iterate on each SoftwareVersion that was found.
         """
@@ -222,23 +222,23 @@ class NukeLauncher(SoftwareLauncher):
                     self.logger.debug("Path did not match regex.")
                     continue
 
-                for variation in self._extract_variations_from_path(executable_path, match.groupdict()):
-                    yield variation
+                for product in self._extract_products_from_path(executable_path, match.groupdict()):
+                    yield product
 
-    def _extract_variations_from_path(self, executable_path, match):
+    def _extract_products_from_path(self, executable_path, match):
         """
-        Extracts the variations from an executable. Note that more than one variation
+        Extracts the products from an executable. Note that more than one product
         can be extracted from a single executable on certain platforms.
 
         :param str executable_path: Path to the executable.
         :param match: Tokens that were extracted from the executable.
 
-        :returns: Generator that generates each variation that can be launched from the given
+        :returns: Generator that generates each product that can be launched from the given
             executable.
         """
         executable_version = match.get("version")
         if sys.platform == "darwin":
-            # Extract the variation from the file path, as each variation of the product has an actual
+            # Extract the product from the file path, as each product of the product has an actual
             # executable associated to it.
 
             # extract the components (default to None if not included)
@@ -257,37 +257,37 @@ class NukeLauncher(SoftwareLauncher):
                 self._get_icon_from_variant(executable_variant)
             )
         else:
-            for variation_template in self._get_variation_templates_from_version(executable_version):
+            for product_template in self._get_product_templates_from_version(executable_version):
 
-                # Figure out the arguments required for each variation.
+                # Figure out the arguments required for each product.
                 arguments = []
-                if "Studio" in variation_template:
+                if "Studio" in product_template:
                     arguments.append("--studio")
-                elif "Assist" in variation_template:
+                elif "Assist" in product_template:
                     arguments.append("--nukeassist")
-                elif "NukeX" in variation_template:
+                elif "NukeX" in product_template:
                     arguments.append("--nukex")
-                elif "Hiero" in variation_template:
+                elif "Hiero" in product_template:
                     arguments.append("--hiero")
-                elif "PLE" in variation_template:
+                elif "PLE" in product_template:
                     arguments.append("--ple")
 
                 # If this is a non-commercial build, we need to add the special argument.
-                if "Non-commercial" in variation_template:
+                if "Non-commercial" in product_template:
                     arguments.append("--nc")
 
                 yield SoftwareVersion(
                     executable_version,
-                    _template_to_variation_name(variation_template),
-                    variation_template % (executable_version,),
+                    _template_to_product_name(product_template),
+                    product_template % (executable_version,),
                     executable_path,
-                    self._get_icon_from_variant(variation_template),
+                    self._get_icon_from_variant(product_template),
                     arguments
                 )
 
-    def _get_variation_templates_from_version(self, version):
+    def _get_product_templates_from_version(self, version):
         """
-        Get the variation templates for a given product version.
+        Get the product templates for a given product version.
 
         :param str version: Nuke version in the format <Major>.<Minor>v<Patch>
 
@@ -296,11 +296,11 @@ class NukeLauncher(SoftwareLauncher):
         # As of Nuke 6, Nuke versions formatting is <Major>.<Minor>v<Patch>.
         # This will grab the major version.
         if version.split(".", 1)[0] in ["7", "8"]:
-            return self.NUKE_7_8_VARIATION_DISPLAY_NAME_TEMPLATES
+            return self.NUKE_7_8_PRODUCT_DISPLAY_NAME_TEMPLATES
         else:
-            return self.NUKE_9_OR_HIGHER_VARIATION_DISPLAY_NAME_TEMPLATES
+            return self.NUKE_9_OR_HIGHER_PRODUCT_DISPLAY_NAME_TEMPLATES
 
-    def _get_variations_from_version(self, version):
+    def _get_products_from_version(self, version):
         """
         Get the name of the products for a given Nuke version.
 
@@ -311,9 +311,9 @@ class NukeLauncher(SoftwareLauncher):
         # As of Nuke 6, Nuke versions formatting is <Major>.<Minor>v<patch>.
         # This will grab the major version.
         if version.split(".", 1)[0] in ["7", "8"]:
-            return self.NUKE_7_8_VARIATIONS
+            return self.NUKE_7_8_PRODUCTS
         else:
-            return self.NUKE_9_OR_HIGHER_VARIATIONS
+            return self.NUKE_9_OR_HIGHER_PRODUCTS
 
     def scan_software(self):
         """
@@ -331,7 +331,7 @@ class NukeLauncher(SoftwareLauncher):
             return []
 
         software_versions = []
-        for software_version in self._find_software_variations():
+        for software_version in self._find_products():
             if self.is_version_supported(software_version):
                 self.logger.debug("Accepting %s", software_version)
                 software_versions.append(software_version)
@@ -347,7 +347,7 @@ class NukeLauncher(SoftwareLauncher):
             super(NukeLauncher, self).is_version_supported(version) and
             # And this is a product that Toolkit support. For example, HieroPlayer is not
             # supported.
-            version.product in self._get_variations_from_version(version.version)
+            version.product in self._get_products_from_version(version.version)
         )
 
     @property
