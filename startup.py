@@ -123,21 +123,25 @@ class NukeLauncher(SoftwareLauncher):
         ]
     }
 
-    def _get_icon_from_variant(self, variant):
+    def _get_icon_from_product(self, product):
         """
-        Returns the icon based on the variant.
+        Returns the icon based on the product.
+
+        :param str product: Product name.
+
+        :returns: Path to the product's icon.
         """
-        if "studio" in variant.lower():
+        if "studio" in product.lower():
             return os.path.join(
                 self.disk_location,
                 "icon_nukestudio_256.png"
             )
-        elif "hiero" in variant.lower():
+        elif "hiero" in product.lower():
             return os.path.join(
                 self.disk_location,
                 "icon_hiero_256.png"
             )
-        elif "nukex" in variant.lower():
+        elif "nukex" in product.lower():
             return os.path.join(
                 self.disk_location,
                 "icon_x_256.png"
@@ -254,7 +258,7 @@ class NukeLauncher(SoftwareLauncher):
                 executable_variant,
                 display_name,
                 executable_path,
-                self._get_icon_from_variant(executable_variant)
+                self._get_icon_from_product(executable_variant)
             )
         else:
             for product_template in self._get_product_templates_from_version(executable_version):
@@ -276,12 +280,13 @@ class NukeLauncher(SoftwareLauncher):
                 if "Non-commercial" in product_template:
                     arguments.append("--nc")
 
+                executable_variant = product_template % (executable_version,)
                 yield SoftwareVersion(
                     executable_version,
                     _template_to_product_name(product_template),
-                    product_template % (executable_version,),
+                    executable_variant,
                     executable_path,
-                    self._get_icon_from_variant(product_template),
+                    self._get_icon_from_product(executable_variant),
                     arguments
                 )
 
@@ -341,6 +346,9 @@ class NukeLauncher(SoftwareLauncher):
     def is_version_supported(self, version):
         """
         Ensures that a product is supported by the launcher and that the version is valid.
+
+        :param version: Checks is a given software version is supported.
+        :type version: :class:`sgtk.platform.SoftwareVersion`
         """
         return (
             # Make sure this is a product the software entity requested
