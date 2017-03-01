@@ -56,22 +56,8 @@ class NukeLauncher(SoftwareLauncher):
         "suffix": r"(?P<suffix> Non-commercial| PLE){0,1}",
         # The Version is present twice on mac in the file path, so the second time
         # we simply reuse the value from the first match.
-        "version2": r"(?P=version)",
+        "version_back": r"(?P=version)",
         "major_minor_version": r"(?P<major_minor_version>[\d.]+)"
-    }
-
-    # Glob strings to insert into the executable template paths when globbing
-    # for executables and bundles on disk. Globbing is admittedly limited in
-    # terms of specific match strings, but if we need to introduce more precise
-    # match strings later, we can do it in one place rather than each of the
-    # template paths defined below.
-    COMPONENT_GLOB_LOOKUP = {
-        "version": "*",
-        "variant": "*",
-        "suffix": "*",
-        # Reusing the same naming convention as the regular expressions for key names.
-        "version2": "*",
-        "major_minor_version": "*"
     }
 
     # Templates for all the display names of the products supported by Nuke 7 and 8.
@@ -113,16 +99,16 @@ class NukeLauncher(SoftwareLauncher):
     EXECUTABLE_MATCH_TEMPLATES = {
         "darwin": [
             # /Applications/Nuke10.0v5/NukeStudio10.0v5.app
-            "/Applications/Nuke{version}/{variant}{version2}{suffix}.app",
+            "/Applications/Nuke{version}/{variant}{version_back}{suffix}.app",
         ],
         "win32": [
             # C:\Program Files\Nuke10.0v5\Nuke10.0.exe
             "C:/Program Files/Nuke{version}/Nuke{major_minor_version}.exe",
         ],
         "linux2": [
-            # example path: /usr/local/Nuke10.0v5/Nuke10.0
+            # /usr/local/Nuke10.0v5/Nuke10.0
             "/usr/local/Nuke{version}/Nuke{major_minor_version}",
-            # example path: /home/<username>/Nuke10.0v5/Nuke10.0
+            # /home/<username>/Nuke10.0v5/Nuke10.0
             os.path.expanduser("~/Nuke{version}/Nuke{major_minor_version}")
         ]
     }
@@ -174,7 +160,7 @@ class NukeLauncher(SoftwareLauncher):
         for match_template in match_templates:
 
             # build the glob pattern by formatting the template for globbing
-            glob_pattern = _format(match_template, self.COMPONENT_GLOB_LOOKUP)
+            glob_pattern = _format(match_template, dict((key, "*") for key in self.COMPONENT_REGEX_LOOKUP))
             self.logger.debug(
                 "Globbing for executable matching: %s ..." % (glob_pattern,)
             )
