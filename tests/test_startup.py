@@ -161,7 +161,9 @@ class TestStartup(TankTestBase):
             # Remember where we are in the current hierarchy.
             current_depth = current_depth[t]
 
-        # We've reached the folder we wanted. Get imports files.
+        # We've reached the folder we wanted, build a list.
+        # We're using dicts for intemediary folders and lists for leaf folders so iterate
+        # on the items to get all the names.
         return list(iter(current_depth))
 
     def test_nuke10(self):
