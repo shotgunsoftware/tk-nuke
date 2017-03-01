@@ -1,0 +1,9 @@
+engines:
+    tk-nuke:
+        location:
+            type: dev
+            path: $TK_NUKE_REPO_ROOT
+        debug_logging: true
+        apps:
+
+frameworks:
