@@ -258,9 +258,10 @@ class TestStartup(TankTestBase):
 
         # Ensure the icon is correct.
         for version in software_versions:
+            self.assertEqual(os.path.exists(version.icon), True)
             file_name = os.path.basename(version.icon)
             if "studio" in version.display_name.lower():
-                self.assertEqual(file_name, "icon_studio_256.png")
+                self.assertEqual(file_name, "icon_nukestudio_256.png")
             elif "hiero" in version.display_name.lower():
                 self.assertEqual(file_name, "icon_hiero_256.png")
             elif "nukex" in version.display_name.lower():

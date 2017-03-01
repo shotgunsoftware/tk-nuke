@@ -130,7 +130,7 @@ class NukeLauncher(SoftwareLauncher):
         if "studio" in variant.lower():
             return os.path.join(
                 self.disk_location,
-                "icon_studio_256.png"
+                "icon_nukestudio_256.png"
             )
         elif "hiero" in variant.lower():
             return os.path.join(
