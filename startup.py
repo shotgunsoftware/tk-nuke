@@ -45,6 +45,21 @@ class NukeLauncher(SoftwareLauncher):
     engine with the current context in the new session of Nuke.
     """
 
+    # Named regex strings to insert into the executable template paths when
+    # matching against supplied versions and variants. Similar to the glob
+    # strings, these allow us to alter the regex matching for any of the
+    # variable components of the path in one place
+
+    COMPONENT_REGEX_LOOKUP = {
+        "version": r"(?P<version>[\d.v]+)",
+        "variant": r"(?P<variant>[\w\s]+)",
+        "suffix": r"(?P<suffix> Non-commercial| PLE){0,1}",
+        # The Version is present twice on mac in the file path, so the second time
+        # we simply reuse the value from the first match.
+        "version2": r"(?P=version)",
+        "major_minor_version": r"(?P<major_minor_version>[\d.]+)"
+    }
+
     # Glob strings to insert into the executable template paths when globbing
     # for executables and bundles on disk. Globbing is admittedly limited in
     # terms of specific match strings, but if we need to introduce more precise
@@ -54,20 +69,9 @@ class NukeLauncher(SoftwareLauncher):
         "version": "*",
         "variant": "*",
         "suffix": "*",
-        "same_version": "*",
+        # Reusing the same naming convention as the regular expressions for key names.
+        "version2": "*",
         "major_minor_version": "*"
-    }
-
-    # Named regex strings to insert into the executable template paths when
-    # matching against supplied versions and variants. Similar to the glob
-    # strings, these allow us to alter the regex matching for any of the
-    # variable components of the path in one place
-    COMPONENT_REGEX_LOOKUP = {
-        "version": r"(?P<version>[\d.v]+)",
-        "variant": r"(?P<variant>[\w\s]+)",
-        "suffix": r"(?P<suffix> Non-commercial| PLE){0,1}",
-        "same_version": r"(?P=version)",
-        "major_minor_version": r"(?P<major_minor_version>[\d.]+)"
     }
 
     # Templates for all the display names of the products supported by Nuke 7 and 8.
@@ -109,7 +113,7 @@ class NukeLauncher(SoftwareLauncher):
     EXECUTABLE_MATCH_TEMPLATES = {
         "darwin": [
             # /Applications/Nuke10.0v5/NukeStudio10.0v5.app
-            "/Applications/Nuke{version}/{variant}{same_version}{suffix}.app",
+            "/Applications/Nuke{version}/{variant}{version2}{suffix}.app",
         ],
         "win32": [
             # C:\Program Files\Nuke10.0v5\Nuke10.0.exe
