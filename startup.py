@@ -12,8 +12,11 @@ import glob
 import os
 import re
 import sys
+import uuid
+import imp
+import sgtk
 
-from sgtk.platform import SoftwareLauncher, SoftwareVersion
+from sgtk.platform import SoftwareLauncher, SoftwareVersion, LaunchInformation
 
 
 def _template_to_product_name(template):
@@ -370,4 +373,53 @@ class NukeLauncher(SoftwareLauncher):
 
         :returns: :class:`LaunchInformation` instance
         """
-        pass
+
+        # Get the basic environment variables to launch Nuke. Do this by reusing Toolkit classic's
+        # bootstrap code.
+        startup_python_path = os.path.join(
+            self.disk_location,
+            "python",
+            "startup"
+        )
+        bootstrap = self._uuid_import("bootstrap", startup_python_path)
+        required_env = bootstrap.compute_environment(exec_path, args)
+
+        if True:
+            self.logger.info("Preparing Nuke Launch via Toolkit as a Plugin ...")
+
+            # Add std context and site info to the env
+            std_env = self.get_standard_plugin_environment()
+            required_env.update(std_env)
+
+            # A Nuke script can't be launched from the menu.py, so we have to tack it onto the
+            # launch arguments instead.
+            if file_to_open:
+                args = "%s %s" % (file_to_open, args)
+
+            required_env["SGTK_ENGINE"] = self.engine_name
+        else:
+            self.logger.info("Preparing Nuke Launch via Toolkit Classic methodology ...")
+            # Keep using TANK_* for now in case it might break backwards compatibility.
+            required_env["TANK_ENGINE"] = self.engine_name
+            required_env["TANK_CONTEXT"] = sgtk.Context.serialize(self.context)
+
+        return LaunchInformation(exec_path, args, required_env)
+
+    def _uuid_import(self, module, path):
+        """
+        Imports a module with a given name at a given location with a decorated
+        namespace so that it can be reloaded multiple times at different locations.
+
+        :param module: Name of the module we are importing.
+        :param path: Path to the folder containing the module we are importing.
+
+        :returns: The imported module.
+        """
+        self.logger.info("Trying to import module '%s' from path '%s'..." % (module, path))
+
+        spec = imp.find_module(module, [path])
+        module = imp.load_module("%s_%s" % (uuid.uuid4().hex, module), *spec)
+
+        self.logger.info("Successfully imported %s" % module)
+
+        return module

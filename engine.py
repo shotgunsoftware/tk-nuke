@@ -225,7 +225,7 @@ class NukeEngine(tank.platform.Engine):
         # Store data needed for bootstrapping Tank in env vars. Used in startup/menu.py.
         os.environ["TANK_NUKE_ENGINE_INIT_NAME"] = self.instance_name
         os.environ["TANK_NUKE_ENGINE_INIT_CONTEXT"] = tank.context.serialize(self.context)
-        os.environ["TANK_NUKE_ENGINE_INIT_PROJECT_ROOT"] = self.tank.project_path
+        # os.environ["TANK_NUKE_ENGINE_INIT_PROJECT_ROOT"] = self.tank.project_path
         
         # Add our startup path to the nuke init path
         startup_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "startup"))
