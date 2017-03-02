@@ -46,13 +46,13 @@ class NukeLauncher(SoftwareLauncher):
     """
 
     # Named regex strings to insert into the executable template paths when
-    # matching against supplied versions and variants. Similar to the glob
+    # matching against supplied versions and products. Similar to the glob
     # strings, these allow us to alter the regex matching for any of the
     # variable components of the path in one place
 
     COMPONENT_REGEX_LOOKUP = {
         "version": r"(?P<version>[\d.v]+)",
-        "variant": r"(?P<variant>[\w\s]+)",
+        "product": r"(?P<product>[\w\s]+)",
         "suffix": r"(?P<suffix> Non-commercial| PLE){0,1}",
         # The Version is present twice on mac in the file path, so the second time
         # we simply reuse the value from the first match.
@@ -99,7 +99,7 @@ class NukeLauncher(SoftwareLauncher):
     EXECUTABLE_MATCH_TEMPLATES = {
         "darwin": [
             # /Applications/Nuke10.0v5/NukeStudio10.0v5.app
-            "/Applications/Nuke{version}/{variant}{version_back}{suffix}.app",
+            "/Applications/Nuke{version}/{product}{version_back}{suffix}.app",
         ],
         "win32": [
             # C:\Program Files\Nuke10.0v5\Nuke10.0.exe
@@ -167,6 +167,7 @@ class NukeLauncher(SoftwareLauncher):
             matching_paths = glob.glob(glob_pattern)
             if matching_paths:
                 # found matches, remember this association (template: matches)
+                # Flips the slashes orientation so our regexes can be simpler for Windows.
                 executable_matches[match_template] = [x.replace("\\", "/") for x in matching_paths]
                 self.logger.debug(
                     "Found %s matches: %s" % (
@@ -187,7 +188,7 @@ class NukeLauncher(SoftwareLauncher):
 
         # now that we have a list of matching executables on disk and the
         # corresponding template used to find them, we can extract the component
-        # pieces to see if they match the supplied version/variant constraints
+        # pieces to see if they match the supplied version/product constraints
         for (match_template, executable_paths) in executable_matches.iteritems():
 
             # construct the regex string to extract the components
@@ -236,19 +237,19 @@ class NukeLauncher(SoftwareLauncher):
             # executable associated to it.
 
             # extract the components (default to None if not included)
-            executable_variant = match.get("variant")
+            executable_product = match.get("product")
             # If there is no suffix (Non-commercial or PLE), we'll simply use an empty string).
             executable_suffix = match.get("suffix") or ""
 
             # Generate the display name.
-            display_name = "%s %s%s" % (executable_variant, executable_version, executable_suffix)
+            display_name = "%s %s%s" % (executable_product, executable_version, executable_suffix)
 
             yield SoftwareVersion(
                 executable_version,
-                executable_variant,
+                executable_product,
                 display_name,
                 executable_path,
-                self._get_icon_from_product(executable_variant)
+                self._get_icon_from_product(executable_product)
             )
         else:
             for product_template in self._get_product_templates_from_version(executable_version):
@@ -270,13 +271,13 @@ class NukeLauncher(SoftwareLauncher):
                 if "Non-commercial" in product_template:
                     arguments.append("--nc")
 
-                executable_variant = product_template % (executable_version,)
+                executable_product = product_template % (executable_version,)
                 yield SoftwareVersion(
                     executable_version,
                     _template_to_product_name(product_template),
-                    executable_variant,
+                    executable_product,
                     executable_path,
-                    self._get_icon_from_product(executable_variant),
+                    self._get_icon_from_product(executable_product),
                     arguments
                 )
 
