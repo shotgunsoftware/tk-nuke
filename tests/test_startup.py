@@ -173,7 +173,7 @@ class TestStartup(TankTestBase):
         self._test_nuke(
             [
                 "Nuke 10.0v5", "NukeX 10.0v5", "NukeStudio 10.0v5", "NukeAssist 10.0v5", "Hiero 10.0v5",
-                "Nuke 10.0v5 Non-commercial", "NukeX 10.0v5 Non-commercial", "NukeStudio 10.0v5 Non-commercial"
+                "Nuke Non-commercial 10.0v5", "NukeX Non-commercial 10.0v5", "NukeStudio Non-commercial 10.0v5"
             ],
             "10.0v5"
         )
@@ -185,7 +185,7 @@ class TestStartup(TankTestBase):
         self._test_nuke(
             [
                 "Nuke 9.0v8", "NukeX 9.0v8", "NukeStudio 9.0v8", "NukeAssist 9.0v8", "Hiero 9.0v8",
-                "Nuke 9.0v8 Non-commercial", "NukeX 9.0v8 Non-commercial", "NukeStudio 9.0v8 Non-commercial"
+                "Nuke Non-commercial 9.0v8", "NukeX Non-commercial 9.0v8", "NukeStudio Non-commercial 9.0v8"
             ],
             "9.0v8"
         )
@@ -196,7 +196,7 @@ class TestStartup(TankTestBase):
         """
         self._test_nuke(
             [
-                "Nuke 8.0v4", "NukeX 8.0v4", "Nuke 8.0v4 PLE", "NukeAssist 8.0v4"
+                "Nuke 8.0v4", "NukeX 8.0v4", "Nuke PLE 8.0v4", "NukeAssist 8.0v4"
             ],
             "8.0v4"
         )
@@ -207,7 +207,7 @@ class TestStartup(TankTestBase):
         """
         self._test_nuke(
             [
-                "Nuke 7.0v10", "NukeX 7.0v10", "Nuke 7.0v10 PLE", "NukeAssist 7.0v10"
+                "Nuke 7.0v10", "NukeX 7.0v10", "Nuke PLE 7.0v10", "NukeAssist 7.0v10"
             ],
             "7.0v10"
         )
@@ -249,7 +249,7 @@ class TestStartup(TankTestBase):
 
         with self._mock_folder_listing():
             # Ensure we are getting back the right variations.
-            software_versions = self._nuke_launcher.scan_software()
+            software_versions = self._nuke_launcher.get_supported_software()
 
         expected_variations = set(expected_variations)
         found_variations = set(x.display_name for x in software_versions)

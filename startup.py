@@ -8,9 +8,7 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
-import glob
 import os
-import re
 import sys
 import uuid
 import imp
@@ -28,20 +26,6 @@ def _template_to_product_name(template):
     return template.replace("%s", "").replace("  ", " ").strip()
 
 
-def _format(template, tokens):
-    """
-    Super dumb implementation of Python 2.6-like str.format.
-
-    :param str template: String using {<name>} tokens for substitution.
-    :param dict tokens: Dictionary of <name> to substitute for <value>.
-
-    :returns: The substituted string, when "<name>" will yield "<value>".
-    """
-    for key, value in tokens.iteritems():
-        template = template.replace("{%s}" % key, value)
-    return template
-
-
 class NukeLauncher(SoftwareLauncher):
     """
     Handles launching Nuke executables. Automatically starts up a tk-nuke
@@ -49,13 +33,13 @@ class NukeLauncher(SoftwareLauncher):
     """
 
     # Named regex strings to insert into the executable template paths when
-    # matching against supplied versions and variants. Similar to the glob
+    # matching against supplied versions and products. Similar to the glob
     # strings, these allow us to alter the regex matching for any of the
     # variable components of the path in one place
 
     COMPONENT_REGEX_LOOKUP = {
         "version": r"(?P<version>[\d.v]+)",
-        "variant": r"(?P<variant>[\w\s]+)",
+        "product": r"(?P<product>[\w\s]+)",
         "suffix": r"(?P<suffix> Non-commercial| PLE){0,1}",
         # The Version is present twice on mac in the file path, so the second time
         # we simply reuse the value from the first match.
@@ -64,33 +48,23 @@ class NukeLauncher(SoftwareLauncher):
     }
 
     # Templates for all the display names of the products supported by Nuke 7 and 8.
-    NUKE_7_8_PRODUCT_DISPLAY_NAME_TEMPLATES = [
-        "Nuke %s",
-        "NukeX %s",
-        "Nuke %s PLE",
-        "NukeAssist %s",
-    ]
-
-    # Name of all the products supported by Nuke 7 and 8.
     NUKE_7_8_PRODUCTS = [
-        _template_to_product_name(x) for x in NUKE_7_8_PRODUCT_DISPLAY_NAME_TEMPLATES
+        "Nuke",
+        "NukeX",
+        "Nuke PLE",
+        "NukeAssist",
     ]
 
     # Templates for all the display names of the products supported by Nuke 9 and onward.
-    NUKE_9_OR_HIGHER_PRODUCT_DISPLAY_NAME_TEMPLATES = [
-        "Nuke %s",
-        "Nuke %s Non-commercial",
-        "NukeAssist %s",
-        "NukeStudio %s",
-        "NukeStudio %s Non-commercial",
-        "NukeX %s",
-        "NukeX %s Non-commercial",
-        "Hiero %s"
-    ]
-
-    # Name for all the products supported by Nuke 9 and onward.
     NUKE_9_OR_HIGHER_PRODUCTS = [
-        _template_to_product_name(x) for x in NUKE_9_OR_HIGHER_PRODUCT_DISPLAY_NAME_TEMPLATES
+        "Nuke",
+        "Nuke Non-commercial",
+        "NukeAssist",
+        "NukeStudio",
+        "NukeStudio Non-commercial",
+        "NukeX",
+        "NukeX Non-commercial",
+        "Hiero"
     ]
 
     # This dictionary defines a list of executable template strings for each
@@ -102,7 +76,7 @@ class NukeLauncher(SoftwareLauncher):
     EXECUTABLE_MATCH_TEMPLATES = {
         "darwin": [
             # /Applications/Nuke10.0v5/NukeStudio10.0v5.app
-            "/Applications/Nuke{version}/{variant}{version_back}{suffix}.app",
+            "/Applications/Nuke{version}/{product}{version_back}{suffix}.app",
         ],
         "win32": [
             # C:\Program Files\Nuke10.0v5\Nuke10.0.exe
@@ -145,82 +119,22 @@ class NukeLauncher(SoftwareLauncher):
                 "icon_256.png"
             )
 
-    def _find_executables(self, match_templates):
-        """
-        Finds all the executables available for this platform.
-
-        :param list match_templates: List of Glob patterns that can match Nuke executables.
-
-        :returns: Dictionary of results where the glob pattern is the key and the value
-            is the files found with said pattern.
-        """
-
-        # build up a dictionary where the key is the match template and the
-        # value is a list of matching executables. we'll need to keep the
-        # association between template and matches for later when we extract
-        # the components (version and product)
-        executable_matches = {}
-        for match_template in match_templates:
-
-            # build the glob pattern by formatting the template for globbing
-            glob_pattern = _format(match_template, dict((key, "*") for key in self.COMPONENT_REGEX_LOOKUP))
-            self.logger.debug(
-                "Globbing for executable matching: %s ..." % (glob_pattern,)
-            )
-            matching_paths = glob.glob(glob_pattern)
-            if matching_paths:
-                # found matches, remember this association (template: matches)
-                executable_matches[match_template] = [x.replace("\\", "/") for x in matching_paths]
-                self.logger.debug(
-                    "Found %s matches: %s" % (
-                        len(matching_paths),
-                        matching_paths
-                    )
-                )
-
-        return executable_matches
-
-    def _find_products(self):
+    def _scan_software(self):
         """
         For each software executable that was found, get the software products for it.
 
         :returns: Generator that will iterate on each SoftwareVersion that was found.
         """
-        executable_matches = self._find_executables(self.EXECUTABLE_MATCH_TEMPLATES[sys.platform])
+        sw_versions = []
+        # Certain platforms have more than one location for installed software
+        for template in self.EXECUTABLE_MATCH_TEMPLATES[sys.platform]:
+            self.logger.debug("Processing template %s.", template)
+            # Extract all products from that executable.
+            for executable, tokens in self._scan_software_with_expression(template, self.COMPONENT_REGEX_LOOKUP):
+                self.logger.debug("Processing %s with tokens %s", executable, tokens)
+                sw_versions.extend(self._extract_products_from_path(executable, tokens))
 
-        # now that we have a list of matching executables on disk and the
-        # corresponding template used to find them, we can extract the component
-        # pieces to see if they match the supplied version/variant constraints
-        for (match_template, executable_paths) in executable_matches.iteritems():
-
-            # construct the regex string to extract the components
-            regex_pattern = _format(match_template, self.COMPONENT_REGEX_LOOKUP)
-
-            # accumulate the software version objects to return. this will include
-            # include the head/tail anchors in the regex
-            regex_pattern = "^%s$" % (regex_pattern,)
-
-            self.logger.debug(
-                "Now matching components with regex: %s" % (regex_pattern,)
-            )
-
-            # compile the regex
-            executable_regex = re.compile(regex_pattern, re.IGNORECASE)
-
-            # iterate over each executable found for the glob pattern and find
-            # matched components via the regex
-            for executable_path in executable_paths:
-
-                self.logger.debug("Processing path: %s" % (executable_path,))
-
-                match = executable_regex.match(executable_path)
-
-                if not match:
-                    self.logger.debug("Path did not match regex.")
-                    continue
-
-                for product in self._extract_products_from_path(executable_path, match.groupdict()):
-                    yield product
+        return sw_versions
 
     def _extract_products_from_path(self, executable_path, match):
         """
@@ -239,64 +153,46 @@ class NukeLauncher(SoftwareLauncher):
             # executable associated to it.
 
             # extract the components (default to None if not included)
-            executable_variant = match.get("variant")
+            executable_product = match.get("product")
             # If there is no suffix (Non-commercial or PLE), we'll simply use an empty string).
             executable_suffix = match.get("suffix") or ""
 
             # Generate the display name.
-            display_name = "%s %s%s" % (executable_variant, executable_version, executable_suffix)
+            product = "%s%s" % (executable_product, executable_suffix)
 
             yield SoftwareVersion(
                 executable_version,
-                executable_variant,
-                display_name,
+                product,
                 executable_path,
-                self._get_icon_from_product(executable_variant)
+                self._get_icon_from_product(executable_product)
             )
         else:
-            for product_template in self._get_product_templates_from_version(executable_version):
-
+            for product in self._get_products_from_version(executable_version):
                 # Figure out the arguments required for each product.
                 arguments = []
-                if "Studio" in product_template:
+                if "Studio" in product:
                     arguments.append("--studio")
-                elif "Assist" in product_template:
+                elif "Assist" in product:
                     arguments.append("--nukeassist")
-                elif "NukeX" in product_template:
+                elif "NukeX" in product:
                     arguments.append("--nukex")
-                elif "Hiero" in product_template:
+                elif "Hiero" in product:
                     arguments.append("--hiero")
-                elif "PLE" in product_template:
+                elif "PLE" in product:
                     arguments.append("--ple")
 
                 # If this is a non-commercial build, we need to add the special argument.
-                if "Non-commercial" in product_template:
+                if "Non-commercial" in product:
                     arguments.append("--nc")
 
-                executable_variant = product_template % (executable_version,)
-                yield SoftwareVersion(
+                sw = SoftwareVersion(
                     executable_version,
-                    _template_to_product_name(product_template),
-                    executable_variant,
+                    product,
                     executable_path,
-                    self._get_icon_from_product(executable_variant),
+                    self._get_icon_from_product(product),
                     arguments
                 )
-
-    def _get_product_templates_from_version(self, version):
-        """
-        Get the product templates for a given product version.
-
-        :param str version: Nuke version in the format <Major>.<Minor>v<Patch>
-
-        :returns: List of templates for the display names of the products.
-        """
-        # As of Nuke 6, Nuke versions formatting is <Major>.<Minor>v<Patch>.
-        # This will grab the major version.
-        if version.split(".", 1)[0] in ["7", "8"]:
-            return self.NUKE_7_8_PRODUCT_DISPLAY_NAME_TEMPLATES
-        else:
-            return self.NUKE_9_OR_HIGHER_PRODUCT_DISPLAY_NAME_TEMPLATES
+                yield sw
 
     def _get_products_from_version(self, version):
         """
@@ -313,43 +209,19 @@ class NukeLauncher(SoftwareLauncher):
         else:
             return self.NUKE_9_OR_HIGHER_PRODUCTS
 
-    def scan_software(self):
-        """
-        Performs a scan for software installations.
-
-        :param list versions: List of strings representing versions to search
-            for. If set to None, search for all versions.
-
-        :returns: List of :class:`SoftwareVersion` instances
-        """
-        self.logger.debug("Scanning for Nuke versions...")
-
-        if sys.platform not in ["darwin", "win32", "linux2"]:
-            self.logger.debug("Nuke not supported on platform %s.", sys.platform)
-            return []
-
-        software_versions = []
-        for software_version in self._find_products():
-            if self.is_version_supported(software_version):
-                self.logger.debug("Accepting %s", software_version)
-                software_versions.append(software_version)
-
-        return software_versions
-
-    def is_version_supported(self, version):
+    def _is_supported(self, version):
         """
         Ensures that a product is supported by the launcher and that the version is valid.
 
         :param version: Checks is a given software version is supported.
         :type version: :class:`sgtk.platform.SoftwareVersion`
+
+        :returns: ``True`` if supported, ``False`` if not.
         """
-        return (
-            # Make sure this is a product the software entity requested
-            super(NukeLauncher, self).is_version_supported(version) and
-            # And this is a product that Toolkit support. For example, HieroPlayer is not
-            # supported.
-            version.product in self._get_products_from_version(version.version)
-        )
+        if version.product not in self._get_products_from_version(version.version):
+            return False, "Toolkit does not support '%s'." % version.product
+
+        return super(NukeLauncher, self)._is_supported(version)
 
     @property
     def minimum_supported_version(self):
