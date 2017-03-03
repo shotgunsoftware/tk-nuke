@@ -178,7 +178,7 @@ class NukeLauncher(SoftwareLauncher):
 
         return executable_matches
 
-    def _find_products(self):
+    def _scan_software(self):
         """
         For each software executable that was found, get the software products for it.
 
@@ -242,59 +242,41 @@ class NukeLauncher(SoftwareLauncher):
             executable_suffix = match.get("suffix") or ""
 
             # Generate the display name.
-            display_name = "%s %s%s" % (executable_product, executable_version, executable_suffix)
+            product = "%s%s" % (executable_product, executable_suffix)
 
             yield SoftwareVersion(
                 executable_version,
-                executable_product,
-                display_name,
+                product,
                 executable_path,
                 self._get_icon_from_product(executable_product)
             )
         else:
-            for product_template in self._get_product_templates_from_version(executable_version):
+            for product in self._get_products_from_version(executable_version):
 
                 # Figure out the arguments required for each product.
                 arguments = []
-                if "Studio" in product_template:
+                if "Studio" in product:
                     arguments.append("--studio")
-                elif "Assist" in product_template:
+                elif "Assist" in product:
                     arguments.append("--nukeassist")
-                elif "NukeX" in product_template:
+                elif "NukeX" in product:
                     arguments.append("--nukex")
-                elif "Hiero" in product_template:
+                elif "Hiero" in product:
                     arguments.append("--hiero")
-                elif "PLE" in product_template:
+                elif "PLE" in product:
                     arguments.append("--ple")
 
                 # If this is a non-commercial build, we need to add the special argument.
-                if "Non-commercial" in product_template:
+                if "Non-commercial" in product:
                     arguments.append("--nc")
 
-                executable_product = product_template % (executable_version,)
                 yield SoftwareVersion(
                     executable_version,
-                    _template_to_product_name(product_template),
-                    executable_product,
+                    product,
                     executable_path,
-                    self._get_icon_from_product(executable_product),
+                    self._get_icon_from_product(product),
                     arguments
                 )
-
-    def _get_product_templates_from_version(self, version):
-        """
-        Get the product templates for a given product version.
-
-        :param str version: Nuke version in the format <Major>.<Minor>v<Patch>
-
-        :returns: List of templates for the display names of the products.
-        """
-        # As of Nuke 6, Nuke versions formatting is <Major>.<Minor>v<Patch>.
-        # This will grab the major version.
-        if version.split(".", 1)[0] in ["7", "8"]:
-            return self.NUKE_7_8_PRODUCT_DISPLAY_NAME_TEMPLATES
-        else:
-            return self.NUKE_9_OR_HIGHER_PRODUCT_DISPLAY_NAME_TEMPLATES
 
     def _get_products_from_version(self, version):
         """
@@ -311,43 +293,19 @@ class NukeLauncher(SoftwareLauncher):
         else:
             return self.NUKE_9_OR_HIGHER_PRODUCTS
 
-    def scan_software(self):
-        """
-        Performs a scan for software installations.
-
-        :param list versions: List of strings representing versions to search
-            for. If set to None, search for all versions.
-
-        :returns: List of :class:`SoftwareVersion` instances
-        """
-        self.logger.debug("Scanning for Nuke versions...")
-
-        if sys.platform not in ["darwin", "win32", "linux2"]:
-            self.logger.debug("Nuke not supported on platform %s.", sys.platform)
-            return []
-
-        software_versions = []
-        for software_version in self._find_products():
-            if self.is_version_supported(software_version):
-                self.logger.debug("Accepting %s", software_version)
-                software_versions.append(software_version)
-
-        return software_versions
-
-    def is_version_supported(self, version):
+    def _is_supported(self, version):
         """
         Ensures that a product is supported by the launcher and that the version is valid.
 
         :param version: Checks is a given software version is supported.
         :type version: :class:`sgtk.platform.SoftwareVersion`
+
+        :returns: ``True`` if supported, ``False`` if not.
         """
-        return (
-            # Make sure this is a product the software entity requested
-            super(NukeLauncher, self).is_version_supported(version) and
-            # And this is a product that Toolkit support. For example, HieroPlayer is not
-            # supported.
-            version.product in self._get_products_from_version(version.version)
-        )
+        if version.product not in self._get_products_from_version(version.version):
+            return False, "Toolkit does not support '%s'." % version.product
+
+        return super(NukeLauncher, self)._is_supported(version)
 
     @property
     def minimum_supported_version(self):
