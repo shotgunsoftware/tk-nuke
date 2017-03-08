@@ -17,15 +17,6 @@ import sgtk
 from sgtk.platform import SoftwareLauncher, SoftwareVersion, LaunchInformation
 
 
-def _template_to_product_name(template):
-    """
-    Converts a display name template name to a product name.
-
-    For example, "NukeX %s Non-commercial" becomes "NukeX Non-commercial".
-    """
-    return template.replace("%s", "").replace("  ", " ").strip()
-
-
 class NukeLauncher(SoftwareLauncher):
     """
     Handles launching Nuke executables. Automatically starts up a tk-nuke
@@ -78,7 +69,7 @@ class NukeLauncher(SoftwareLauncher):
             "/Applications/Nuke{version}/{product}{version_back}{suffix}.app",
         ],
         "win32": [
-            # C:\Program Files\Nuke10.0v5\Nuke10.0.exe
+            # C:/Program Files/Nuke10.0v5/Nuke10.0.exe
             "C:/Program Files/Nuke{version}/Nuke{major_minor_version}.exe",
         ],
         "linux2": [
