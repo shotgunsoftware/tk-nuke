@@ -63,8 +63,7 @@ class NukeLauncher(SoftwareLauncher):
         "NukeStudio",
         "NukeStudio Non-commercial",
         "NukeX",
-        "NukeX Non-commercial",
-        "Hiero"
+        "NukeX Non-commercial"
     ]
 
     # This dictionary defines a list of executable template strings for each
@@ -119,22 +118,37 @@ class NukeLauncher(SoftwareLauncher):
                 "icon_256.png"
             )
 
-    def _scan_software(self):
+    def scan_software(self):
         """
         For each software executable that was found, get the software products for it.
 
-        :returns: Generator that will iterate on each SoftwareVersion that was found.
+        :returns: List of :class:`SoftwareVersion`.
         """
-        sw_versions = []
+        softwares = []
+        self.logger.debug("Scanning for Nuke-based software.")
+        for sw in self._find_software():
+            supported, reason = self._is_supported(sw)
+            if supported:
+                softwares.append(sw)
+            else:
+                self.logger.debug(reason)
+
+        return softwares
+
+    def _find_software(self):
+        """
+        Finds all Nuke software on disk.
+
+        :returns: Generator of :class:`SoftwareVersion`.
+        """
         # Certain platforms have more than one location for installed software
         for template in self.EXECUTABLE_MATCH_TEMPLATES[sys.platform]:
             self.logger.debug("Processing template %s.", template)
             # Extract all products from that executable.
-            for executable, tokens in self._scan_software_with_expression(template, self.COMPONENT_REGEX_LOOKUP):
+            for executable, _, tokens in self._glob_and_match(template, self.COMPONENT_REGEX_LOOKUP):
                 self.logger.debug("Processing %s with tokens %s", executable, tokens)
-                sw_versions.extend(self._extract_products_from_path(executable, tokens))
-
-        return sw_versions
+                for sw in self._extract_products_from_path(executable, tokens):
+                    yield sw
 
     def _extract_products_from_path(self, executable_path, match):
         """
