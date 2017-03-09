@@ -70,7 +70,7 @@ class NukeLauncher(SoftwareLauncher):
         ],
         "win32": [
             # C:/Program Files/Nuke10.0v5/Nuke10.0.exe
-            "C:/Program Files/Nuke{version}/Nuke{major_minor_version}.exe",
+            "C:\\Program Files\\Nuke{version}\\Nuke{major_minor_version}.exe",
         ],
         "linux2": [
             # /usr/local/Nuke10.0v5/Nuke10.0
@@ -261,8 +261,9 @@ class NukeLauncher(SoftwareLauncher):
         bootstrap = self._uuid_import("bootstrap", startup_python_path)
         required_env = bootstrap.compute_environment(exec_path, args)
 
-        if True:
-            self.logger.info("Preparing Nuke Launch via Toolkit as a Plugin ...")
+        launch_plugins = self.get_setting("launch_builtin_plugins")
+        if launch_plugins:
+            self.logger.info("Launch plugins: %s", launch_plugins)
 
             # Add std context and site info to the env
             std_env = self.get_standard_plugin_environment()

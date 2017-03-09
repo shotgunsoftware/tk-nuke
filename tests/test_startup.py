@@ -78,7 +78,7 @@ class TestStartup(TankTestBase):
 
     # Mocked folder hierarchy for Windows.
     _windows_mock_hiearchy = {
-        "C:/": {
+        "C:\\": {
             "Program Files": {
                 "Nuke10.0v5": ["Nuke10.0.exe"],
                 "Nuke9.0v8": ["Nuke9.0.exe"],
@@ -142,7 +142,7 @@ class TestStartup(TankTestBase):
         """
         if path == "/":
             return []
-        elif path.endswith(":/"):
+        elif path.endswith(":\\"):
             return [path]
         else:
             directory, basename = os.path.split(path)
@@ -286,6 +286,6 @@ class TestStartup(TankTestBase):
                     expected_arguments.append("--ple")
 
                 # And that they are the same.
-                self.assertSetEqual(set(expected_arguments), set(version.arguments))
+                self.assertSetEqual(set(expected_arguments), set(version.args))
                 # Ensure there are as many tokens.
-                self.assertEqual(len(expected_arguments), len(version.arguments))
+                self.assertEqual(len(expected_arguments), len(version.args))
