@@ -10,9 +10,9 @@
 
 import os
 import sys
-import uuid
-import imp
 import sgtk
+import contextlib
+import pprint
 
 from sgtk.platform import SoftwareLauncher, SoftwareVersion, LaunchInformation
 
@@ -258,50 +258,55 @@ class NukeLauncher(SoftwareLauncher):
             "python",
             "startup"
         )
-        bootstrap = self._uuid_import("bootstrap", startup_python_path)
 
-        launch_plugins = self.get_setting("launch_builtin_plugins")
+        with self.temporary_import(startup_python_path, "bootstrap") as bootstrap:
+            launch_plugins = self.get_setting("launch_builtin_plugins")
 
-        if launch_plugins:
-            self.logger.info("Launch plugins: %s", launch_plugins)
+            if launch_plugins:
+                self.logger.info("Launch plugins: %s", launch_plugins)
 
-            # Get Nuke environment for plugin launch.
-            required_env, required_args = bootstrap.get_plugin_startup_env(
-                launch_plugins, exec_path, args, file_to_open
-            )
+                # Get Nuke environment for plugin launch.
+                required_env, required_args = bootstrap.get_plugin_startup_env(
+                    launch_plugins, exec_path, args, file_to_open
+                )
 
-            # Add std context and site info to the env.
-            required_env.update(self.get_standard_plugin_environment())
-        else:
-            self.logger.info("Preparing Nuke Launch via Toolkit Classic methodology ...")
+                # Add std context and site info to the env.
+                required_env.update(self.get_standard_plugin_environment())
+            else:
+                self.logger.info("Preparing Nuke Launch via Toolkit Classic methodology ...")
 
-            # Get Nuke environment for Toolkit Classic launch.
-            required_env, required_args = bootstrap.get_classic_startup_env(
-                exec_path, args, file_to_open
-            )
-            # Add context information info to the env.
-            required_env["TANK_CONTEXT"] = sgtk.Context.serialize(self.context)
+                # Get Nuke environment for Toolkit Classic launch.
+                required_env, required_args = bootstrap.get_classic_startup_env(
+                    exec_path, args, file_to_open
+                )
+                # Add context information info to the env.
+                required_env["TANK_CONTEXT"] = sgtk.Context.serialize(self.context)
 
-        # Make sure we are picking the right engine.
-        required_env["SGTK_ENGINE"] = self.engine_name
+            # Make sure we are picking the right engine.
+            required_env["SGTK_ENGINE"] = self.engine_name
+
+            self.logger.debug("Launch environment: %s", pprint.pformat(required_env))
+            self.logger.debug("Launch arguments: %s", required_args)
 
         return LaunchInformation(exec_path, required_args, required_env)
 
-    def _uuid_import(self, module, path):
+    @contextlib.contextmanager
+    def temporary_import(self, module_path, module_name):
         """
-        Imports a module with a given name at a given location with a decorated
-        namespace so that it can be reloaded multiple times at different locations.
+        Imports a module and ensures its path is removed and the module removed from
+        sys.module when the scope is terminated.
 
-        :param module: Name of the module we are importing.
-        :param path: Path to the folder containing the module we are importing.
+        :param str module_path: Path to add to the ``sys.path`` before importing. Can be ``None``.
+        :param str module_name: Name of the module to temporarily import.
 
-        :returns: The imported module.
+        This method will yield the module that was imported temporarily.
         """
-        self.logger.info("Trying to import module '%s' from path '%s'..." % (module, path))
-
-        spec = imp.find_module(module, [path])
-        module = imp.load_module("%s_%s" % (uuid.uuid4().hex, module), *spec)
-
-        self.logger.info("Successfully imported %s" % module)
-
-        return module
+        try:
+            if module_path:
+                sys.path.insert(0, module_path)
+            yield __import__(module_name)
+        finally:
+            if module_path:
+                sys.path.remove(module_path)
+            if module_name in sys.modules:
+                del sys.modules[module_name]
