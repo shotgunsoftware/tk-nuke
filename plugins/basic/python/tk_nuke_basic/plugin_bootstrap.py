@@ -12,7 +12,7 @@ import os
 import sys
 
 
-def bootstrap(plugin_root_path, engine_name, has_gui):
+def bootstrap(plugin_root_path, engine_name):
     """
     Entry point for toolkit bootstrap in Nuke.
 
@@ -101,8 +101,6 @@ def bootstrap(plugin_root_path, engine_name, has_gui):
         # When the user is not yet authenticated, pop up the Shotgun login
         # dialog to get the user's credentials, otherwise, get the cached user's
         # credentials.
-        # FIXME: User should not be read from disk, the credentials should be retrieve
-        # from launch environment.
         user = sgtk.authentication.ShotgunAuthenticator().get_user()
     except sgtk.authentication.AuthenticationCancelled:
         # TODO: show a "Shotgun > Login" menu in nuke
