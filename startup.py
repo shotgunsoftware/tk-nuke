@@ -259,29 +259,33 @@ class NukeLauncher(SoftwareLauncher):
             "startup"
         )
         bootstrap = self._uuid_import("bootstrap", startup_python_path)
-        required_env = bootstrap.compute_environment(exec_path, args)
 
         launch_plugins = self.get_setting("launch_builtin_plugins")
+
         if launch_plugins:
             self.logger.info("Launch plugins: %s", launch_plugins)
 
-            # Add std context and site info to the env
-            std_env = self.get_standard_plugin_environment()
-            required_env.update(std_env)
+            # Get Nuke environment for plugin launch.
+            required_env, required_args = bootstrap.get_plugin_startup_env(
+                launch_plugins, exec_path, args, file_to_open
+            )
 
-            # A Nuke script can't be launched from the menu.py, so we have to tack it onto the
-            # launch arguments instead.
-            if file_to_open:
-                args = "%s %s" % (file_to_open, args)
-
-            required_env["SGTK_ENGINE"] = self.engine_name
+            # Add std context and site info to the env.
+            required_env.update(self.get_standard_plugin_environment())
         else:
             self.logger.info("Preparing Nuke Launch via Toolkit Classic methodology ...")
-            # Keep using TANK_* for now in case it might break backwards compatibility.
-            required_env["TANK_ENGINE"] = self.engine_name
+
+            # Get Nuke environment for Toolkit Classic launch.
+            required_env, required_args = bootstrap.get_classic_startup_env(
+                exec_path, args, file_to_open
+            )
+            # Add context information info to the env.
             required_env["TANK_CONTEXT"] = sgtk.Context.serialize(self.context)
 
-        return LaunchInformation(exec_path, args, required_env)
+        # Make sure we are picking the right engine.
+        required_env["SGTK_ENGINE"] = self.engine_name
+
+        return LaunchInformation(exec_path, required_args, required_env)
 
     def _uuid_import(self, module, path):
         """
