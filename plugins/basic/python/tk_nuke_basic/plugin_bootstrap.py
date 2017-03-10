@@ -33,6 +33,14 @@ def bootstrap(plugin_root_path, engine_name, has_gui):
     #   directly from the engine folder without a bundle cache and with this
     #   configuration, core already exists in the pythonpath.
 
+    if not engine_name:
+        try:
+            import hiero # noqa
+        except:
+            engine_name = "tk-nuke"
+        else:
+            engine_name = "tk-nukestudio"
+
     # now see if we are running stand alone or in situ
     try:
         from sgtk_plugin_basic_nuke import manifest
@@ -93,6 +101,8 @@ def bootstrap(plugin_root_path, engine_name, has_gui):
         # When the user is not yet authenticated, pop up the Shotgun login
         # dialog to get the user's credentials, otherwise, get the cached user's
         # credentials.
+        # FIXME: User should not be read from disk, the credentials should be retrieve
+        # from launch environment.
         user = sgtk.authentication.ShotgunAuthenticator().get_user()
     except sgtk.authentication.AuthenticationCancelled:
         # TODO: show a "Shotgun > Login" menu in nuke

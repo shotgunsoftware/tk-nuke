@@ -135,6 +135,10 @@ class NukeEngine(tank.platform.Engine):
     def menu_generator(self):
         return self._menu_generator
 
+    @property
+    def is_plugin_mode(self):
+        return True if self.get_setting("launch_builtin_plugins") else False
+
     #####################################################################################
     # Engine Initialization and Destruction
     
@@ -189,9 +193,10 @@ class NukeEngine(tank.platform.Engine):
             return
 
         # Now check that there is a location on disk which corresponds to the context.
-        if self.context.project is None:
+
+        if not self.is_plugin_mode and self.context.project is None:
             # Must have at least a project in the context to even start!
-            raise tank.TankError("The nuke engine needs at least a project"
+            raise tank.TankError("The nuke engine needs at least a project "
                                  "in the context in order to start! Your "
                                  "context: %s" % self.context)
 
@@ -225,8 +230,11 @@ class NukeEngine(tank.platform.Engine):
         # Store data needed for bootstrapping Tank in env vars. Used in startup/menu.py.
         os.environ["TANK_NUKE_ENGINE_INIT_NAME"] = self.instance_name
         os.environ["TANK_NUKE_ENGINE_INIT_CONTEXT"] = tank.context.serialize(self.context)
-        # os.environ["TANK_NUKE_ENGINE_INIT_PROJECT_ROOT"] = self.tank.project_path
-        
+
+        # If we're in Toolkit classic mode, get the project path.
+        if not self.is_plugin_mode:
+            os.environ["TANK_NUKE_ENGINE_INIT_PROJECT_ROOT"] = self.tank.project_path
+
         # Add our startup path to the nuke init path
         startup_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "startup"))
         tank.util.append_path_to_env_var("NUKE_PATH", startup_path)        
@@ -336,6 +344,7 @@ class NukeEngine(tank.platform.Engine):
             # (several of the key scene callbacks are in the main init file).
             import tk_nuke
             import hiero
+            from hiero.core import env as hiero_env
 
             # Create the menu!
             self._menu_generator = tk_nuke.HieroMenuGenerator(self, menu_name)
