@@ -133,7 +133,7 @@ class NukeLauncher(SoftwareLauncher):
         for template in self.EXECUTABLE_MATCH_TEMPLATES[sys.platform]:
             self.logger.debug("Processing template %s.", template)
             # Extract all products from that executable.
-            for executable, _, tokens in self._glob_and_match(template, self.COMPONENT_REGEX_LOOKUP):
+            for executable, tokens in self._glob_and_match(template, self.COMPONENT_REGEX_LOOKUP):
                 self.logger.debug("Processing %s with tokens %s", executable, tokens)
                 for sw in self._extract_products_from_path(executable, tokens):
                     yield sw
