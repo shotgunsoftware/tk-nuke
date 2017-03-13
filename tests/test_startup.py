@@ -172,8 +172,7 @@ class TestStartup(TankTestBase):
         """
         self._test_nuke(
             [
-                "Nuke 10.0v5", "NukeX 10.0v5", "NukeStudio 10.0v5", "NukeAssist 10.0v5",
-                "Nuke Non-commercial 10.0v5", "NukeX Non-commercial 10.0v5", "NukeStudio Non-commercial 10.0v5"
+                "Nuke 10.0v5", "NukeX 10.0v5", "NukeStudio 10.0v5", "NukeAssist 10.0v5"
             ],
             "10.0v5"
         )
@@ -184,8 +183,7 @@ class TestStartup(TankTestBase):
         """
         self._test_nuke(
             [
-                "Nuke 9.0v8", "NukeX 9.0v8", "NukeStudio 9.0v8", "NukeAssist 9.0v8",
-                "Nuke Non-commercial 9.0v8", "NukeX Non-commercial 9.0v8", "NukeStudio Non-commercial 9.0v8"
+                "Nuke 9.0v8", "NukeX 9.0v8", "NukeStudio 9.0v8", "NukeAssist 9.0v8"
             ],
             "9.0v8"
         )
@@ -196,7 +194,7 @@ class TestStartup(TankTestBase):
         """
         self._test_nuke(
             [
-                "Nuke 8.0v4", "NukeX 8.0v4", "Nuke PLE 8.0v4", "NukeAssist 8.0v4"
+                "Nuke 8.0v4", "NukeX 8.0v4", "NukeAssist 8.0v4"
             ],
             "8.0v4"
         )
@@ -207,7 +205,7 @@ class TestStartup(TankTestBase):
         """
         self._test_nuke(
             [
-                "Nuke 7.0v10", "NukeX 7.0v10", "Nuke PLE 7.0v10", "NukeAssist 7.0v10"
+                "Nuke 7.0v10", "NukeX 7.0v10", "NukeAssist 7.0v10"
             ],
             "7.0v10"
         )
@@ -278,12 +276,6 @@ class TestStartup(TankTestBase):
                 for token in ["studio", "nukeassist", "nukex", "hiero"]:
                     if token in version.display_name.lower():
                         expected_arguments.append("--%s" % token)
-
-                if "Non-commercial" in version.display_name:
-                    expected_arguments.append("--nc")
-
-                if "PLE" in version.display_name:
-                    expected_arguments.append("--ple")
 
                 # And that they are the same.
                 self.assertSetEqual(set(expected_arguments), set(version.arguments))

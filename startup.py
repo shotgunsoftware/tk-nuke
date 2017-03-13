@@ -42,19 +42,15 @@ class NukeLauncher(SoftwareLauncher):
     NUKE_7_8_PRODUCTS = [
         "Nuke",
         "NukeX",
-        "Nuke PLE",
         "NukeAssist",
     ]
 
     # Templates for all the display names of the products supported by Nuke 9 and onward.
     NUKE_9_OR_HIGHER_PRODUCTS = [
         "Nuke",
-        "Nuke Non-commercial",
         "NukeAssist",
         "NukeStudio",
-        "NukeStudio Non-commercial",
         "NukeX",
-        "NukeX Non-commercial"
     ]
 
     # This dictionary defines a list of executable template strings for each
@@ -183,12 +179,6 @@ class NukeLauncher(SoftwareLauncher):
                     arguments.append("--nukex")
                 elif "Hiero" in product:
                     arguments.append("--hiero")
-                elif "PLE" in product:
-                    arguments.append("--ple")
-
-                # If this is a non-commercial build, we need to add the special argument.
-                if "Non-commercial" in product:
-                    arguments.append("--nc")
 
                 sw = SoftwareVersion(
                     executable_version,
