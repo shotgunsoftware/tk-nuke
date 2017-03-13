@@ -278,6 +278,6 @@ class TestStartup(TankTestBase):
                         expected_arguments.append("--%s" % token)
 
                 # And that they are the same.
-                self.assertSetEqual(set(expected_arguments), set(version.arguments))
+                self.assertSetEqual(set(expected_arguments), set(version.args))
                 # Ensure there are as many tokens.
-                self.assertEqual(len(expected_arguments), len(version.arguments))
+                self.assertEqual(len(expected_arguments), len(version.args))
