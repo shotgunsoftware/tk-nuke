@@ -365,8 +365,11 @@ class HieroMenuGenerator(BaseMenuGenerator):
         ctx_menu = self._menu_handle.addMenu(ctx_name)
         action = ctx_menu.addAction("Jump to Shotgun")
         action.triggered.connect(self._jump_to_sg)
-        action = ctx_menu.addAction("Jump to File System")
-        action.triggered.connect(self._jump_to_fs)
+
+        if self.context.filesystem_locations:
+            action = ctx_menu.addAction("Jump to File System")
+            action.triggered.connect(self._jump_to_fs)
+
         ctx_menu.addSeparator()
         return ctx_menu
 
@@ -583,7 +586,8 @@ class NukeMenuGenerator(BaseMenuGenerator):
         # Create the menu object.
         ctx_menu = menu_handle.addMenu(ctx_name, icon=self._shotgun_logo_blue)
         ctx_menu.addCommand("Jump to Shotgun", self._jump_to_sg)
-        ctx_menu.addCommand("Jump to File System", self._jump_to_fs)
+        if ctx.filesystem_locations:
+            ctx_menu.addCommand("Jump to File System", self._jump_to_fs)
         ctx_menu.addSeparator()
         return ctx_menu
 
