@@ -29,32 +29,27 @@ class NukeLauncher(SoftwareLauncher):
     # variable components of the path in one place
 
     COMPONENT_REGEX_LOOKUP = {
-        "version": r"(?P<version>[\d.v]+)",
-        "product": r"(?P<product>[\w\s]+)",
-        "suffix": r"(?P<suffix> Non-commercial| PLE){0,1}",
+        "version": r"[\d.v]+",
+        "product": r"[A-Za-z]+",
         # The Version is present twice on mac in the file path, so the second time
         # we simply reuse the value from the first match.
-        "version_back": r"(?P=version)",
-        "major_minor_version": r"(?P<major_minor_version>[\d.]+)"
+        "version_back": r"[\d.v]+",
+        "major_minor_version": r"[\d.]+"
     }
 
     # Templates for all the display names of the products supported by Nuke 7 and 8.
     NUKE_7_8_PRODUCTS = [
         "Nuke",
         "NukeX",
-        "Nuke PLE",
         "NukeAssist",
     ]
 
     # Templates for all the display names of the products supported by Nuke 9 and onward.
     NUKE_9_OR_HIGHER_PRODUCTS = [
         "Nuke",
-        "Nuke Non-commercial",
         "NukeAssist",
         "NukeStudio",
-        "NukeStudio Non-commercial",
         "NukeX",
-        "NukeX Non-commercial"
     ]
 
     # This dictionary defines a list of executable template strings for each
@@ -66,7 +61,9 @@ class NukeLauncher(SoftwareLauncher):
     EXECUTABLE_MATCH_TEMPLATES = {
         "darwin": [
             # /Applications/Nuke10.0v5/NukeStudio10.0v5.app
-            "/Applications/Nuke{version}/{product}{version_back}{suffix}.app",
+            # Note that this regular expression will purposefully not match Nuke PLE and
+            # Non-Commercial.
+            "/Applications/Nuke{version}/{product}{version_back}.app",
         ],
         "win32": [
             # C:/Program Files/Nuke10.0v5/Nuke10.0.exe
@@ -136,7 +133,7 @@ class NukeLauncher(SoftwareLauncher):
         for template in self.EXECUTABLE_MATCH_TEMPLATES[sys.platform]:
             self.logger.debug("Processing template %s.", template)
             # Extract all products from that executable.
-            for executable, _, tokens in self._glob_and_match(template, self.COMPONENT_REGEX_LOOKUP):
+            for executable, tokens in self._glob_and_match(template, self.COMPONENT_REGEX_LOOKUP):
                 self.logger.debug("Processing %s with tokens %s", executable, tokens)
                 for sw in self._extract_products_from_path(executable, tokens):
                     yield sw
@@ -183,12 +180,6 @@ class NukeLauncher(SoftwareLauncher):
                     arguments.append("--nukex")
                 elif "Hiero" in product:
                     arguments.append("--hiero")
-                elif "PLE" in product:
-                    arguments.append("--ple")
-
-                # If this is a non-commercial build, we need to add the special argument.
-                if "Non-commercial" in product:
-                    arguments.append("--nc")
 
                 sw = SoftwareVersion(
                     executable_version,
