@@ -1,22 +1,18 @@
 # Copyright (c) 2016 Shotgun Software Inc.
-# 
+#
 # CONFIDENTIAL AND PROPRIETARY
-# 
-# This work is provided "AS IS" and subject to the Shotgun Pipeline Toolkit 
+#
+# This work is provided "AS IS" and subject to the Shotgun Pipeline Toolkit
 # Source Code License included in this distribution package. See LICENSE.
-# By accessing, using, copying or modifying this work you indicate your 
-# agreement to the Shotgun Pipeline Toolkit Source Code License. All rights 
+# By accessing, using, copying or modifying this work you indicate your
+# agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 import tank
-import platform
-import time
 import nuke
 import os
-import re
-import traceback
-import unicodedata
 import nukescripts
+
 
 class NukeEngine(tank.platform.Engine):
     """
@@ -137,7 +133,7 @@ class NukeEngine(tank.platform.Engine):
 
     #####################################################################################
     # Engine Initialization and Destruction
-    
+
     def init_engine(self):
         """
         Called at Engine startup.
@@ -168,18 +164,20 @@ class NukeEngine(tank.platform.Engine):
             # This is an untested version of Nuke.
             msg = ("The Shotgun Pipeline Toolkit has not yet been fully tested with Nuke %d.%dv%d. "
                    "You can continue to use the Toolkit but you may experience bugs or "
-                   "instability.  Please report any issues you see to support@shotgunsoftware.com" 
+                   "instability.  Please report any issues you see to support@shotgunsoftware.com"
                    % (nuke_version[0], nuke_version[1], nuke_version[2]))
-            
+
             # Show nuke message if in UI mode, this is the first time the engine has been started
             # and the warning dialog isn't overriden by the config. Note that nuke.message isn't
             # available in Hiero, so we have to skip this there.
-            if (self.has_ui 
-                and not "TANK_NUKE_ENGINE_INIT_NAME" in os.environ
-                and nuke_version[0] >= self.get_setting("compatibility_dialog_min_version", 11)
-                and not self.hiero_enabled):
+            if (
+                self.has_ui and
+                "TANK_NUKE_ENGINE_INIT_NAME" not in os.environ and
+                nuke_version[0] >= self.get_setting("compatibility_dialog_min_version", 11) and
+                not self.hiero_enabled
+            ):
                 nuke.message("Warning - Shotgun Pipeline Toolkit!\n\n%s" % msg)
-                           
+
             # Log the warning.
             self.log_warning(msg)
 
@@ -380,10 +378,10 @@ class NukeEngine(tank.platform.Engine):
 
             # Initialize favourite dirs in the file open/file save dialogs
             self.__setup_favorite_dirs()
-            
+
             # Register all panels with nuke's callback system
             # this will be used at nuke startup in order
-            # for nuke to be able to restore panels 
+            # for nuke to be able to restore panels
             # automatically. For all panels that exist as
             # part of saved layouts, nuke will look through
             # a global list of registered panels, try to locate
@@ -403,14 +401,13 @@ class NukeEngine(tank.platform.Engine):
                 app_gizmo_folder = app_gizmo_folder.replace(os.path.sep, "/")
                 self.log_debug("Gizmos found - Adding %s to nuke.pluginAddPath() and NUKE_PATH" % app_gizmo_folder)
                 nuke.pluginAddPath(app_gizmo_folder)
-                # And also add it to the plugin path - this is so that any 
+                # And also add it to the plugin path - this is so that any
                 # new processes spawned from this one will have access too.
                 # (for example if you do file->open or file->new)
                 tank.util.append_path_to_env_var("NUKE_PATH", app_gizmo_folder)
 
         try:
-            self.log_user_attribute_metric("Nuke version",
-                nuke.env.get("NukeVersionString"))
+            self.log_user_attribute_metric("Nuke version", nuke.env.get("NukeVersionString"))
         except:
             # ignore all errors. ex: using a core that doesn't support metrics
             pass
@@ -526,18 +523,18 @@ class NukeEngine(tank.platform.Engine):
         Shows a panel in Nuke. If the panel already exists, the previous panel is swapped out
         and replaced with a new one. In this case, the contents of the panel (e.g. the toolkit app)
         is not destroyed but carried over to the new panel.
-        
+
         If this is being called from a non-pane menu in Nuke, there isn't a well established logic
         for where the panel should be mounted. In this case, the code will look for suitable
         areas in the UI and try to panel it there, starting by looking for the property pane and
         trying to dock panels next to this.
-        
+
         :param panel_id: Unique id to associate with the panel - normally this is a string obtained
                          via the register_panel() call.
         :param title: The title of the window
         :param bundle: The app, engine or framework object that is associated with this window
         :param widget_class: The class of the UI to be constructed. This must derive from QWidget.
-        
+
         Additional parameters specified will be passed through to the widget_class constructor.
         """
         if self.hiero_enabled:
@@ -554,7 +551,7 @@ class NukeEngine(tank.platform.Engine):
 
         # Note! Not using the import_module call as this confuses nuke's callback system
         import tk_nuke_qt
-        
+
         # Create the panel.
         panel_widget = tk_nuke_qt.NukePanelWidget(
             bundle,
@@ -563,11 +560,11 @@ class NukeEngine(tank.platform.Engine):
             widget_class,
             *args, **kwargs
         )
-        
+
         if hasattr(tank, "_callback_from_non_pane_menu"):
             # This global flag is set by the menu callback system
             # to indicate that the click comes from a non-pane context.
-            # 
+            #
             # In this case, we have to figure out where the pane should be shown.
             # Try to parent it next to the properties panel
             # if possible, because this is typically laid out like a classic
@@ -582,14 +579,14 @@ class NukeEngine(tank.platform.Engine):
                 "Viewer.1",     # viewer
                 "Toolbar.1",    # nodes toolbar
             ]
-            
+
             existing_pane = None
             for tab_name in built_in_tabs:
                 self.log_debug("Parenting panel - looking for %s tab..." % tab_name)
                 existing_pane = nuke.getPaneFor(tab_name)
                 if existing_pane:
                     break
-    
+
             if existing_pane is None and nuke.env.get("NukeVersionMajor") < 9:
                 # Couldn't find anything to parent next to!
                 # Nuke 9 will automatically handle this situation
@@ -599,10 +596,10 @@ class NukeEngine(tank.platform.Engine):
                 nuke.message("Cannot find any of the standard Nuke UI panels to anchor against. "
                              "Please add a Properties Bin to your Nuke UI layout and try again.")
                 return
-    
-            # All good - we are running nuke 9 and/or 
+
+            # All good - we are running nuke 9 and/or
             # have existing panes to parent against.
-            panel_widget.addToPane(existing_pane)   
+            panel_widget.addToPane(existing_pane)
         else:
             # We are either calling this from a pane restore
             # callback or from the pane menu in Nuke. In both
@@ -618,29 +615,29 @@ class NukeEngine(tank.platform.Engine):
     def get_menu_selection(self):
         """
         Returns the list of hiero objects selected in the most recent menu click.
-        This list may contain items of various types. To see exactly what is being 
+        This list may contain items of various types. To see exactly what is being
         returned by which methods, turn on debug logging - this will print out details
         of what is going on.
-        
+
         Examples of types that are being returned are:
-        
+
         Selecting a project in the bin view:
         http://docs.thefoundry.co.uk/hiero/10/hieropythondevguide/api/api_core.html#hiero.core.Bin
-        
+
         Selecting an item in a bin view:
         http://docs.thefoundry.co.uk/hiero/10/hieropythondevguide/api/api_core.html#hiero.core.BinItem
-        
+
         Selecting a track:
         http://docs.thefoundry.co.uk/hiero/10/hieropythondevguide/api/api_core.html#hiero.core.TrackItem
         """
         return self._last_clicked_selection
-        
+
     def get_menu_category(self):
         """
         Returns the UI area where the last menu click took place.
-        
+
         Returns one of the following constants:
-        
+
         - HieroEngine.HIERO_BIN_AREA
         - HieroEngine.HIERO_SPREADSHEET_AREA
         - HieroEngine.HIERO_TIMELINE_AREA
@@ -653,7 +650,7 @@ class NukeEngine(tank.platform.Engine):
 
     def set_project_root(self, event):
         """
-        Ensure any new projects get the project root or default startup 
+        Ensure any new projects get the project root or default startup
         projects get the project root set properly.
 
         :param event:   A Nuke event object. It is a standard argument for
@@ -676,7 +673,7 @@ class NukeEngine(tank.platform.Engine):
         Return the QWidget parent for all dialogs created through
         show_dialog and show_modal.
         """
-        # See https://github.com/shotgunsoftware/tk-nuke/commit/35ca540d152cc5357dc7e347b5efc728a3a89f4a 
+        # See https://github.com/shotgunsoftware/tk-nuke/commit/35ca540d152cc5357dc7e347b5efc728a3a89f4a
         # for more info. There have been instability issues with nuke 7 causing
         # various crashes, so window parenting on Nuke versions above 6 is
         # currently disabled.
@@ -780,20 +777,20 @@ class NukeEngine(tank.platform.Engine):
                 tank.platform.change_context(new_context)
         except Exception:
             self.log_debug("Unable to determine context for file: %s" % script_path)
-    
+
     def __setup_favorite_dirs(self):
         """
-        Sets up nuke shortcut "favorite dirs" that are presented in the left hand side of 
+        Sets up nuke shortcut "favorite dirs" that are presented in the left hand side of
         Nuke common dialogs (open, save).
 
-        Nuke currently only writes favorites to disk in ~/.nuke/folders.nk. If you add/remove 
-        one in the UI. Doing them via the api only updates them for the session (Nuke bug #3740). 
+        Nuke currently only writes favorites to disk in ~/.nuke/folders.nk. If you add/remove
+        one in the UI. Doing them via the api only updates them for the session (Nuke bug #3740).
         See http://forums.thefoundry.co.uk/phpBB2/viewtopic.php?t=3481&start=15
         """
         engine_root_dir = self.disk_location
         sg_logo = os.path.abspath(os.path.join(engine_root_dir, "resources", "sg_logo_80px.png"))
 
-        # Ensure old favorites we used to use are removed. 
+        # Ensure old favorites we used to use are removed.
         supported_entity_types = ["Shot", "Sequence", "Scene", "Asset", "Project"]
         for x in supported_entity_types:
             nuke.removeFavoriteDir("Tank Current %s" % x)
@@ -817,10 +814,10 @@ class NukeEngine(tank.platform.Engine):
                 nuke.removeFavoriteDir(dir_name)
 
                 # Add new path
-                nuke.addFavoriteDir(dir_name, 
-                                    directory=root_path,  
-                                    type=(nuke.IMAGE|nuke.SCRIPT|nuke.GEO), 
-                                    icon=sg_logo, 
+                nuke.addFavoriteDir(dir_name,
+                                    directory=root_path,
+                                    type=(nuke.IMAGE | nuke.SCRIPT | nuke.GEO),
+                                    icon=sg_logo,
                                     tooltip=root_path)
 
         # Add favorites directories from the config
@@ -837,14 +834,13 @@ class NukeEngine(tank.platform.Engine):
                 self.log_exception(msg)
                 continue
 
-            # Add new directory 
+            # Add new directory
             icon_path = favorite.get('icon')
             if not os.path.isfile(icon_path) or not os.path.exists(icon_path):
                 icon_path = sg_logo
 
-            nuke.addFavoriteDir(favorite['display_name'], 
-                                directory=path,  
-                                type=(nuke.IMAGE|nuke.SCRIPT|nuke.GEO), 
-                                icon=icon_path, 
+            nuke.addFavoriteDir(favorite['display_name'],
+                                directory=path,
+                                type=(nuke.IMAGE | nuke.SCRIPT | nuke.GEO),
+                                icon=icon_path,
                                 tooltip=path)
-        
