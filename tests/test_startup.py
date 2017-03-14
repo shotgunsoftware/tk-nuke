@@ -22,7 +22,7 @@ import contextlib
 
 
 repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-print "tk-nuke repoistory root found at %s." % repo_root
+print "tk-nuke repository root found at %s." % repo_root
 
 
 class TestStartup(TankTestBase):
