@@ -410,11 +410,64 @@ class NukeEngine(tank.platform.Engine):
                 # (for example if you do file->open or file->new)
                 tank.util.append_path_to_env_var("NUKE_PATH", app_gizmo_folder)
 
+        self._run_commands_at_startup()
+
         try:
             self.log_user_attribute_metric("Nuke version", nuke.env.get("NukeVersionString"))
         except:
             # ignore all errors. ex: using a core that doesn't support metrics
             pass
+
+    def _run_commands_at_startup(self):
+        # Build a dictionary mapping app instance names to dictionaries of commands they registered with the engine.
+        app_instance_commands = {}
+        for (command_name, value) in self.commands.iteritems():
+            app_instance = value["properties"].get("app")
+            if app_instance:
+                # Add entry 'command name: command function' to the command dictionary of this app instance.
+                command_dict = app_instance_commands.setdefault(app_instance.instance_name, {})
+                command_dict[command_name] = value["callback"]
+
+        commands_to_run = []
+        # Run the series of app instance commands listed in the 'run_at_startup' setting.
+        for app_setting_dict in self.get_setting("run_at_startup", []):
+
+            app_instance_name = app_setting_dict["app_instance"]
+            # Menu name of the command to run or '' to run all commands of the given app instance.
+            setting_command_name = app_setting_dict["name"]
+
+            # Retrieve the command dictionary of the given app instance.
+            command_dict = app_instance_commands.get(app_instance_name)
+
+            if command_dict is None:
+                self.log_warning(
+                    "%s configuration setting 'run_at_startup' requests app '%s' that is not installed." %
+                    (self.name, app_instance_name))
+            else:
+                if not setting_command_name:
+                    # Run all commands of the given app instance.
+                    for (command_name, command_function) in command_dict.iteritems():
+                        self.log_debug("%s startup running app '%s' command '%s'." %
+                                       (self.name, app_instance_name, command_name))
+                        commands_to_run.append(command_function)
+                else:
+                    # Run the command whose name is listed in the 'run_at_startup' setting.
+                    command_function = command_dict.get(setting_command_name)
+                    if command_function:
+                        self.log_debug("%s startup running app '%s' command '%s'." %
+                                       (self.name, app_instance_name, setting_command_name))
+                        commands_to_run.append(command_function)
+                    else:
+                        known_commands = ', '.join("'%s'" % name for name in command_dict)
+                        self.log_warning(
+                            "%s configuration setting 'run_at_startup' requests app '%s' unknown command '%s'. "
+                            "Known commands: %s" %
+                            (self.name, app_instance_name, setting_command_name, known_commands))
+
+        # Run the commands once Nuke will have completed its UI update and be idle
+        # in order to run it after the ones that restore the persisted Shotgun app panels.
+        for command in commands_to_run:
+            nukescripts.utils.executeDeferred(command)
 
     def destroy_engine(self):
         """
