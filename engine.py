@@ -17,6 +17,7 @@ import re
 import traceback
 import unicodedata
 import nukescripts
+import logging
 
 class NukeEngine(tank.platform.Engine):
     """
@@ -189,7 +190,11 @@ class NukeEngine(tank.platform.Engine):
 
         # Make sure we are not running Nuke PLE!
         if nuke.env.get("ple"):
-            self.log_error("The Nuke Engine does not work with the Nuke PLE!")
+            self.log_error("The Nuke Engine does not work with Nuke PLE!")
+            return
+
+        if nuke.env.get("nc"):
+            self.log_error("The Nuke Engine does not work with Nuke Non-Commercial!")
             return
 
         # Now check that there is a location on disk which corresponds to the context.
@@ -231,18 +236,20 @@ class NukeEngine(tank.platform.Engine):
         os.environ["TANK_NUKE_ENGINE_INIT_NAME"] = self.instance_name
         os.environ["TANK_NUKE_ENGINE_INIT_CONTEXT"] = tank.context.serialize(self.context)
 
+        print os.environ["NUKE_PATH"]
+
         # If we're in Toolkit classic mode, get the project path.
         if not self.is_plugin_mode:
             os.environ["TANK_NUKE_ENGINE_INIT_PROJECT_ROOT"] = self.tank.project_path
 
-        # Add our startup path to the nuke init path
-        startup_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "startup"))
-        tank.util.append_path_to_env_var("NUKE_PATH", startup_path)        
-    
-        # We also need to pass the path to the python folder down to the init script
-        # because nuke python does not have a __file__ attribute for that file.
-        local_python_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "python"))
-        os.environ["TANK_NUKE_ENGINE_MOD_PATH"] = local_python_path
+            # Add our startup path to the nuke init path
+            startup_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "startup"))
+            tank.util.append_path_to_env_var("NUKE_PATH", startup_path)
+
+            # We also need to pass the path to the python folder down to the init script
+            # because nuke python does not have a __file__ attribute for that file.
+            local_python_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "python"))
+            os.environ["TANK_NUKE_ENGINE_MOD_PATH"] = local_python_path
 
     def pre_app_init(self):
         """
@@ -254,7 +261,7 @@ class NukeEngine(tank.platform.Engine):
         # Note! not using the import as this confuses nuke's calback system
         # (several of the key scene callbacks are in the main init file...)
         import tk_nuke
-        
+
         # Make sure callbacks tracking the context switching are active.
         tk_nuke.tank_ensure_callbacks_registered()
 
@@ -474,57 +481,30 @@ class NukeEngine(tank.platform.Engine):
     #####################################################################################
     # Logging
 
-    def log_debug(self, msg):
-        if self.get_setting("debug_logging", False):
-            msg = "Shotgun Debug: %s" % msg
-            # We will log it via the API, as well as print normally,
-            # which should make its way to the scripting console.
-            if self.hiero_enabled:
-                import hiero
+    def _emit_log_message(self, handler, record):
+        """
+        Emits a log
+        """
+        msg = handler.format(record)
+
+        if self.hiero_enabled:
+            import hiero
+            if record.levelno >= logging.ERROR:
+                hiero.core.log.error(msg)
+            elif record.levelno >= logging.WARNING:
+                hiero.core.log.info(msg)
+            elif record.levelno >= logging.INFO:
+                hiero.core.log.info(msg)
+            else:
                 hiero.core.log.setLogLevel(hiero.core.log.kDebug)
                 hiero.core.log.debug(msg)
-            print msg
-
-    def log_info(self, msg):
-        msg = "Shotgun Info: %s" % msg
-        # We will log it via the API, as well as print normally,
-        # which should make its way to the scripting console.
-        if self.hiero_enabled:
-            # NOTE! By default, info logging is turned OFF in hiero
-            # meaning that no info messages (nor warning, since they use info to output too)
-            # will be output in the console.
-            # 
-            # In order to have these emitted, we would need to turn them on by doing a 
-            # hiero.core.log.setLogLevel(hiero.core.log.kInfo)
-            #
-            # However this has call been omitted on purpose because too much output 
-            # from hiero to stdout/stderr is causing problems with the browser plugin
-            # causing it to hang or crash. By keeping the info and warning logging off
-            # we are avoiding such hangs and working around this known issue.
-            import hiero
-            hiero.core.log.info(msg)
-        print msg
-
-    def log_warning(self, msg):
-        msg = "Shotgun Warning: %s" % msg
-        # We will log it via the API, as well as print normally,
-        # which should make its way to the scripting console.
-        if self.hiero_enabled:
-            import hiero
-            hiero.core.log.info(msg)
         else:
-            nuke.warning(msg)
-        print msg
-
-    def log_error(self, msg):
-        msg = "Shotgun Error: %s" % msg
-        # We will log it via the API, as well as print normally,
-        # which should make its way to the scripting console.
-        if self.hiero_enabled:
-            import hiero
-            hiero.core.log.error(msg)
-        else:
-            nuke.error(msg)
+            if record.levelno >= logging.CRITICAL:
+                nuke.critical("Shotgun Critical: %s" % msg)
+            elif record.levelno >= logging.ERROR:
+                nuke.error("Shotgun Error: %s" % msg)
+            elif record.levelno >= logging.WARNING:
+                nuke.warning("Shotgun Warning: %s" % msg)
         print msg
 
     #####################################################################################

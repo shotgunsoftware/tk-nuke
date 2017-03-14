@@ -113,15 +113,15 @@ def get_plugin_startup_env(plugin_names, app_path, app_args, file_to_open):
     return _compute_environment(app_path, app_args, startup_paths, file_to_open)
 
 
-def get_classic_startup_env(app_path, app_args, file_to_open):
-    """
-    Invoked by the SoftwareLauncher based startup code for classic startup.
+# def get_classic_startup_env(app_path, app_args, file_to_open):
+#     """
+#     Invoked by the SoftwareLauncher based startup code for classic startup.
 
-    Prepares for the bootstrapping process that will run during startup of
-    Nuke, Hiero and Nuke Studio.
+#     Prepares for the bootstrapping process that will run during startup of
+#     Nuke, Hiero and Nuke Studio.
 
-    .. NOTE:: For detailed documentation of the bootstrap process for Nuke,
-              Hiero and Nuke Studio, see the engine documentation in
-              `tk-nuke/engine.py`.
-    """
-    return _compute_environment(app_path, app_args, [_get_current_module_path()])
+#     .. NOTE:: For detailed documentation of the bootstrap process for Nuke,
+#               Hiero and Nuke Studio, see the engine documentation in
+#               `tk-nuke/engine.py`.
+#     """
+#     return _compute_environment(app_path, app_args, [_get_current_module_path()])
