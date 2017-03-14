@@ -241,4 +241,4 @@ class NukeLauncher(SoftwareLauncher):
 
         :returns: :class:`LaunchInformation` instance
         """
-        pass
+        return LaunchInformation(exec_path, args)
