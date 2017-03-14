@@ -133,7 +133,10 @@ class NukeEngine(tank.platform.Engine):
         return self._menu_generator
 
     @property
-    def is_plugin_mode(self):
+    def in_plugin_mode(self):
+        """
+        Indicates if we are running one of the builtin plugins.
+        """
         return True if self.get_setting("launch_builtin_plugins") else False
 
     #####################################################################################
@@ -186,18 +189,17 @@ class NukeEngine(tank.platform.Engine):
             # Log the warning.
             self.log_warning(msg)
 
-        # Make sure we are not running Nuke PLE!
+        # Make sure we are not running Nuke PLE or Non-Commercial!
         if nuke.env.get("ple"):
             self.log_error("The Nuke Engine does not work with Nuke PLE!")
             return
-
-        if nuke.env.get("nc"):
+        elif nuke.env.get("nc"):
             self.log_error("The Nuke Engine does not work with Nuke Non-Commercial!")
             return
 
         # Now check that we are at least in a project context. Note that plugin mode
         # does not require this check since it can operate at the site level.
-        if not self.is_plugin_mode and self.context.project is None:
+        if not self.in_plugin_mode and self.context.project is None:
             # Must have at least a project in the context to even start!
             raise tank.TankError("The nuke engine needs at least a project "
                                  "in the context in order to start! Your "
@@ -234,8 +236,9 @@ class NukeEngine(tank.platform.Engine):
         os.environ["TANK_NUKE_ENGINE_INIT_NAME"] = self.instance_name
         os.environ["TANK_NUKE_ENGINE_INIT_CONTEXT"] = tank.context.serialize(self.context)
 
-        # If we're in Toolkit classic mode, get the project path.
-        if not self.is_plugin_mode:
+        # If we're in Toolkit classic mode, we need to backup a few things in order to be able
+        # to restart the engine after a File->New|Open
+        if not self.in_plugin_mode:
             os.environ["TANK_NUKE_ENGINE_INIT_PROJECT_ROOT"] = self.tank.project_path
 
             # Add our startup path to the nuke init path
@@ -464,10 +467,16 @@ class NukeEngine(tank.platform.Engine):
 
     def _emit_log_message(self, handler, record):
         """
-        Emits a log
+        Emits a log to Nuke's Script Editor and Error Console.
+
+        :param handler: Log handler that this message was dispatched from
+        :type handler: :class:`~python.logging.LogHandler`
+        :param record: Std python logging record
+        :type record: :class:`~python.logging.LogRecord`
         """
         msg = handler.format(record)
 
+        # Sends the message to error console of the DCC
         if self.hiero_enabled:
             import hiero
             if record.levelno >= logging.ERROR:
@@ -486,6 +495,8 @@ class NukeEngine(tank.platform.Engine):
                 nuke.error("Shotgun Error: %s" % msg)
             elif record.levelno >= logging.WARNING:
                 nuke.warning("Shotgun Warning: %s" % msg)
+
+        # Sends the message to the script editor.
         print msg
 
     #####################################################################################

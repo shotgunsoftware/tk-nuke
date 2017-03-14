@@ -20,8 +20,8 @@ base_configuration:
     #
     # If your descriptor supports a version token and you want it to
     # always use the latest version available, simply omit the version token.
-    type: dev
-    path: ~/gitlocal/tk-config-basic
+    type: app_store
+    name: tk-config-basic
 
 # The Plugin Id helps uniquely identify this plugin and can be
 # used to override and customize it. For more information, see

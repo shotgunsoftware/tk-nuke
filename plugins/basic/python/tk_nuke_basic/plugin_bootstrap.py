@@ -16,7 +16,7 @@ def bootstrap(plugin_root_path):
     """
     Entry point for toolkit bootstrap in Nuke.
 
-    Called by the basic/startup/{menu,init}.py file.
+    Called by the basic/startup/menu.py file.
 
     :param str plugin_root_path: Path to the root folder of the plugin
     """
@@ -82,6 +82,13 @@ def bootstrap(plugin_root_path):
 
 
 def __launch_sgtk(base_config, plugin_id, bundle_cache):
+    """
+    Launches Toolkit and the engine.
+
+    :param str base_config: Basic configuration to use for this plugin instance.
+    :param str plugin_id: Plugin id of this plugin instance.
+    :param str bundle_cache: Alternate bundle cache location. Can be ``None``.
+    """
 
     # ---- now we have everything needed to bootstrap. finish initializing the
     #      manager and logger, authenticate, then bootstrap the engine.
@@ -138,8 +145,19 @@ def __launch_sgtk(base_config, plugin_id, bundle_cache):
 
 
 def __get_engine_name():
+    """
+    Retrieves the engine name to use.
+
+    If the plugin is being launched from the SoftwareLauncher, the method will return
+    the value assigned to the ``SHOTGUN_ENGINE`` environment variable. Otherwise
+    the code will detect whether Nuke or Nuke Studio is running and will return
+    ``tk-nuke`` and ``tk-nukestudio`` respectively.
+    """
     engine_name = os.environ.get("SHOTGUN_ENGINE")
     if not engine_name:
+        # FIXME: We are assuming that the configuration inside the standalone plugin
+        # has an engine instance with these name. These values should probably come
+        # from the plugin's info.yml file.
         try:
             import hiero # noqa
         except:

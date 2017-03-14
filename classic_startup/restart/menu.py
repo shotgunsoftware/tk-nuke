@@ -25,6 +25,8 @@ import sys
 
 def handle_new_tank_session():
     import tk_nuke
+    # Ensure the engine has been restarted before registering callback since
+    # callbacks registration depend on engine setting.
     tk_nuke.tank_startup_node_callback()
     tk_nuke.tank_ensure_callbacks_registered()
 

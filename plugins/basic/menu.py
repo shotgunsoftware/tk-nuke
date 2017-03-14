@@ -4,6 +4,9 @@ import sys
 
 
 def plugin_startup():
+    """
+    Initializes the Toolkit plugin for Nuke.
+    """
 
     current_file_path = os.path.abspath(
         inspect.getsourcefile(lambda: 0)
@@ -32,4 +35,5 @@ def plugin_startup():
         nuke.error(details)
 
 
+# Invoked on startup while Nuke is walking NUKE_PATH.
 plugin_startup()
