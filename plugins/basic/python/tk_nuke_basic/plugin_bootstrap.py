@@ -140,7 +140,7 @@ class DeferredProgressTask(object):
 
     # Maximum amount of time the progress reporting can stay hidden before we need to show some
     # progress to the user.
-    MAXIMUM_HIDDEN_TIME = 3
+    MAXIMUM_HIDDEN_TIME = 5
 
     def __init__(self):
         self._state = self.WAITING
