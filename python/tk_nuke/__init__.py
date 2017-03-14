@@ -196,7 +196,7 @@ def tank_ensure_callbacks_registered():
 
     # Register only if we're missing an engine (to allow going from disabled to something else)
     # or if the engine specifically requests for it.
-    if (engine and engine.get_setting("automatic_context_switch")) or not engine:
+    if not engine or engine.get_setting("automatic_context_switch"):
         global g_tank_callbacks_registered
         if not g_tank_callbacks_registered:
             nuke.addOnScriptLoad(tank_startup_node_callback)
