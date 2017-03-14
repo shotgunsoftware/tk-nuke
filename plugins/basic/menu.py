@@ -19,7 +19,7 @@ def plugin_startup():
     # now that the path is there, we can import the plugin bootstrap logic
     try:
         from tk_nuke_basic import plugin_bootstrap
-        plugin_bootstrap.bootstrap(plugin_root_path, os.environ.get("SGTK_ENGINE"))
+        plugin_bootstrap.bootstrap(plugin_root_path)
     except Exception, e:
         import traceback
         stack_trace = traceback.format_exc()

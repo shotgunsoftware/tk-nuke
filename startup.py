@@ -263,6 +263,9 @@ class NukeLauncher(SoftwareLauncher):
 
                 # Add std context and site info to the env.
                 required_env.update(self.get_standard_plugin_environment())
+
+                # Make sure we are picking the right engine.
+                required_env["SHOTGUN_ENGINE"] = self.engine_name
             else:
                 self.logger.info("Preparing Nuke Launch via Toolkit Classic methodology ...")
 
@@ -272,9 +275,7 @@ class NukeLauncher(SoftwareLauncher):
                 )
                 # Add context information info to the env.
                 required_env["TANK_CONTEXT"] = sgtk.Context.serialize(self.context)
-
-            # Make sure we are picking the right engine.
-            required_env["SGTK_ENGINE"] = self.engine_name
+                required_env["TANK_ENGINE"] = self.engine_name
 
             self.logger.debug("Launch environment: %s", pprint.pformat(required_env))
             self.logger.debug("Launch arguments: %s", required_args)

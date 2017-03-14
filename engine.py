@@ -195,8 +195,8 @@ class NukeEngine(tank.platform.Engine):
             self.log_error("The Nuke Engine does not work with Nuke Non-Commercial!")
             return
 
-        # Now check that there is a location on disk which corresponds to the context.
-
+        # Now check that we are at least in a project context. Note that plugin mode
+        # does not require this check since it can operate at the site level.
         if not self.is_plugin_mode and self.context.project is None:
             # Must have at least a project in the context to even start!
             raise tank.TankError("The nuke engine needs at least a project "
@@ -234,34 +234,18 @@ class NukeEngine(tank.platform.Engine):
         os.environ["TANK_NUKE_ENGINE_INIT_NAME"] = self.instance_name
         os.environ["TANK_NUKE_ENGINE_INIT_CONTEXT"] = tank.context.serialize(self.context)
 
-        print os.environ["NUKE_PATH"]
-
         # If we're in Toolkit classic mode, get the project path.
         if not self.is_plugin_mode:
             os.environ["TANK_NUKE_ENGINE_INIT_PROJECT_ROOT"] = self.tank.project_path
 
             # Add our startup path to the nuke init path
-            startup_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "startup"))
+            startup_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "classic_startup", "restart"))
             tank.util.append_path_to_env_var("NUKE_PATH", startup_path)
 
             # We also need to pass the path to the python folder down to the init script
             # because nuke python does not have a __file__ attribute for that file.
             local_python_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "python"))
             os.environ["TANK_NUKE_ENGINE_MOD_PATH"] = local_python_path
-
-    def pre_app_init(self):
-        """
-        Called at startup, but after QT has been initialized.
-        """
-        if self.hiero_enabled or self.studio_enabled:
-            return
-
-        # Note! not using the import as this confuses nuke's calback system
-        # (several of the key scene callbacks are in the main init file...)
-        import tk_nuke
-
-        # Make sure callbacks tracking the context switching are active.
-        tk_nuke.tank_ensure_callbacks_registered()
 
     def post_app_init(self):
         """

@@ -12,7 +12,7 @@ import os
 import sys
 
 
-def bootstrap(plugin_root_path, engine_name):
+def bootstrap(plugin_root_path):
     """
     Entry point for toolkit bootstrap in Nuke.
 
@@ -32,14 +32,7 @@ def bootstrap(plugin_root_path, engine_name):
     #   and not from a standalone workflow, we are running the plugin code
     #   directly from the engine folder without a bundle cache and with this
     #   configuration, core already exists in the pythonpath.
-
-    if not engine_name:
-        try:
-            import hiero # noqa
-        except:
-            engine_name = "tk-nuke"
-        else:
-            engine_name = "tk-nukestudio"
+    # If the engine is currently being restarted, restore
 
     # now see if we are running stand alone or in situ
     try:
@@ -85,6 +78,11 @@ def bootstrap(plugin_root_path, engine_name):
         # no bundle cache in in situ mode
         bundle_cache = None
 
+    __launch_sgtk(base_config, plugin_id, bundle_cache)
+
+
+def __launch_sgtk(base_config, plugin_id, bundle_cache):
+
     # ---- now we have everything needed to bootstrap. finish initializing the
     #      manager and logger, authenticate, then bootstrap the engine.
 
@@ -110,6 +108,7 @@ def bootstrap(plugin_root_path, engine_name):
     # Create a boostrap manager for the logged in user with the plug-in
     # configuration data.
     toolkit_mgr = sgtk.bootstrap.ToolkitManager(user)
+
     toolkit_mgr.base_configuration = base_config
     toolkit_mgr.plugin_id = plugin_id
 
@@ -127,10 +126,28 @@ def bootstrap(plugin_root_path, engine_name):
     toolkit_mgr.progress_callback = bootstrap_progress_callback
 
     # start engine
-    sgtk_logger.info("Bootstrapping the Shotgun engine for Houdini...")
-    toolkit_mgr.bootstrap_engine(engine_name, entity)
+    sgtk_logger.info("Bootstrapping the Shotgun engine for Nuke...")
+
+    toolkit_mgr.bootstrap_engine(__get_engine_name(), entity)
 
     sgtk_logger.debug("Bootstrap complete.")
+
+    # Contrary to other engines, do not clear the SHOTGUN_ENGINE environment variable.
+    # Nuke spawns a new process when doing a File->Open or File->New, which means our
+    # plugin needs to be able to bootstrap a second time.
+
+
+def __get_engine_name():
+    engine_name = os.environ.get("SHOTGUN_ENGINE")
+    if not engine_name:
+        try:
+            import hiero # noqa
+        except:
+            engine_name = "tk-nuke"
+        else:
+            engine_name = "tk-nukestudio"
+
+    return engine_name
 
 
 def bootstrap_progress_callback(progress_value, message):
