@@ -30,7 +30,7 @@ from .menu_generation import (
     NukeStudioMenuGenerator,
 )
 
-from .context import StudioContextSwitcher
+from .context import ClassicStudioContextSwitcher, PluginStudioContextSwitcher # noqa
 
 
 def __show_tank_disabled_message(details):

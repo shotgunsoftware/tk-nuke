@@ -242,12 +242,12 @@ class NukeEngine(tank.platform.Engine):
             os.environ["TANK_NUKE_ENGINE_INIT_PROJECT_ROOT"] = self.tank.project_path
 
             # Add our startup path to the nuke init path
-            startup_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "classic_startup", "restart"))
+            startup_path = os.path.abspath(os.path.join(self.disk_location, "classic_startup", "restart"))
             tank.util.append_path_to_env_var("NUKE_PATH", startup_path)
 
             # We also need to pass the path to the python folder down to the init script
             # because nuke python does not have a __file__ attribute for that file.
-            local_python_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "python"))
+            local_python_path = os.path.abspath(os.path.join(self.disk_location, "python"))
             os.environ["TANK_NUKE_ENGINE_MOD_PATH"] = local_python_path
 
     def post_app_init(self):
@@ -291,28 +291,29 @@ class NukeEngine(tank.platform.Engine):
             self._menu_generator = tk_nuke.NukeStudioMenuGenerator(self, menu_name)
             self._menu_generator.create_menu()
 
-            hiero.core.events.registerInterest(
-                "kAfterNewProjectCreated",
-                self.set_project_root,
-            )
+            # No context switching in plugin mode.
+            if self.in_plugin_mode:
+                self._context_switcher = tk_nuke.PluginStudioContextSwitcher(self)
+            else:
+                hiero.core.events.registerInterest(
+                    "kAfterNewProjectCreated",
+                    self.set_project_root,
+                )
 
-            hiero.core.events.registerInterest(
-                "kAfterProjectLoad",
-                self._on_project_load_callback,
-            )
+                hiero.core.events.registerInterest(
+                    "kAfterProjectLoad",
+                    self._on_project_load_callback,
+                )
 
-            # Then we need to setup our context switcher.
-            import tk_nuke
-            self._context_switcher = tk_nuke.StudioContextSwitcher(self)
-
-            # On selection change we have to check what was selected and pre-load
-            # the context if that environment (ie: shot_step) hasn't already been
-            # processed. This ensure that all Nuke gizmos for the target environment
-            # will be available.
-            hiero.core.events.registerInterest(
-                "kSelectionChanged",
-                self._handle_studio_selection_change,
-            )
+                self._context_switcher = tk_nuke.ClassicStudioContextSwitcher(self)
+                # On selection change we have to check what was selected and pre-load
+                # the context if that environment (ie: shot_step) hasn't already been
+                # processed. This ensure that all Nuke gizmos for the target environment
+                # will be available.
+                hiero.core.events.registerInterest(
+                    "kSelectionChanged",
+                    self._handle_studio_selection_change,
+                )
 
             try:
                 hiero_ver_str = "%s.%s%s" % (

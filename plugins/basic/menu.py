@@ -1,4 +1,19 @@
-import inspect
+# Copyright (c) 2017 Shotgun Software Inc.
+#
+# CONFIDENTIAL AND PROPRIETARY
+#
+# This work is provided "AS IS" and subject to the Shotgun Pipeline Toolkit
+# Source Code License included in this distribution package. See LICENSE.
+# By accessing, using, copying or modifying this work you indicate your
+# agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
+# not expressly granted therein are reserved by Shotgun Software Inc.
+
+"""
+This file is being imported by Nuke automatically because it is in the NUKE_PATH.
+It launches the plugin's bootstrap process.
+"""
+
+
 import os
 import sys
 
@@ -8,11 +23,11 @@ def plugin_startup():
     Initializes the Toolkit plugin for Nuke.
     """
 
-    current_file_path = os.path.abspath(
-        inspect.getsourcefile(lambda: 0)
-    )
-
-    plugin_root_path = os.path.dirname(current_file_path)
+    # construct the path to the plugin root's folder.
+    #      plugins/basic/menu.py
+    #      -------------|
+    # this part ^
+    plugin_root_path = os.path.dirname(__file__)
 
     # the plugin python path will be just below the root level. add it to
     # sys.path

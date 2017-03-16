@@ -32,7 +32,6 @@ def bootstrap(plugin_root_path):
     #   and not from a standalone workflow, we are running the plugin code
     #   directly from the engine folder without a bundle cache and with this
     #   configuration, core already exists in the pythonpath.
-    # If the engine is currently being restarted, restore
 
     # now see if we are running stand alone or in situ
     try:
@@ -156,14 +155,8 @@ def __get_engine_name():
     engine_name = os.environ.get("SHOTGUN_ENGINE")
     if not engine_name:
         # FIXME: We are assuming that the configuration inside the standalone plugin
-        # has an engine instance with these name. These values should probably come
-        # from the plugin's info.yml file.
-        try:
-            import hiero # noqa
-        except:
-            engine_name = "tk-nuke"
-        else:
-            engine_name = "tk-nukestudio"
+        # has an engine instance with this name.
+        engine_name = "tk-nuke"
 
     return engine_name
 

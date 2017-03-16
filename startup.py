@@ -66,7 +66,7 @@ class NukeLauncher(SoftwareLauncher):
         ],
         "win32": [
             # C:/Program Files/Nuke10.0v5/Nuke10.0.exe
-            "C:\\Program Files\\Nuke{version}\\Nuke{major_minor_version}.exe",
+            r"C:\Program Files\Nuke{version}\Nuke{major_minor_version}.exe",
         ],
         "linux2": [
             # /usr/local/Nuke10.0v5/Nuke10.0
