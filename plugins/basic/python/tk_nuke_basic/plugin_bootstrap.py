@@ -259,7 +259,8 @@ class NukeBootstraper(object):
         and start reporting progress.
         """
         # Paranoia. This is in case something goes wrong with the removeOnCreate call. I don't know what
-        # could go wrong, but I don't want the risk or rebootstrapping every single time
+        # could go wrong, but I don't want the risk or rebootstrapping every single time someone adds a
+        # node. That would be really, really bad.
         if self._is_bootstrapping:
             self._logger.warning("Unexpected call to NukeBoostrapper._bootstrap.")
             return

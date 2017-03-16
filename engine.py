@@ -471,8 +471,7 @@ class NukeEngine(tank.platform.Engine):
         # Set the _callback_from_non_pane_menu hint so that the show_panel method knows this
         # was invoked not from the pane menu.
 
-        # FIXME: This pattern is horrible. We should find a way to prevent show_panel from thinking something
-        # is being added
+        # FIXME: This pattern is horrible.
         setattr(tank, "_callback_from_non_pane_menu", True)
         try:
             for command in commands_to_run:
