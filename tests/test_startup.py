@@ -222,7 +222,6 @@ class TestStartup(TankTestBase):
         Mocks folder listing so that the startup code can be unit tested even on machines that
         don't have Nuke installed.
         """
-
         # When this environment variable is set, do not mock folders and rely on the real
         # filesystem data. This is useful when adding support for a new version of Nuke.
         if "TK_NO_FOLDER_MOCKING" not in os.environ:
@@ -230,6 +229,160 @@ class TestStartup(TankTestBase):
                 yield
         else:
             yield
+
+    def _get_plugin_environment(self, dcc_path):
+        """
+        Returns the expected environment variables dictionary for a plugin.
+        """
+        expected = {
+            "SHOTGUN_ENGINE": "tk-nuke",
+            "SHOTGUN_PIPELINE_CONFIGURATION_ID": str(self.pipeline_configuration_id),
+            "SHOTGUN_SITE": sgtk.util.shotgun.get_associated_sg_base_url(),
+            dcc_path: os.path.join(repo_root, "plugins", "basic")
+        }
+        return expected
+
+    def _get_classic_environment(self, dcc_path):
+        """
+        Returns the expected environment variables dictionary for a Toolkit classic launch.
+        """
+        expected = {
+            "TANK_CONTEXT": sgtk.context.create_empty(self.tk).serialize(),
+            "TANK_ENGINE": "tk-nuke-classic",
+            dcc_path: os.path.join(repo_root, "classic_startup")
+        }
+        return expected
+
+    def _get_hiero_environment(self, is_classic=True):
+        """
+        Returns the expected environment variables dictionary for Hiero or Nuke Studio
+        """
+        if is_classic:
+            env = self._get_classic_environment("HIERO_PLUGIN_PATH")
+        else:
+            env = self._get_plugin_environment("HIERO_PLUGIN_PATH")
+        return env
+
+    def _get_nuke_environment(self, is_classic=True):
+        """
+        Returns the expected environment variables dictionary for Nuke
+        """
+        if is_classic:
+            env = self._get_classic_environment("NUKE_PATH")
+        else:
+            env = self._get_plugin_environment("NUKE_PATH")
+        return env
+
+    def _get_engine_configurations(self):
+        """
+        Returns the different engine instance name and whether they are using Toolkit Classic or not
+        from the fixture.
+        """
+        return [("tk-nuke", False), ("tk-nuke-classic", True)]
+
+    def test_nuke_studio(self):
+        """
+        Ensures Nuke Studio LaunchInformation is correct.
+        """
+        for engine_instance, is_classic in self._get_engine_configurations():
+            self._test_launch_information(
+                engine_instance, "NukeStudio.app", "", None,
+                self._get_hiero_environment(is_classic=is_classic)
+            )
+
+            self._test_launch_information(
+                engine_instance, "Nuke.exe", "--studio", None,
+                self._get_hiero_environment(is_classic=is_classic)
+            )
+
+    def test_nuke(self):
+        """
+        Ensures Nuke LaunchInformation is correct.
+        """
+        for engine_instance, is_classic in self._get_engine_configurations():
+            self._test_launch_information(
+                engine_instance, "Nuke.app", "", "/file/to/open",
+                self._get_nuke_environment(is_classic=is_classic)
+            )
+
+            self._test_launch_information(
+                engine_instance, "Nuke.exe", "", "/file/to/open",
+                self._get_nuke_environment(is_classic=is_classic)
+            )
+
+    def test_nukex(self):
+        """
+        Ensures NukeX LaunchInformation is correct.
+        """
+        for engine_instance, is_classic in self._get_engine_configurations():
+            self._test_launch_information(
+                engine_instance, "NukeX.app", "", "/file/to/open",
+                self._get_nuke_environment(is_classic=is_classic)
+            )
+
+            self._test_launch_information(
+                engine_instance, "Nuke.exe", "--nukex", "/file/to/open",
+                self._get_nuke_environment(is_classic=is_classic)
+            )
+
+    def test_nukeassist(self):
+        """
+        Ensures Nuke Assist LaunchInformation is correct.
+        """
+        for engine_instance, is_classic in self._get_engine_configurations():
+            self._test_launch_information(
+                engine_instance, "NukeAssist.app", "", "/file/to/open",
+                self._get_nuke_environment(is_classic=is_classic)
+            )
+
+            self._test_launch_information(
+                engine_instance, "Nuke.exe", "--nukeassist", "/file/to/open",
+                self._get_nuke_environment(is_classic=is_classic)
+            )
+
+    def test_hiero(self):
+        """
+        Ensures Hiero LaunchInformation is correct.
+        """
+        self._test_launch_information(
+            "tk-nuke-classic", "Hiero.app", "", None,
+            self._get_hiero_environment(is_classic=True)
+        )
+
+        self._test_launch_information(
+            "tk-nuke-classic", "Nuke.exe", "--hiero", None,
+            self._get_hiero_environment(is_classic=True)
+        )
+
+    def _test_launch_information(self, engine_name, dcc_path, args, file_to_open, expected_env):
+        """
+        Validates that a given DCC has the right LaunchInformation.
+
+        :param str engine_name: Name of the engine instance name to create a launcher for.
+        :param str dcc_path: Path to the DCC. Doesn't have to be a real one.
+        :param str file_to_open: Path to a file to open.
+        :param str expected_env: Expected environment variables.
+        """
+        nuke_launcher = sgtk.platform.create_engine_launcher(
+            self.tk, sgtk.context.create_empty(self.tk), engine_name, ["10.0v5"]
+        )
+
+        launch_info = nuke_launcher.prepare_launch(dcc_path, args, file_to_open)
+
+        self.assertEqual(
+            # Maybe there's no args, in which case we need to strip.
+            # Also, maybe there's no file to open, so substitute for an empty string.
+            ("%s %s" % (file_to_open or "", args)).strip(),
+            launch_info.args
+        )
+
+        # Ensure the environment variatiables from the LaunchInfo are the same as the expected ones.
+        self.assertListEqual(sorted(expected_env.keys()), sorted(launch_info.environment.keys()))
+
+        # Ensure each environment variable's value is the same as they expected ones.
+        for key, value in expected_env.iteritems():
+            self.assertIn(key, launch_info.environment)
+            self.assertEqual(launch_info.environment[key], value)
 
     def _test_nuke(self, expected_variations, expected_version):
         """

@@ -272,11 +272,23 @@ class NukeLauncher(SoftwareLauncher):
 
         return LaunchInformation(exec_path, required_args, required_env)
 
+    # Do not remove or rename this method. It is being called by older versions
+    # of the tk-multi-launchapp from tk-nuke/python/startup/bootstrap.py.
+    # Also, because this method is being invoke from the bootstrap.py file, it doesn't
+    # have access to the disk_location property and as such needs to be passed in.
     @classmethod
     def _get_classic_startup_env(cls, bundle_root, app_path, app_args, file_to_open):
         """
         Prepares for the bootstrapping process that will run during startup of
         Nuke, Hiero and Nuke Studio with the legacy launcher app.
+
+        :param str bundle_root: Root of this bundle.
+        :param str app_path: Path to the executable being launched.
+        :param str app_args: Arguments for the app being launched.
+        :param str file_to_open: Path to a file to open.
+
+        :returns: Dictionary of environment variables to set and the command line arguments
+            to specify.
         """
         return cls._compute_environment(
             app_path, app_args, [os.path.join(bundle_root, "classic_startup")], file_to_open
@@ -286,6 +298,14 @@ class NukeLauncher(SoftwareLauncher):
         """
         Prepares for the bootstrapping process that will run during startup of
         Nuke and Nuke Studio with the new launcher app.
+
+        :param str plugin_names: Names of the builtin plugins to load.
+        :param str app_path: Path to the executable being launched.
+        :param str app_args: Arguments for the app being launched.
+        :param str file_to_open: Path to a file to open.
+
+        :returns: Dictionary of environment variables to set and the command line arguments
+            to specify.
         """
         startup_paths = []
 
@@ -302,12 +322,18 @@ class NukeLauncher(SoftwareLauncher):
 
         return self._compute_environment(app_path, app_args, startup_paths, file_to_open)
 
-    # Do not remove or rename this method. It is being called by older versions
-    # of the tk-multi-launchapp from tk-nuke/python/startup/bootstrap.py
     @classmethod
     def _compute_environment(cls, app_path, app_args, startup_paths, file_to_open):
         """
         Computes the environment variables and command line arguments required to launch Nuke.
+
+        :param str app_path: Path to the executable being launched.
+        :param str app_args: Arguments for the app being launched.
+        :param list startup_paths: List of paths to plugins that need to be added to the DCC's path.
+        :param str file_to_open: Path to a file to open.
+
+        :returns: Dictionary of environment variables to set and the command line arguments
+            to specify.
         """
         app_args = app_args or ""
 
