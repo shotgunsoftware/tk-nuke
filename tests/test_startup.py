@@ -236,7 +236,7 @@ class TestStartup(TankTestBase):
         """
         expected = {
             "SHOTGUN_ENGINE": "tk-nuke",
-            "SHOTGUN_PIPELINE_CONFIGURATION_ID": str(self.pipeline_configuration_id),
+            "SHOTGUN_PIPELINE_CONFIGURATION_ID": str(self.sg_pc_entity["id"]),
             "SHOTGUN_SITE": sgtk.util.shotgun.get_associated_sg_base_url(),
             dcc_path: os.path.join(repo_root, "plugins", "basic")
         }
