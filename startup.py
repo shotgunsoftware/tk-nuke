@@ -10,9 +10,8 @@
 
 import os
 import sys
-import uuid
-import imp
 import sgtk
+import pprint
 
 from sgtk.platform import SoftwareLauncher, SoftwareVersion, LaunchInformation
 
@@ -67,7 +66,7 @@ class NukeLauncher(SoftwareLauncher):
         ],
         "win32": [
             # C:/Program Files/Nuke10.0v5/Nuke10.0.exe
-            "C:/Program Files/Nuke{version}/Nuke{major_minor_version}.exe",
+            r"C:\Program Files\Nuke{version}\Nuke{major_minor_version}.exe",
         ],
         "linux2": [
             # /usr/local/Nuke10.0v5/Nuke10.0
@@ -241,4 +240,118 @@ class NukeLauncher(SoftwareLauncher):
 
         :returns: :class:`LaunchInformation` instance
         """
-        return LaunchInformation(exec_path, args)
+        launch_plugins = self.get_setting("launch_builtin_plugins")
+
+        if launch_plugins:
+            self.logger.info("Launch plugins: %s", launch_plugins)
+
+            # Get Nuke environment for plugin launch.
+            required_env, required_args = self._get_plugin_startup_env(
+                launch_plugins, exec_path, args, file_to_open
+            )
+
+            # Add std context and site info to the env.
+            required_env.update(self.get_standard_plugin_environment())
+
+            # Make sure we are picking the right engine.
+            required_env["SHOTGUN_ENGINE"] = self.engine_name
+        else:
+            self.logger.info("Preparing Nuke Launch via Toolkit Classic methodology ...")
+
+            # Get Nuke environment for Toolkit Classic launch.
+            required_env, required_args = self._get_classic_startup_env(
+                self.disk_location,
+                exec_path, args, file_to_open
+            )
+            # Add context information info to the env.
+            required_env["TANK_CONTEXT"] = sgtk.Context.serialize(self.context)
+            required_env["TANK_ENGINE"] = self.engine_name
+
+        self.logger.debug("Launch environment: %s", pprint.pformat(required_env))
+        self.logger.debug("Launch arguments: %s", required_args)
+
+        return LaunchInformation(exec_path, required_args, required_env)
+
+    # Do not remove or rename this method. It is being called by older versions
+    # of the tk-multi-launchapp from tk-nuke/python/startup/bootstrap.py.
+    # Also, because this method is being invoke from the bootstrap.py file, it doesn't
+    # have access to the disk_location property and as such needs to be passed in.
+    @classmethod
+    def _get_classic_startup_env(cls, bundle_root, app_path, app_args, file_to_open):
+        """
+        Prepares for the bootstrapping process that will run during startup of
+        Nuke, Hiero and Nuke Studio with the legacy launcher app.
+
+        :param str bundle_root: Root of this bundle.
+        :param str app_path: Path to the executable being launched.
+        :param str app_args: Arguments for the app being launched.
+        :param str file_to_open: Path to a file to open.
+
+        :returns: Dictionary of environment variables to set and the command line arguments
+            to specify.
+        """
+        return cls._compute_environment(
+            app_path, app_args, [os.path.join(bundle_root, "classic_startup")], file_to_open
+        )
+
+    def _get_plugin_startup_env(self, plugin_names, app_path, app_args, file_to_open):
+        """
+        Prepares for the bootstrapping process that will run during startup of
+        Nuke and Nuke Studio with the new launcher app.
+
+        :param str plugin_names: Names of the builtin plugins to load.
+        :param str app_path: Path to the executable being launched.
+        :param str app_args: Arguments for the app being launched.
+        :param str file_to_open: Path to a file to open.
+
+        :returns: Dictionary of environment variables to set and the command line arguments
+            to specify.
+        """
+        startup_paths = []
+
+        for plugin_name in plugin_names:
+            plugin_path = os.path.join(
+                self.disk_location, "plugins", plugin_name
+            )
+
+            if os.path.exists(plugin_path):
+                self.logger.debug("Plugin '%s' found at '%s'", plugin_name, plugin_path)
+                startup_paths.append(plugin_path)
+            else:
+                self.logger.warning("Plugin '%s' missing at '%s'", plugin_name, plugin_path)
+
+        return self._compute_environment(app_path, app_args, startup_paths, file_to_open)
+
+    @classmethod
+    def _compute_environment(cls, app_path, app_args, startup_paths, file_to_open):
+        """
+        Computes the environment variables and command line arguments required to launch Nuke.
+
+        :param str app_path: Path to the executable being launched.
+        :param str app_args: Arguments for the app being launched.
+        :param list startup_paths: List of paths to plugins that need to be added to the DCC's path.
+        :param str file_to_open: Path to a file to open.
+
+        :returns: Dictionary of environment variables to set and the command line arguments
+            to specify.
+        """
+        app_args = app_args or ""
+
+        env = {}
+
+        if "hiero" in app_path.lower() or "--hiero" in app_args:
+            env["HIERO_PLUGIN_PATH"] = os.pathsep.join(startup_paths)
+        elif "nukestudio" in app_path.lower() or "--studio" in app_args:
+            env["HIERO_PLUGIN_PATH"] = os.pathsep.join(startup_paths)
+        else:
+            env["NUKE_PATH"] = os.pathsep.join(startup_paths)
+
+            # A Nuke script can't be launched from the menu.py, so we
+            # have to tack it onto the launch arguments instead.
+            if file_to_open:
+                if app_args:
+                    app_args = "%s %s" % (file_to_open, app_args)
+                else:
+                    app_args = file_to_open
+
+        return env, app_args

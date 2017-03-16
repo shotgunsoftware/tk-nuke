@@ -366,7 +366,7 @@ class HieroMenuGenerator(BaseMenuGenerator):
         action = ctx_menu.addAction("Jump to Shotgun")
         action.triggered.connect(self._jump_to_sg)
 
-        if self.context.filesystem_locations:
+        if ctx.filesystem_locations:
             action = ctx_menu.addAction("Jump to File System")
             action.triggered.connect(self._jump_to_fs)
 

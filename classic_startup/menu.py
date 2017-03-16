@@ -1,5 +1,4 @@
- #!/bin/bash
-# Copyright (c) 2017 Shotgun Software Inc.
+# Copyright (c) 2016 Shotgun Software Inc.
 #
 # CONFIDENTIAL AND PROPRIETARY
 #
@@ -9,5 +8,13 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
-find .. -name "*.pyc" -delete
-../../tk-core/tests/run_tests.sh --test-root . $*
+import os
+import sys
+
+sys.path.append(os.path.dirname(__file__))
+
+# This covers initialization of Toolkit in GUI sessions of Nuke.
+try:
+    import sgtk_startup # noqa
+finally:
+    sys.path.pop()

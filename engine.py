@@ -12,6 +12,7 @@ import tank
 import nuke
 import os
 import nukescripts
+import logging
 
 
 class NukeEngine(tank.platform.Engine):
@@ -131,6 +132,13 @@ class NukeEngine(tank.platform.Engine):
     def menu_generator(self):
         return self._menu_generator
 
+    @property
+    def in_plugin_mode(self):
+        """
+        Indicates if we are running one of the builtin plugins.
+        """
+        return True if self.get_setting("launch_builtin_plugins") else False
+
     #####################################################################################
     # Engine Initialization and Destruction
 
@@ -181,15 +189,19 @@ class NukeEngine(tank.platform.Engine):
             # Log the warning.
             self.log_warning(msg)
 
-        # Make sure we are not running Nuke PLE!
+        # Make sure we are not running Nuke PLE or Non-Commercial!
         if nuke.env.get("ple"):
-            self.log_error("The Nuke Engine does not work with the Nuke PLE!")
+            self.log_error("The Nuke Engine does not work with Nuke PLE!")
+            return
+        elif nuke.env.get("nc"):
+            self.log_error("The Nuke Engine does not work with Nuke Non-Commercial!")
             return
 
-        # Now check that there is a location on disk which corresponds to the context.
-        if self.context.project is None:
+        # Now check that we are at least in a project context. Note that plugin mode
+        # does not require this check since it can operate at the site level.
+        if not self.in_plugin_mode and self.context.project is None:
             # Must have at least a project in the context to even start!
-            raise tank.TankError("The nuke engine needs at least a project"
+            raise tank.TankError("The nuke engine needs at least a project "
                                  "in the context in order to start! Your "
                                  "context: %s" % self.context)
 
@@ -223,30 +235,20 @@ class NukeEngine(tank.platform.Engine):
         # Store data needed for bootstrapping Tank in env vars. Used in startup/menu.py.
         os.environ["TANK_NUKE_ENGINE_INIT_NAME"] = self.instance_name
         os.environ["TANK_NUKE_ENGINE_INIT_CONTEXT"] = tank.context.serialize(self.context)
-        os.environ["TANK_NUKE_ENGINE_INIT_PROJECT_ROOT"] = self.tank.project_path
-        
-        # Add our startup path to the nuke init path
-        startup_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "startup"))
-        tank.util.append_path_to_env_var("NUKE_PATH", startup_path)        
-    
-        # We also need to pass the path to the python folder down to the init script
-        # because nuke python does not have a __file__ attribute for that file.
-        local_python_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "python"))
-        os.environ["TANK_NUKE_ENGINE_MOD_PATH"] = local_python_path
 
-    def pre_app_init(self):
-        """
-        Called at startup, but after QT has been initialized.
-        """
-        if self.hiero_enabled or self.studio_enabled:
-            return
+        # If we're in Toolkit classic mode, we need to backup a few things in order to be able
+        # to restart the engine after a File->New|Open
+        if not self.in_plugin_mode:
+            os.environ["TANK_NUKE_ENGINE_INIT_PROJECT_ROOT"] = self.tank.project_path
 
-        # Note! not using the import as this confuses nuke's calback system
-        # (several of the key scene callbacks are in the main init file...)
-        import tk_nuke
-        
-        # Make sure callbacks tracking the context switching are active.
-        tk_nuke.tank_ensure_callbacks_registered()
+            # Add our startup path to the nuke init path
+            startup_path = os.path.abspath(os.path.join(self.disk_location, "classic_startup", "restart"))
+            tank.util.append_path_to_env_var("NUKE_PATH", startup_path)
+
+            # We also need to pass the path to the python folder down to the init script
+            # because nuke python does not have a __file__ attribute for that file.
+            local_python_path = os.path.abspath(os.path.join(self.disk_location, "python"))
+            os.environ["TANK_NUKE_ENGINE_MOD_PATH"] = local_python_path
 
     def post_app_init(self):
         """
@@ -289,28 +291,29 @@ class NukeEngine(tank.platform.Engine):
             self._menu_generator = tk_nuke.NukeStudioMenuGenerator(self, menu_name)
             self._menu_generator.create_menu()
 
-            hiero.core.events.registerInterest(
-                "kAfterNewProjectCreated",
-                self.set_project_root,
-            )
+            # No context switching in plugin mode.
+            if self.in_plugin_mode:
+                self._context_switcher = tk_nuke.PluginStudioContextSwitcher(self)
+            else:
+                hiero.core.events.registerInterest(
+                    "kAfterNewProjectCreated",
+                    self.set_project_root,
+                )
 
-            hiero.core.events.registerInterest(
-                "kAfterProjectLoad",
-                self._on_project_load_callback,
-            )
+                hiero.core.events.registerInterest(
+                    "kAfterProjectLoad",
+                    self._on_project_load_callback,
+                )
 
-            # Then we need to setup our context switcher.
-            import tk_nuke
-            self._context_switcher = tk_nuke.StudioContextSwitcher(self)
-
-            # On selection change we have to check what was selected and pre-load
-            # the context if that environment (ie: shot_step) hasn't already been
-            # processed. This ensure that all Nuke gizmos for the target environment
-            # will be available.
-            hiero.core.events.registerInterest(
-                "kSelectionChanged",
-                self._handle_studio_selection_change,
-            )
+                self._context_switcher = tk_nuke.ClassicStudioContextSwitcher(self)
+                # On selection change we have to check what was selected and pre-load
+                # the context if that environment (ie: shot_step) hasn't already been
+                # processed. This ensure that all Nuke gizmos for the target environment
+                # will be available.
+                hiero.core.events.registerInterest(
+                    "kSelectionChanged",
+                    self._handle_studio_selection_change,
+                )
 
             try:
                 hiero_ver_str = "%s.%s%s" % (
@@ -334,6 +337,7 @@ class NukeEngine(tank.platform.Engine):
             # (several of the key scene callbacks are in the main init file).
             import tk_nuke
             import hiero
+            from hiero.core import env as hiero_env
 
             # Create the menu!
             self._menu_generator = tk_nuke.HieroMenuGenerator(self, menu_name)
@@ -462,57 +466,38 @@ class NukeEngine(tank.platform.Engine):
     #####################################################################################
     # Logging
 
-    def log_debug(self, msg):
-        if self.get_setting("debug_logging", False):
-            msg = "Shotgun Debug: %s" % msg
-            # We will log it via the API, as well as print normally,
-            # which should make its way to the scripting console.
-            if self.hiero_enabled:
-                import hiero
+    def _emit_log_message(self, handler, record):
+        """
+        Emits a log to Nuke's Script Editor and Error Console.
+
+        :param handler: Log handler that this message was dispatched from
+        :type handler: :class:`~python.logging.LogHandler`
+        :param record: Std python logging record
+        :type record: :class:`~python.logging.LogRecord`
+        """
+        msg = handler.format(record)
+
+        # Sends the message to error console of the DCC
+        if self.hiero_enabled:
+            import hiero
+            if record.levelno >= logging.ERROR:
+                hiero.core.log.error(msg)
+            elif record.levelno >= logging.WARNING:
+                hiero.core.log.info(msg)
+            elif record.levelno >= logging.INFO:
+                hiero.core.log.info(msg)
+            else:
                 hiero.core.log.setLogLevel(hiero.core.log.kDebug)
                 hiero.core.log.debug(msg)
-            print msg
-
-    def log_info(self, msg):
-        msg = "Shotgun Info: %s" % msg
-        # We will log it via the API, as well as print normally,
-        # which should make its way to the scripting console.
-        if self.hiero_enabled:
-            # NOTE! By default, info logging is turned OFF in hiero
-            # meaning that no info messages (nor warning, since they use info to output too)
-            # will be output in the console.
-            # 
-            # In order to have these emitted, we would need to turn them on by doing a 
-            # hiero.core.log.setLogLevel(hiero.core.log.kInfo)
-            #
-            # However this has call been omitted on purpose because too much output 
-            # from hiero to stdout/stderr is causing problems with the browser plugin
-            # causing it to hang or crash. By keeping the info and warning logging off
-            # we are avoiding such hangs and working around this known issue.
-            import hiero
-            hiero.core.log.info(msg)
-        print msg
-
-    def log_warning(self, msg):
-        msg = "Shotgun Warning: %s" % msg
-        # We will log it via the API, as well as print normally,
-        # which should make its way to the scripting console.
-        if self.hiero_enabled:
-            import hiero
-            hiero.core.log.info(msg)
         else:
-            nuke.warning(msg)
-        print msg
+            if record.levelno >= logging.CRITICAL:
+                nuke.critical("Shotgun Critical: %s" % msg)
+            elif record.levelno >= logging.ERROR:
+                nuke.error("Shotgun Error: %s" % msg)
+            elif record.levelno >= logging.WARNING:
+                nuke.warning("Shotgun Warning: %s" % msg)
 
-    def log_error(self, msg):
-        msg = "Shotgun Error: %s" % msg
-        # We will log it via the API, as well as print normally,
-        # which should make its way to the scripting console.
-        if self.hiero_enabled:
-            import hiero
-            hiero.core.log.error(msg)
-        else:
-            nuke.error(msg)
+        # Sends the message to the script editor.
         print msg
 
     #####################################################################################

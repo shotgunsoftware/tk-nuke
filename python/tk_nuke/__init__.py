@@ -30,7 +30,7 @@ from .menu_generation import (
     NukeStudioMenuGenerator,
 )
 
-from .context import StudioContextSwitcher
+from .context import ClassicStudioContextSwitcher, PluginStudioContextSwitcher # noqa
 
 
 def __show_tank_disabled_message(details):
@@ -190,9 +190,15 @@ def tank_ensure_callbacks_registered():
     """
     Make sure that we have callbacks tracking context state changes.
     """
-    global g_tank_callbacks_registered
-    if not g_tank_callbacks_registered:
-        nuke.addOnScriptLoad(tank_startup_node_callback)
-        nuke.addOnScriptSave(__tank_on_save_callback)
-        g_tank_callbacks_registered = True
 
+    import sgtk
+    engine = sgtk.platform.current_engine()
+
+    # Register only if we're missing an engine (to allow going from disabled to something else)
+    # or if the engine specifically requests for it.
+    if not engine or engine.get_setting("automatic_context_switch"):
+        global g_tank_callbacks_registered
+        if not g_tank_callbacks_registered:
+            nuke.addOnScriptLoad(tank_startup_node_callback)
+            nuke.addOnScriptSave(__tank_on_save_callback)
+            g_tank_callbacks_registered = True

@@ -8,16 +8,30 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
-import os
-import sys
-import copy
-
 import nuke
 import tank
 
-from tank import TankError
 
-class StudioContextSwitcher(object):
+class PluginStudioContextSwitcher(object):
+    """
+    A Toolkit context-switching manager.
+
+    This class provides a context switcher for non template based pipeline configurations.
+    As such, there is no way to find the context of a file by extracting entities from the
+    path. It is therefore an empty shell.
+    """
+
+    def __init__(self, engine):
+        pass
+
+    def get_new_context(self, file_path):
+        return None
+
+    def destroy(self):
+        pass
+
+
+class ClassicStudioContextSwitcher(object):
     """
     A Toolkit context-switching manager.
 
@@ -33,7 +47,7 @@ class StudioContextSwitcher(object):
     """
     def __init__(self, engine):
         """
-        Initializes a StudioContextSwitcher object.
+        Initializes a PluginStudioContextSwitcher object.
 
         :param engine:  The running sgtk.engine.Engine to associate the
                         context switcher with.
@@ -211,7 +225,7 @@ class StudioContextSwitcher(object):
             # Get the new file name.
             file_name = nuke.root().name()
             try:
-                # This file could be in another project altogether, so 
+                # This file could be in another project altogether, so
                 # create a new Tank instance.
                 tk = tank.tank_from_path(file_name)
             except tank.TankError, e:
@@ -389,4 +403,3 @@ class StudioContextSwitcher(object):
 
             if self._check_if_registered(function, registrar):
                 remove(function)
-
