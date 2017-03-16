@@ -9,14 +9,13 @@
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 """
-This file is being imported by Nuke Studio automatically because it is in the NUKE_PATH.
-It launches the plugin's bootstrap process by reuning the one for Nuke.
+This file is being imported by Nuke Studio automatically because it is in the HIERO_PLUGIN_PATH.
+It launches the plugin's bootstrap process by reusing the one for Nuke.
 """
 
 import imp
 import uuid
 import os
-import inspect
 
 
 def startup():
