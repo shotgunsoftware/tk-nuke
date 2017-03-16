@@ -410,7 +410,9 @@ class NukeEngine(tank.platform.Engine):
                 # (for example if you do file->open or file->new)
                 tank.util.append_path_to_env_var("NUKE_PATH", app_gizmo_folder)
 
-        self._run_commands_at_startup()
+        # Nuke Studio 9 really doesn't like us starting things at startup, do don't.
+        if not (nuke.env.get("NukeVersionMajor") == 9 and nuke.env.get("studio")):
+            self._run_commands_at_startup()
 
         try:
             self.log_user_attribute_metric("Nuke version", nuke.env.get("NukeVersionString"))
@@ -466,8 +468,17 @@ class NukeEngine(tank.platform.Engine):
 
         # Run the commands once Nuke will have completed its UI update and be idle
         # in order to run it after the ones that restore the persisted Shotgun app panels.
-        for command in commands_to_run:
-            nukescripts.utils.executeDeferred(command)
+        # Set the _callback_from_non_pane_menu hint so that the show_panel method knows this
+        # was invoked not from the pane menu.
+
+        # FIXME: This pattern is horrible. We should find a way to prevent show_panel from thinking something
+        # is being added
+        setattr(tank, "_callback_from_non_pane_menu", True)
+        try:
+            for command in commands_to_run:
+                command()
+        finally:
+            delattr(tank, "_callback_from_non_pane_menu")
 
     def destroy_engine(self):
         """
@@ -599,7 +610,11 @@ class NukeEngine(tank.platform.Engine):
             *args, **kwargs
         )
 
+        self.logger.debug("Showing pane %s - %s from %s", panel_id, title, bundle.name)
+
         if hasattr(tank, "_callback_from_non_pane_menu"):
+            self.logger.debug("Looking for a pane.")
+
             # This global flag is set by the menu callback system
             # to indicate that the click comes from a non-pane context.
             #
@@ -635,10 +650,13 @@ class NukeEngine(tank.platform.Engine):
                              "Please add a Properties Bin to your Nuke UI layout and try again.")
                 return
 
+            self.logger.debug("Pane found: %s", existing_pane)
+
             # All good - we are running nuke 9 and/or
             # have existing panes to parent against.
             panel_widget.addToPane(existing_pane)
         else:
+            self.logger.debug("Adding to established pane.")
             # We are either calling this from a pane restore
             # callback or from the pane menu in Nuke. In both
             # these cases, the current pane is already established

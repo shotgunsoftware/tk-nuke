@@ -10,8 +10,9 @@
 
 import os
 import sys
-import nuke
 import time
+
+import nuke
 
 
 def bootstrap(plugin_root_path):
@@ -103,6 +104,10 @@ def __launch_sgtk(base_config, plugin_id, bundle_cache):
     sgtk_logger = sgtk.LogManager.get_logger("plugin")
     sgtk_logger.debug("Booting up toolkit plugin.")
 
+    sgtk_logger.debug("Executable: %s", sys.executable)
+    sgtk_logger.debug("Studio?: %s", nuke.env.get("studio"))
+    sgtk_logger.debug("Hiero?: %s", nuke.env.get("hiero"))
+
     try:
         # When the user is not yet authenticated, pop up the Shotgun login
         # dialog to get the user's credentials, otherwise, get the cached user's
@@ -135,6 +140,11 @@ def __launch_sgtk(base_config, plugin_id, bundle_cache):
 
 
 class DeferredProgressTask(object):
+    """
+    This is a wrapper around Nuke's ``nuke.ProgressTask``. It basically allows to postpone the display
+    of the widget to a later time, so the progress reporting appears only for tasks that are taking
+    a very long time.
+    """
 
     WAITING, RUNNING, COMPLETED = range(3)
 
@@ -148,16 +158,28 @@ class DeferredProgressTask(object):
         self._progress_task = None
 
     def start(self):
+        """
+        Starts the progress reporting. MAXIMUM_HIDDEN_TIME from now, the UI will
+        be displayed.
+        """
         self._start_time = time.time()
         self._state = self.RUNNING
 
     def done(self):
+        """
+        Tells the progress reporter that it is done. This will dismiss the widget from the UI.
+        """
         self._state = self.COMPLETED
         self._progress_task = None
 
     def report_progress(self, percentage, message):
-        # Get a reference to the object. Holding it will ensure the dialog will stay visible until the
-        # end of the current scope.
+        """
+        Reports progress in the UI, but only if MAXIMUM_HIDDEN_TIME has elapsed.
+
+        :param float percentage: Number to display in the UI for progress.
+        :param str message: Message to display.
+        """
+        # Check the progress task reported widget, but only if it is required yet.
         progress_task = self._get_progress_task()
         if progress_task is None:
             return
@@ -169,6 +191,9 @@ class DeferredProgressTask(object):
             raise Exception("User cancelled the Toolkit startup process...")
 
     def _get_progress_task(self):
+        """
+        Returns a progress task object if enough time has elapsed.
+        """
 
         # If we've started reporting progress already, just return the progress reporter.
         if self._progress_task:
@@ -178,15 +203,16 @@ class DeferredProgressTask(object):
         if self._state == self.WAITING:
             return None
 
-        # If we're currently running.
+        # If we're currently running. (someone invoked start())
         if self._state == self.RUNNING:
-            # If more than 3 seconds have passed since we started, create a progress reported
+            # If more than MAXIMUM_HIDDEN_TIME seconds have passed since we started, create the widget
             # and return it.
             elapsed = time.time() - self._start_time
             if elapsed > self.MAXIMUM_HIDDEN_TIME:
-                self._progress_task = nuke.ProgressTask("Starting Toolkit...")
+                self._progress_task = nuke.ProgressTask("Initializing Toolkit...")
                 return self._progress_task
             else:
+                # Not enough time has elapsed, widget will not be available.
                 return None
 
         # State is completed, we're done, nothing to report.
@@ -194,81 +220,96 @@ class DeferredProgressTask(object):
 
 
 class NukeBootstraper(object):
+    """
+    Glue between the ToolkitManager and the DCC. Makes sure progress is reported to the GUI.
+    """
 
-    def __init__(self, toolkit_mgr, entity, sgtk_logger):
+    def __init__(self, toolkit_mgr, entity, logger):
+        """
+        :param toolkit_mgr: ToolkitManager instance used for bootstrapping.
+        :param entity: Entity for which we want to bootstrap.
+        :param logger: Logger to use while progress reporting.
+        """
         self._progress_task = DeferredProgressTask()
-        self._sgtk_logger = sgtk_logger
+        self._logger = logger
         self._entity = entity
         self._toolkit_mgr = toolkit_mgr
-        self._is_bootstrapped = False
+        self._is_bootstrapping = False
 
     def bootstrap(self):
-        # Can't launch an asynchrnous startup while nuke is still initializing, so we'll wait for the first
-        # node create callback.
-        nuke.addOnCreate(self._on_create)
+        """
+        Starts the bootstrap process.
+        """
+        # Nuke doesn't like us starting a thread while it is still initializing. Nuke 7 is fine, so
+        # is Nuke Studio 10. However, Nuke 10 wants us to wait. nuke.executeInMainThread or
+        # nukescripts.utils.executeDeferred don't seem to help, so we wait for the first node to be
+        # created. As for Nuke Studio 9? It doesn't like the asynchronous bootstrap, so we'll have
+        # to start synchronously.
+        if nuke.env.get("studio") and nuke.env.get("NukeVersionMajor") < 10:
+            self._toolkit_mgr.bootstrap_engine(
+                os.environ.get("SHOTGUN_ENGINE", "tk-nuke"),
+                self._entity
+            )
+        else:
+            nuke.addOnCreate(self._bootstrap)
 
-    def _on_create(self):
-        if self._is_bootstrapped:
+    def _bootstrap(self):
+        """
+        Invoked when Nuke is done with building it's UI. This will launch the bootstrap process
+        and start reporting progress.
+        """
+        # Paranoia. This is in case something goes wrong with the removeOnCreate call. I don't know what
+        # could go wrong, but I don't want the risk or rebootstrapping every single time
+        if self._is_bootstrapping:
+            self._logger.warning("Unexpected call to NukeBoostrapper._bootstrap.")
             return
 
-        self._is_bootstrapped = True
+        # Unregister from the node event, we're bootstrapping now.
+        self._is_bootstrapping = True
+        nuke.removeOnCreate(self._bootstrap)
 
         self._toolkit_mgr.progress_callback = self._report
         self._toolkit_mgr.bootstrap_engine_async(
-            self._get_engine_name(), self._entity, self._on_success, self._on_failure
+            os.environ.get("SHOTGUN_ENGINE", "tk-nuke"),
+            self._entity, lambda engine: self._on_finish(), self._on_failure
         )
         self._progress_task.start()
 
         # Contrary to other engines, do not clear the SHOTGUN_ENGINE environment variable.
         # Nuke spawns a new process when doing a File->Open or File->New, which means our
-        # plugin needs to be able to bootstrap a second time.
-
-    def _get_engine_name(self):
-        """
-        Retrieves the engine name to use.
-
-        If the plugin is being launched from the SoftwareLauncher, the method will return
-        the value assigned to the ``SHOTGUN_ENGINE`` environment variable. Otherwise
-        the code will detect whether Nuke or Nuke Studio is running and will return
-        ``tk-nuke`` and ``tk-nukestudio`` respectively.
-        """
-        engine_name = os.environ.get("SHOTGUN_ENGINE")
-        if not engine_name:
-            # FIXME: We are assuming that the configuration inside the standalone plugin
-        # has an engine instance with this name.
-        engine_name = "tk-nuke"
-            else:
-                engine_name = "tk-nuke"
-
-        return engine_name
+        # plug-in needs to be able to bootstrap a second time.
 
     def _report(self, progress_value, message):
+        """
+        Called by the ToolkitManager to report progress. It will go to the logs and the ProgressTask
+        widget.
 
-        # The event reporting is not thread safe. By taking a copy of the reference to progress task,
-        # we are ensuring it is alive for the duration of this method.
-        # Prevent spurious updates from Toolkit after we've reported that
-        # progress was completed.
+        :param float progress_value: Between 0 and 1. Indicates progress.
+        :param str message: Current message to display.
+        """
 
         # Report in the Toolkit Log.
         percentage = int(progress_value * 100)
-        self._sgtk_logger.debug("[%s] - %s", percentage, message)
+        self._logger.debug("[%s] - %s", percentage, message)
         self._progress_task.report_progress(percentage, message)
         print message
 
     def _on_finish(self):
-        # At this point we are guaranteed that Toolkit is bootstrapped, so we can dismiss progress
+        """
+        Called after bootstrap (success or failure) to cleanup resources.
+        """
+        # At this point we are guaranteed that bootstrapped is finished, so we can dismiss progress
         # reporting.
-        nuke.removeOnCreate(self._on_create)
         self._progress_task.done()
 
-    def _on_success(self, engine):
-        try:
-            pass
-        finally:
-            self._on_finish()
-
     def _on_failure(self, phase, exception):
+        """
+        Called when something went wrong during bootstrap.
+
+        :param phase: Phase which went wrong.
+        :param exception: Exception that was raised.
+        """
         try:
-            pass
+            nuke.error("Initialization failed: " % str(exception))
         finally:
             self._on_finish()
