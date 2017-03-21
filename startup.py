@@ -222,10 +222,8 @@ class NukeLauncher(SoftwareLauncher):
     def minimum_supported_version(self):
         """
         Minimum supported version by this launcher.
-
-        As of February 2017, the earliest you can get a license from The Foundry is 7.0.
         """
-        return "7.0v0"
+        return "7.0v10"
 
     def prepare_launch(self, exec_path, args, file_to_open=None):
         """

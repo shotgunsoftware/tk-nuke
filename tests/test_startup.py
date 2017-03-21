@@ -67,6 +67,12 @@ class TestStartup(TankTestBase):
                 "NukeAssist7.0v10.app",
                 "NukeX7.0v10.app"
             ],
+            "Nuke7.0v9": [
+                "Nuke7.0v9 PLE.app",
+                "Nuke7.0v9.app",
+                "NukeAssist7.0v9.app",
+                "NukeX7.0v9.app"
+            ],
             "Nuke6.3v6": [
                 "Nuke6.3v6 PLE",
                 "Nuke6.3v6.app",
@@ -208,6 +214,15 @@ class TestStartup(TankTestBase):
                 "Nuke 7.0v10", "NukeX 7.0v10", "NukeAssist 7.0v10"
             ],
             "7.0v10"
+        )
+
+    def test_nuke7_9(self):
+        """
+        Ensures we are returning the right variants for Nuke 7.
+        """
+        self._test_nuke(
+            [],
+            "7.0v9"
         )
 
     def test_nuke6(self):
