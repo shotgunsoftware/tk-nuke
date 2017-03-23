@@ -31,7 +31,7 @@ def plugin_startup():
 
     # the plugin python path will be just below the root level. add it to
     # sys.path
-    plugin_python_path = os.path.join(plugin_root_path, "python")
+    plugin_python_path = os.path.join(plugin_root_path, "Python")
     sys.path.insert(0, plugin_python_path)
 
     # now that the path is there, we can import the plugin bootstrap logic
