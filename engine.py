@@ -321,12 +321,15 @@ class NukeEngine(tank.platform.Engine):
             )
             self.log_user_attribute_metric("Nuke Studio version", hiero_ver_str)
 
-    def log_user_attribute_metric(self, event, value):
+    def log_user_attribute_metric(self, name, value):
         """
         Logs usage metrics if core supports it.
+
+        :param str name: Name of the metric to log.
+        :param str value: Value of the metric to log.
         """
         if hasattr(tank.platform.Engine, "log_user_attribute_metric"):
-            super(NukeEngine, self).log_user_attribute_metric(event, value)
+            super(NukeEngine, self).log_user_attribute_metric(name, value)
         else:
             self.log_debug("The current version of core doesn't support usage metrics.")
 
