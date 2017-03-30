@@ -149,7 +149,7 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
         # and now clear the init parameters
         self.set_init_parameters(None, None, None, None, None, None)
         
-        bundle.log_debug("Creating panel '%s' to host %s" % (panel_id, PanelClass))
+        bundle.logger.debug("Creating panel '%s' to host %s" % (panel_id, PanelClass))
         
         # set up this object and create a layout
         self.setObjectName("%s.wrapper" % panel_id)
@@ -177,7 +177,7 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
                 # found an existing panel widget!
                 self.toolkit_widget = widget
                 
-                bundle.log_debug("Found existing panel widget: %s" % self.toolkit_widget)
+                bundle.logger.debug("Found existing panel widget: %s" % self.toolkit_widget)
                 
                 # now find the tab widget by going up the hierarchy
                 tab_widget = self._find_panel_tab(self.toolkit_widget)
@@ -188,7 +188,7 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
                         # and remove the tab widget completely!
                         # our widget will now be hidden
                         stacked_widget.removeWidget(tab_widget)
-                        bundle.log_debug("Removed previous panel tab %s" % tab_widget)
+                        bundle.logger.debug("Removed previous panel tab %s" % tab_widget)
                 break
 
         # now check if a widget was found. If not, 
@@ -202,7 +202,7 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
             # give our main widget a name so that we can identify it later
             self.toolkit_widget.setObjectName(widget_name)
             
-            bundle.log_debug("Created new toolkit panel widget %s" % self.toolkit_widget)
+            bundle.logger.debug("Created new toolkit panel widget %s" % self.toolkit_widget)
             
             # now let the core apply any external stylesheets
             bundle.engine._apply_external_styleshet(bundle, self.toolkit_widget)
@@ -211,11 +211,11 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
             # there is already a dialog. Re-parent it to this
             # object and move it across into this layout
             self.toolkit_widget.setParent(self)
-            bundle.log_debug("Reparented existing toolkit widget.")
+            bundle.logger.debug("Reparented existing toolkit widget.")
         
         # Add the widget to our current layout
         self.layout.addWidget(self.toolkit_widget)
-        bundle.log_debug("Added toolkit widget to panel hierarchy")
+        bundle.logger.debug("Added toolkit widget to panel hierarchy")
         
         # now, the close widget logic does not propagate correctly
         # down to the child widgets. When someone closes a tab or pane,
@@ -234,7 +234,7 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
                 filter = CloseEventFilter(widget)
                 filter.parent_closed.connect(self._on_parent_closed)
                 widget.installEventFilter(filter)
-                bundle.log_debug("Installed close-event filter watcher on tab %s" % widget)
+                bundle.logger.debug("Installed close-event filter watcher on tab %s" % widget)
                 break
 
         # We should have a parent panel object. If we do, we can alert it to the

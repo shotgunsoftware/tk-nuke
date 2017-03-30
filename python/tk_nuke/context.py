@@ -332,7 +332,7 @@ class ClassicStudioContextSwitcher(object):
                 )
         except Exception, e:
             self.engine.menu_generator.create_sgtk_disabled_menu(e)
-            self.engine.log_debug(e)
+            self.engine.logger.debug(e)
 
         return None
 
