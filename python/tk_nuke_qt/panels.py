@@ -149,7 +149,7 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
         # and now clear the init parameters
         self.set_init_parameters(None, None, None, None, None, None)
         
-        bundle.logger.debug("Creating panel '%s' to host %s" % (panel_id, PanelClass))
+        bundle.logger.debug("Creating panel '%s' to host %s", panel_id, PanelClass)
         
         # set up this object and create a layout
         self.setObjectName("%s.wrapper" % panel_id)
@@ -177,7 +177,7 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
                 # found an existing panel widget!
                 self.toolkit_widget = widget
                 
-                bundle.logger.debug("Found existing panel widget: %s" % self.toolkit_widget)
+                bundle.logger.debug("Found existing panel widget: %s", self.toolkit_widget)
                 
                 # now find the tab widget by going up the hierarchy
                 tab_widget = self._find_panel_tab(self.toolkit_widget)
@@ -188,7 +188,7 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
                         # and remove the tab widget completely!
                         # our widget will now be hidden
                         stacked_widget.removeWidget(tab_widget)
-                        bundle.logger.debug("Removed previous panel tab %s" % tab_widget)
+                        bundle.logger.debug("Removed previous panel tab %s", tab_widget)
                 break
 
         # now check if a widget was found. If not, 
@@ -202,7 +202,7 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
             # give our main widget a name so that we can identify it later
             self.toolkit_widget.setObjectName(widget_name)
             
-            bundle.logger.debug("Created new toolkit panel widget %s" % self.toolkit_widget)
+            bundle.logger.debug("Created new toolkit panel widget %s", self.toolkit_widget)
             
             # now let the core apply any external stylesheets
             bundle.engine._apply_external_styleshet(bundle, self.toolkit_widget)
@@ -234,7 +234,7 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
                 filter = CloseEventFilter(widget)
                 filter.parent_closed.connect(self._on_parent_closed)
                 widget.installEventFilter(filter)
-                bundle.logger.debug("Installed close-event filter watcher on tab %s" % widget)
+                bundle.logger.debug("Installed close-event filter watcher on tab %s", widget)
                 break
 
         # We should have a parent panel object. If we do, we can alert it to the

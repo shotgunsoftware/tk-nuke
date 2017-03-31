@@ -104,10 +104,9 @@ class BaseMenuGenerator(object):
         :param msg:         A message explaining why Toolkit is disabled.
         """
         self.engine.logger.debug(
-            'Not implemented: %s.%s' % (
-                self.__class__.__name__,
-                'create_disabled_menu',
-            ),
+            'Not implemented: %s.%s',
+            self.__class__.__name__,
+            'create_disabled_menu'
         )
 
     def _disable_menu(self, cmd_name, msg):
@@ -148,7 +147,7 @@ class BaseMenuGenerator(object):
 
             exit_code = os.system(cmd)
             if exit_code != 0:
-                self.engine.logger.error("Failed to launch '%s'!" % cmd)
+                self.engine.logger.error("Failed to launch '%s'!", cmd)
 
 # -----------------------------------------------------------------------------
 
@@ -836,11 +835,11 @@ class HieroAppCommand(BaseAppCommand):
             self.engine.logger.debug("")
             self.engine.logger.debug("--------------------------------------------")
             self.engine.logger.debug("A menu item was clicked!")
-            self.engine.logger.debug("Event Type: %s / %s" % (self.event_type, self.event_subtype))
+            self.engine.logger.debug("Event Type: %s / %s", self.event_type, self.event_subtype)
             self.engine.logger.debug("Selected Objects:")
 
             for x in self.engine._last_clicked_selection:
-                self.engine.logger.debug("- %r" % x)
+                self.engine.logger.debug("- %r", x)
             self.engine.logger.debug("--------------------------------------------")
             
             # Fire the callback.
