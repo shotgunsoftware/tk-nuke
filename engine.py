@@ -146,7 +146,7 @@ class NukeEngine(tank.platform.Engine):
         """
         Called at Engine startup.
         """
-        self.log_debug("%s: Initializing..." % self)
+        self.logger.debug("%s: Initializing...", self)
 
         # We need to check to make sure that we are using one of the
         # supported versions of Nuke. Right now that is anything between
@@ -161,10 +161,10 @@ class NukeEngine(tank.platform.Engine):
 
         msg = "Nuke 7.0v10 is the minimum version supported!"
         if nuke_version[0] < 7:
-            self.log_error(msg)
+            self.logger.error(msg)
             return
         elif nuke_version[0] == 7 and nuke_version[1] == 0 and nuke_version[2] < 10:
-            self.log_error(msg)
+            self.logger.error(msg)
             return
 
         # Versions > 10.5 have not yet been tested so show a message to that effect.
@@ -187,14 +187,14 @@ class NukeEngine(tank.platform.Engine):
                 nuke.message("Warning - Shotgun Pipeline Toolkit!\n\n%s" % msg)
 
             # Log the warning.
-            self.log_warning(msg)
+            self.logger.warning(msg)
 
         # Make sure we are not running Nuke PLE or Non-Commercial!
         if nuke.env.get("ple"):
-            self.log_error("The Nuke Engine does not work with Nuke PLE!")
+            self.logger.error("The Nuke Engine does not work with Nuke PLE!")
             return
         elif nuke.env.get("nc"):
-            self.log_error("The Nuke Engine does not work with Nuke Non-Commercial!")
+            self.logger.error("The Nuke Engine does not work with Nuke Non-Commercial!")
             return
 
         # Now check that we are at least in a project context. Note that plugin mode
@@ -403,7 +403,7 @@ class NukeEngine(tank.platform.Engine):
             if os.path.exists(app_gizmo_folder):
                 # Now translate the path so that nuke is happy on Windows.
                 app_gizmo_folder = app_gizmo_folder.replace(os.path.sep, "/")
-                self.log_debug("Gizmos found - Adding %s to nuke.pluginAddPath() and NUKE_PATH" % app_gizmo_folder)
+                self.logger.debug("Gizmos found - Adding %s to nuke.pluginAddPath() and NUKE_PATH", app_gizmo_folder)
                 nuke.pluginAddPath(app_gizmo_folder)
                 # And also add it to the plugin path - this is so that any
                 # new processes spawned from this one will have access too.
@@ -442,29 +442,29 @@ class NukeEngine(tank.platform.Engine):
             command_dict = app_instance_commands.get(app_instance_name)
 
             if command_dict is None:
-                self.log_warning(
-                    "%s configuration setting 'run_at_startup' requests app '%s' that is not installed." %
-                    (self.name, app_instance_name))
+                self.logger.warning(
+                    "%s configuration setting 'run_at_startup' requests app '%s' that is not installed.",
+                    self.name, app_instance_name)
             else:
                 if not setting_command_name:
                     # Run all commands of the given app instance.
                     for (command_name, command_function) in command_dict.iteritems():
-                        self.log_debug("%s startup running app '%s' command '%s'." %
-                                       (self.name, app_instance_name, command_name))
+                        self.logger.debug("%s startup running app '%s' command '%s'.",
+                                       self.name, app_instance_name, command_name)
                         commands_to_run.append(command_function)
                 else:
                     # Run the command whose name is listed in the 'run_at_startup' setting.
                     command_function = command_dict.get(setting_command_name)
                     if command_function:
-                        self.log_debug("%s startup running app '%s' command '%s'." %
-                                       (self.name, app_instance_name, setting_command_name))
+                        self.logger.debug("%s startup running app '%s' command '%s'.",
+                                       self.name, app_instance_name, setting_command_name)
                         commands_to_run.append(command_function)
                     else:
                         known_commands = ', '.join("'%s'" % name for name in command_dict)
-                        self.log_warning(
+                        self.logger.warning(
                             "%s configuration setting 'run_at_startup' requests app '%s' unknown command '%s'. "
-                            "Known commands: %s" %
-                            (self.name, app_instance_name, setting_command_name, known_commands))
+                            "Known commands: %s",
+                            self.name, app_instance_name, setting_command_name, known_commands)
 
         # Run the commands once Nuke will have completed its UI update and be idle
         # in order to run it after the ones that restore the persisted Shotgun app panels.
@@ -483,7 +483,7 @@ class NukeEngine(tank.platform.Engine):
         """
         Runs when the engine is unloaded, typically at context switch.
         """
-        self.log_debug("%s: Destroying..." % self)
+        self.logger.debug("%s: Destroying...", self)
 
         if self._context_switcher:
             self._context_switcher.destroy()
@@ -516,7 +516,7 @@ class NukeEngine(tank.platform.Engine):
         :param old_context: The sgtk.context.Context being switched away from.
         :param new_context: The sgtk.context.Context being switched to.
         """
-        self.log_debug("tk-nuke context changed to %s" % str(new_context))
+        self.logger.debug("tk-nuke context changed to %s", str(new_context))
 
         # We also need to run the post init for Nuke, which will handle
         # getting any gizmos setup.
@@ -586,7 +586,7 @@ class NukeEngine(tank.platform.Engine):
         Additional parameters specified will be passed through to the widget_class constructor.
         """
         if self.hiero_enabled:
-            self.log_info(
+            self.logger.info(
                 "Panels are not supported in Hiero. Launching as a dialog..."
             )
             return self.show_dialog(
@@ -634,7 +634,7 @@ class NukeEngine(tank.platform.Engine):
 
             existing_pane = None
             for tab_name in built_in_tabs:
-                self.log_debug("Parenting panel - looking for %s tab..." % tab_name)
+                self.logger.debug("Parenting panel - looking for %s tab...", tab_name)
                 existing_pane = nuke.getPaneFor(tab_name)
                 if existing_pane:
                     break
@@ -715,11 +715,10 @@ class NukeEngine(tank.platform.Engine):
         import hiero
         for p in hiero.core.projects():
             if not p.projectRoot():
-                self.log_debug(
-                    "Setting projectRoot on %s to: %s" % (
-                        p.name(),
-                        self.tank.project_path
-                    )
+                self.logger.debug(
+                    "Setting projectRoot on %s to: %s",
+                    p.name(),
+                    self.tank.project_path
                 )
                 p.setProjectRoot(self.tank.project_path)
 
@@ -787,7 +786,7 @@ class NukeEngine(tank.platform.Engine):
         except Exception, e:
             # If anything went wrong, we can just let the finally block
             # run, which will put things back to the way they were.
-            self.log_debug("Unable to pre-load environment: %s" % str(e))
+            self.logger.debug("Unable to pre-load environment: %s", str(e))
         finally:
             # If the context was changed during the course of the handling
             # of the selection event, we need to go back to what we had.
@@ -831,7 +830,7 @@ class NukeEngine(tank.platform.Engine):
             if new_context != self.context:
                 tank.platform.change_context(new_context)
         except Exception:
-            self.log_debug("Unable to determine context for file: %s" % script_path)
+            self.logger.debug("Unable to determine context for file: %s", script_path)
 
     def __setup_favorite_dirs(self):
         """
@@ -886,7 +885,7 @@ class NukeEngine(tank.platform.Engine):
             except Exception, e:
                 msg = "Error processing template '%s' to add to favorite " \
                       "directories: %s" % (favorite['template_directory'], e)
-                self.log_exception(msg)
+                self.logger.exception(msg)
                 continue
 
             # Add new directory
