@@ -315,16 +315,24 @@ class NukeEngine(tank.platform.Engine):
                     self._handle_studio_selection_change,
                 )
 
-            try:
-                hiero_ver_str = "%s.%s%s" % (
-                    hiero_env["VersionMajor"],
-                    hiero_env["VersionMinor"],
-                    hiero_env["VersionRelease"],
-                )
-                self.log_user_attribute_metric("Nuke Studio version", hiero_ver_str)
-            except:
-                # ignore all errors. ex: using a core that doesn't support metrics
-                pass
+            hiero_ver_str = "%s.%s%s" % (
+                hiero_env["VersionMajor"],
+                hiero_env["VersionMinor"],
+                hiero_env["VersionRelease"],
+            )
+            self.log_user_attribute_metric("Nuke Studio version", hiero_ver_str)
+
+    def log_user_attribute_metric(self, name, value):
+        """
+        Logs usage metrics if core supports it.
+
+        :param str name: Name of the metric to log.
+        :param str value: Value of the metric to log.
+        """
+        if hasattr(tank.platform.Engine, "log_user_attribute_metric"):
+            super(NukeEngine, self).log_user_attribute_metric(name, value)
+        else:
+            self.log_debug("The current version of core doesn't support usage metrics.")
 
     def post_app_init_hiero(self, menu_name="Shotgun"):
         """
