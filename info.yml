@@ -13,6 +13,22 @@
 # expected fields in the configuration file for this engine
 configuration:
 
+    automatic_context_switch:
+        type: bool
+        description: "Controls whether Toolkit should attempt to automatically adjust its
+                     context every time the currently loaded file changes. Defaults to True."
+        default_value: True
+
+    launch_builtin_plugins:
+        type: list
+        description: Comma-separated list of tk-maya plugins to load when launching Maya. Use
+                     of this feature disables the classic mechanism for bootstrapping Toolkit
+                     when Maya is launched.
+        allows_empty: True
+        default_value: []
+        values:
+            type: str
+
     bin_context_menu:
         type: list
         default_value: []
@@ -145,5 +161,5 @@ description: "Shotgun Integration in Nuke"
 
 # Required minimum versions for this item to run
 requires_shotgun_version:
-requires_core_version: "v0.17.0"
+requires_core_version: "v0.18.45"
 

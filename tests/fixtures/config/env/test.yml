@@ -1,0 +1,18 @@
+engines:
+    tk-nuke:
+        launch_builtin_plugins:
+        - basic
+        - does_not_exist
+        location:
+            type: dev
+            path: $TK_NUKE_REPO_ROOT
+        debug_logging: true
+        apps:
+    tk-nuke-classic:
+        launch_builtin_plugins: []
+        location:
+            type: dev
+            path: $TK_NUKE_REPO_ROOT
+        debug_logging: true
+        apps:
+frameworks:

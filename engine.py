@@ -1,22 +1,19 @@
 # Copyright (c) 2016 Shotgun Software Inc.
-# 
+#
 # CONFIDENTIAL AND PROPRIETARY
-# 
-# This work is provided "AS IS" and subject to the Shotgun Pipeline Toolkit 
+#
+# This work is provided "AS IS" and subject to the Shotgun Pipeline Toolkit
 # Source Code License included in this distribution package. See LICENSE.
-# By accessing, using, copying or modifying this work you indicate your 
-# agreement to the Shotgun Pipeline Toolkit Source Code License. All rights 
+# By accessing, using, copying or modifying this work you indicate your
+# agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 import tank
-import platform
-import time
 import nuke
 import os
-import re
-import traceback
-import unicodedata
 import nukescripts
+import logging
+
 
 class NukeEngine(tank.platform.Engine):
     """
@@ -135,14 +132,21 @@ class NukeEngine(tank.platform.Engine):
     def menu_generator(self):
         return self._menu_generator
 
+    @property
+    def in_plugin_mode(self):
+        """
+        Indicates if we are running one of the builtin plugins.
+        """
+        return True if self.get_setting("launch_builtin_plugins") else False
+
     #####################################################################################
     # Engine Initialization and Destruction
-    
+
     def init_engine(self):
         """
         Called at Engine startup.
         """
-        self.log_debug("%s: Initializing..." % self)
+        self.logger.debug("%s: Initializing...", self)
 
         # We need to check to make sure that we are using one of the
         # supported versions of Nuke. Right now that is anything between
@@ -157,10 +161,10 @@ class NukeEngine(tank.platform.Engine):
 
         msg = "Nuke 7.0v10 is the minimum version supported!"
         if nuke_version[0] < 7:
-            self.log_error(msg)
+            self.logger.error(msg)
             return
         elif nuke_version[0] == 7 and nuke_version[1] == 0 and nuke_version[2] < 10:
-            self.log_error(msg)
+            self.logger.error(msg)
             return
 
         # Versions > 10.5 have not yet been tested so show a message to that effect.
@@ -168,30 +172,36 @@ class NukeEngine(tank.platform.Engine):
             # This is an untested version of Nuke.
             msg = ("The Shotgun Pipeline Toolkit has not yet been fully tested with Nuke %d.%dv%d. "
                    "You can continue to use the Toolkit but you may experience bugs or "
-                   "instability.  Please report any issues you see to support@shotgunsoftware.com" 
+                   "instability.  Please report any issues you see to support@shotgunsoftware.com"
                    % (nuke_version[0], nuke_version[1], nuke_version[2]))
-            
+
             # Show nuke message if in UI mode, this is the first time the engine has been started
             # and the warning dialog isn't overriden by the config. Note that nuke.message isn't
             # available in Hiero, so we have to skip this there.
-            if (self.has_ui 
-                and not "TANK_NUKE_ENGINE_INIT_NAME" in os.environ
-                and nuke_version[0] >= self.get_setting("compatibility_dialog_min_version", 11)
-                and not self.hiero_enabled):
+            if (
+                self.has_ui and
+                "TANK_NUKE_ENGINE_INIT_NAME" not in os.environ and
+                nuke_version[0] >= self.get_setting("compatibility_dialog_min_version", 11) and
+                not self.hiero_enabled
+            ):
                 nuke.message("Warning - Shotgun Pipeline Toolkit!\n\n%s" % msg)
-                           
-            # Log the warning.
-            self.log_warning(msg)
 
-        # Make sure we are not running Nuke PLE!
+            # Log the warning.
+            self.logger.warning(msg)
+
+        # Make sure we are not running Nuke PLE or Non-Commercial!
         if nuke.env.get("ple"):
-            self.log_error("The Nuke Engine does not work with the Nuke PLE!")
+            self.logger.error("The Nuke Engine does not work with Nuke PLE!")
+            return
+        elif nuke.env.get("nc"):
+            self.logger.error("The Nuke Engine does not work with Nuke Non-Commercial!")
             return
 
-        # Now check that there is a location on disk which corresponds to the context.
-        if self.context.project is None:
+        # Now check that we are at least in a project context. Note that plugin mode
+        # does not require this check since it can operate at the site level.
+        if not self.in_plugin_mode and self.context.project is None:
             # Must have at least a project in the context to even start!
-            raise tank.TankError("The nuke engine needs at least a project"
+            raise tank.TankError("The nuke engine needs at least a project "
                                  "in the context in order to start! Your "
                                  "context: %s" % self.context)
 
@@ -225,30 +235,20 @@ class NukeEngine(tank.platform.Engine):
         # Store data needed for bootstrapping Tank in env vars. Used in startup/menu.py.
         os.environ["TANK_NUKE_ENGINE_INIT_NAME"] = self.instance_name
         os.environ["TANK_NUKE_ENGINE_INIT_CONTEXT"] = tank.context.serialize(self.context)
-        os.environ["TANK_NUKE_ENGINE_INIT_PROJECT_ROOT"] = self.tank.project_path
-        
-        # Add our startup path to the nuke init path
-        startup_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "startup"))
-        tank.util.append_path_to_env_var("NUKE_PATH", startup_path)        
-    
-        # We also need to pass the path to the python folder down to the init script
-        # because nuke python does not have a __file__ attribute for that file.
-        local_python_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "python"))
-        os.environ["TANK_NUKE_ENGINE_MOD_PATH"] = local_python_path
 
-    def pre_app_init(self):
-        """
-        Called at startup, but after QT has been initialized.
-        """
-        if self.hiero_enabled or self.studio_enabled:
-            return
+        # If we're in Toolkit classic mode, we need to backup a few things in order to be able
+        # to restart the engine after a File->New|Open
+        if not self.in_plugin_mode:
+            os.environ["TANK_NUKE_ENGINE_INIT_PROJECT_ROOT"] = self.tank.project_path
 
-        # Note! not using the import as this confuses nuke's calback system
-        # (several of the key scene callbacks are in the main init file...)
-        import tk_nuke
-        
-        # Make sure callbacks tracking the context switching are active.
-        tk_nuke.tank_ensure_callbacks_registered()
+            # Add our startup path to the nuke init path
+            startup_path = os.path.abspath(os.path.join(self.disk_location, "classic_startup", "restart"))
+            tank.util.append_path_to_env_var("NUKE_PATH", startup_path)
+
+            # We also need to pass the path to the python folder down to the init script
+            # because nuke python does not have a __file__ attribute for that file.
+            local_python_path = os.path.abspath(os.path.join(self.disk_location, "python"))
+            os.environ["TANK_NUKE_ENGINE_MOD_PATH"] = local_python_path
 
     def post_app_init(self):
         """
@@ -291,28 +291,29 @@ class NukeEngine(tank.platform.Engine):
             self._menu_generator = tk_nuke.NukeStudioMenuGenerator(self, menu_name)
             self._menu_generator.create_menu()
 
-            hiero.core.events.registerInterest(
-                "kAfterNewProjectCreated",
-                self.set_project_root,
-            )
+            # No context switching in plugin mode.
+            if self.in_plugin_mode:
+                self._context_switcher = tk_nuke.PluginStudioContextSwitcher(self)
+            else:
+                hiero.core.events.registerInterest(
+                    "kAfterNewProjectCreated",
+                    self.set_project_root,
+                )
 
-            hiero.core.events.registerInterest(
-                "kAfterProjectLoad",
-                self._on_project_load_callback,
-            )
+                hiero.core.events.registerInterest(
+                    "kAfterProjectLoad",
+                    self._on_project_load_callback,
+                )
 
-            # Then we need to setup our context switcher.
-            import tk_nuke
-            self._context_switcher = tk_nuke.StudioContextSwitcher(self)
-
-            # On selection change we have to check what was selected and pre-load
-            # the context if that environment (ie: shot_step) hasn't already been
-            # processed. This ensure that all Nuke gizmos for the target environment
-            # will be available.
-            hiero.core.events.registerInterest(
-                "kSelectionChanged",
-                self._handle_studio_selection_change,
-            )
+                self._context_switcher = tk_nuke.ClassicStudioContextSwitcher(self)
+                # On selection change we have to check what was selected and pre-load
+                # the context if that environment (ie: shot_step) hasn't already been
+                # processed. This ensure that all Nuke gizmos for the target environment
+                # will be available.
+                hiero.core.events.registerInterest(
+                    "kSelectionChanged",
+                    self._handle_studio_selection_change,
+                )
 
             hiero_ver_str = "%s.%s%s" % (
                 hiero_env["VersionMajor"],
@@ -389,10 +390,10 @@ class NukeEngine(tank.platform.Engine):
 
             # Initialize favourite dirs in the file open/file save dialogs
             self.__setup_favorite_dirs()
-            
+
             # Register all panels with nuke's callback system
             # this will be used at nuke startup in order
-            # for nuke to be able to restore panels 
+            # for nuke to be able to restore panels
             # automatically. For all panels that exist as
             # part of saved layouts, nuke will look through
             # a global list of registered panels, try to locate
@@ -410,21 +411,87 @@ class NukeEngine(tank.platform.Engine):
             if os.path.exists(app_gizmo_folder):
                 # Now translate the path so that nuke is happy on Windows.
                 app_gizmo_folder = app_gizmo_folder.replace(os.path.sep, "/")
-                self.log_debug("Gizmos found - Adding %s to nuke.pluginAddPath() and NUKE_PATH" % app_gizmo_folder)
+                self.logger.debug("Gizmos found - Adding %s to nuke.pluginAddPath() and NUKE_PATH", app_gizmo_folder)
                 nuke.pluginAddPath(app_gizmo_folder)
-                # And also add it to the plugin path - this is so that any 
+                # And also add it to the plugin path - this is so that any
                 # new processes spawned from this one will have access too.
                 # (for example if you do file->open or file->new)
                 tank.util.append_path_to_env_var("NUKE_PATH", app_gizmo_folder)
 
-        self.log_user_attribute_metric("Nuke version",
-            nuke.env.get("NukeVersionString"))
+        # Nuke Studio 9 really doesn't like us running commands at startup, so don't.
+        if not (nuke.env.get("NukeVersionMajor") == 9 and nuke.env.get("studio")):
+            self._run_commands_at_startup()
+
+        try:
+            self.log_user_attribute_metric("Nuke version", nuke.env.get("NukeVersionString"))
+        except:
+            # ignore all errors. ex: using a core that doesn't support metrics
+            pass
+
+    def _run_commands_at_startup(self):
+        # Build a dictionary mapping app instance names to dictionaries of commands they registered with the engine.
+        app_instance_commands = {}
+        for (command_name, value) in self.commands.iteritems():
+            app_instance = value["properties"].get("app")
+            if app_instance:
+                # Add entry 'command name: command function' to the command dictionary of this app instance.
+                command_dict = app_instance_commands.setdefault(app_instance.instance_name, {})
+                command_dict[command_name] = value["callback"]
+
+        commands_to_run = []
+        # Run the series of app instance commands listed in the 'run_at_startup' setting.
+        for app_setting_dict in self.get_setting("run_at_startup", []):
+
+            app_instance_name = app_setting_dict["app_instance"]
+            # Menu name of the command to run or '' to run all commands of the given app instance.
+            setting_command_name = app_setting_dict["name"]
+
+            # Retrieve the command dictionary of the given app instance.
+            command_dict = app_instance_commands.get(app_instance_name)
+
+            if command_dict is None:
+                self.logger.warning(
+                    "%s configuration setting 'run_at_startup' requests app '%s' that is not installed.",
+                    self.name, app_instance_name)
+            else:
+                if not setting_command_name:
+                    # Run all commands of the given app instance.
+                    for (command_name, command_function) in command_dict.iteritems():
+                        self.logger.debug("%s startup running app '%s' command '%s'.",
+                                       self.name, app_instance_name, command_name)
+                        commands_to_run.append(command_function)
+                else:
+                    # Run the command whose name is listed in the 'run_at_startup' setting.
+                    command_function = command_dict.get(setting_command_name)
+                    if command_function:
+                        self.logger.debug("%s startup running app '%s' command '%s'.",
+                                       self.name, app_instance_name, setting_command_name)
+                        commands_to_run.append(command_function)
+                    else:
+                        known_commands = ', '.join("'%s'" % name for name in command_dict)
+                        self.logger.warning(
+                            "%s configuration setting 'run_at_startup' requests app '%s' unknown command '%s'. "
+                            "Known commands: %s",
+                            self.name, app_instance_name, setting_command_name, known_commands)
+
+        # Run the commands once Nuke will have completed its UI update and be idle
+        # in order to run it after the ones that restore the persisted Shotgun app panels.
+        # Set the _callback_from_non_pane_menu hint so that the show_panel method knows this
+        # was invoked not from the pane menu.
+
+        # FIXME: This pattern is horrible.
+        setattr(tank, "_callback_from_non_pane_menu", True)
+        try:
+            for command in commands_to_run:
+                command()
+        finally:
+            delattr(tank, "_callback_from_non_pane_menu")
 
     def destroy_engine(self):
         """
         Runs when the engine is unloaded, typically at context switch.
         """
-        self.log_debug("%s: Destroying..." % self)
+        self.logger.debug("%s: Destroying...", self)
 
         if self._context_switcher:
             self._context_switcher.destroy()
@@ -457,7 +524,7 @@ class NukeEngine(tank.platform.Engine):
         :param old_context: The sgtk.context.Context being switched away from.
         :param new_context: The sgtk.context.Context being switched to.
         """
-        self.log_debug("tk-nuke context changed to %s" % str(new_context))
+        self.logger.debug("tk-nuke context changed to %s", str(new_context))
 
         # We also need to run the post init for Nuke, which will handle
         # getting any gizmos setup.
@@ -470,57 +537,38 @@ class NukeEngine(tank.platform.Engine):
     #####################################################################################
     # Logging
 
-    def log_debug(self, msg):
-        if self.get_setting("debug_logging", False):
-            msg = "Shotgun Debug: %s" % msg
-            # We will log it via the API, as well as print normally,
-            # which should make its way to the scripting console.
-            if self.hiero_enabled:
-                import hiero
+    def _emit_log_message(self, handler, record):
+        """
+        Emits a log to Nuke's Script Editor and Error Console.
+
+        :param handler: Log handler that this message was dispatched from
+        :type handler: :class:`~python.logging.LogHandler`
+        :param record: Std python logging record
+        :type record: :class:`~python.logging.LogRecord`
+        """
+        msg = handler.format(record)
+
+        # Sends the message to error console of the DCC
+        if self.hiero_enabled:
+            import hiero
+            if record.levelno >= logging.ERROR:
+                hiero.core.log.error(msg)
+            elif record.levelno >= logging.WARNING:
+                hiero.core.log.info(msg)
+            elif record.levelno >= logging.INFO:
+                hiero.core.log.info(msg)
+            else:
                 hiero.core.log.setLogLevel(hiero.core.log.kDebug)
                 hiero.core.log.debug(msg)
-            print msg
-
-    def log_info(self, msg):
-        msg = "Shotgun Info: %s" % msg
-        # We will log it via the API, as well as print normally,
-        # which should make its way to the scripting console.
-        if self.hiero_enabled:
-            # NOTE! By default, info logging is turned OFF in hiero
-            # meaning that no info messages (nor warning, since they use info to output too)
-            # will be output in the console.
-            # 
-            # In order to have these emitted, we would need to turn them on by doing a 
-            # hiero.core.log.setLogLevel(hiero.core.log.kInfo)
-            #
-            # However this has call been omitted on purpose because too much output 
-            # from hiero to stdout/stderr is causing problems with the browser plugin
-            # causing it to hang or crash. By keeping the info and warning logging off
-            # we are avoiding such hangs and working around this known issue.
-            import hiero
-            hiero.core.log.info(msg)
-        print msg
-
-    def log_warning(self, msg):
-        msg = "Shotgun Warning: %s" % msg
-        # We will log it via the API, as well as print normally,
-        # which should make its way to the scripting console.
-        if self.hiero_enabled:
-            import hiero
-            hiero.core.log.info(msg)
         else:
-            nuke.warning(msg)
-        print msg
+            if record.levelno >= logging.CRITICAL:
+                nuke.critical("Shotgun Critical: %s" % msg)
+            elif record.levelno >= logging.ERROR:
+                nuke.error("Shotgun Error: %s" % msg)
+            elif record.levelno >= logging.WARNING:
+                nuke.warning("Shotgun Warning: %s" % msg)
 
-    def log_error(self, msg):
-        msg = "Shotgun Error: %s" % msg
-        # We will log it via the API, as well as print normally,
-        # which should make its way to the scripting console.
-        if self.hiero_enabled:
-            import hiero
-            hiero.core.log.error(msg)
-        else:
-            nuke.error(msg)
+        # Sends the message to the script editor.
         print msg
 
     #####################################################################################
@@ -531,22 +579,22 @@ class NukeEngine(tank.platform.Engine):
         Shows a panel in Nuke. If the panel already exists, the previous panel is swapped out
         and replaced with a new one. In this case, the contents of the panel (e.g. the toolkit app)
         is not destroyed but carried over to the new panel.
-        
+
         If this is being called from a non-pane menu in Nuke, there isn't a well established logic
         for where the panel should be mounted. In this case, the code will look for suitable
         areas in the UI and try to panel it there, starting by looking for the property pane and
         trying to dock panels next to this.
-        
+
         :param panel_id: Unique id to associate with the panel - normally this is a string obtained
                          via the register_panel() call.
         :param title: The title of the window
         :param bundle: The app, engine or framework object that is associated with this window
         :param widget_class: The class of the UI to be constructed. This must derive from QWidget.
-        
+
         Additional parameters specified will be passed through to the widget_class constructor.
         """
         if self.hiero_enabled:
-            self.log_info(
+            self.logger.info(
                 "Panels are not supported in Hiero. Launching as a dialog..."
             )
             return self.show_dialog(
@@ -559,7 +607,7 @@ class NukeEngine(tank.platform.Engine):
 
         # Note! Not using the import_module call as this confuses nuke's callback system
         import tk_nuke_qt
-        
+
         # Create the panel.
         panel_widget = tk_nuke_qt.NukePanelWidget(
             bundle,
@@ -568,11 +616,15 @@ class NukeEngine(tank.platform.Engine):
             widget_class,
             *args, **kwargs
         )
-        
+
+        self.logger.debug("Showing pane %s - %s from %s", panel_id, title, bundle.name)
+
         if hasattr(tank, "_callback_from_non_pane_menu"):
+            self.logger.debug("Looking for a pane.")
+
             # This global flag is set by the menu callback system
             # to indicate that the click comes from a non-pane context.
-            # 
+            #
             # In this case, we have to figure out where the pane should be shown.
             # Try to parent it next to the properties panel
             # if possible, because this is typically laid out like a classic
@@ -587,14 +639,14 @@ class NukeEngine(tank.platform.Engine):
                 "Viewer.1",     # viewer
                 "Toolbar.1",    # nodes toolbar
             ]
-            
+
             existing_pane = None
             for tab_name in built_in_tabs:
-                self.log_debug("Parenting panel - looking for %s tab..." % tab_name)
+                self.logger.debug("Parenting panel - looking for %s tab...", tab_name)
                 existing_pane = nuke.getPaneFor(tab_name)
                 if existing_pane:
                     break
-    
+
             if existing_pane is None and nuke.env.get("NukeVersionMajor") < 9:
                 # Couldn't find anything to parent next to!
                 # Nuke 9 will automatically handle this situation
@@ -604,11 +656,14 @@ class NukeEngine(tank.platform.Engine):
                 nuke.message("Cannot find any of the standard Nuke UI panels to anchor against. "
                              "Please add a Properties Bin to your Nuke UI layout and try again.")
                 return
-    
-            # All good - we are running nuke 9 and/or 
+
+            self.logger.debug("Pane found: %s", existing_pane)
+
+            # All good - we are running nuke 9 and/or
             # have existing panes to parent against.
-            panel_widget.addToPane(existing_pane)   
+            panel_widget.addToPane(existing_pane)
         else:
+            self.logger.debug("Adding to established pane.")
             # We are either calling this from a pane restore
             # callback or from the pane menu in Nuke. In both
             # these cases, the current pane is already established
@@ -623,29 +678,29 @@ class NukeEngine(tank.platform.Engine):
     def get_menu_selection(self):
         """
         Returns the list of hiero objects selected in the most recent menu click.
-        This list may contain items of various types. To see exactly what is being 
+        This list may contain items of various types. To see exactly what is being
         returned by which methods, turn on debug logging - this will print out details
         of what is going on.
-        
+
         Examples of types that are being returned are:
-        
+
         Selecting a project in the bin view:
         http://docs.thefoundry.co.uk/hiero/10/hieropythondevguide/api/api_core.html#hiero.core.Bin
-        
+
         Selecting an item in a bin view:
         http://docs.thefoundry.co.uk/hiero/10/hieropythondevguide/api/api_core.html#hiero.core.BinItem
-        
+
         Selecting a track:
         http://docs.thefoundry.co.uk/hiero/10/hieropythondevguide/api/api_core.html#hiero.core.TrackItem
         """
         return self._last_clicked_selection
-        
+
     def get_menu_category(self):
         """
         Returns the UI area where the last menu click took place.
-        
+
         Returns one of the following constants:
-        
+
         - HieroEngine.HIERO_BIN_AREA
         - HieroEngine.HIERO_SPREADSHEET_AREA
         - HieroEngine.HIERO_TIMELINE_AREA
@@ -658,7 +713,7 @@ class NukeEngine(tank.platform.Engine):
 
     def set_project_root(self, event):
         """
-        Ensure any new projects get the project root or default startup 
+        Ensure any new projects get the project root or default startup
         projects get the project root set properly.
 
         :param event:   A Nuke event object. It is a standard argument for
@@ -668,11 +723,10 @@ class NukeEngine(tank.platform.Engine):
         import hiero
         for p in hiero.core.projects():
             if not p.projectRoot():
-                self.log_debug(
-                    "Setting projectRoot on %s to: %s" % (
-                        p.name(),
-                        self.tank.project_path
-                    )
+                self.logger.debug(
+                    "Setting projectRoot on %s to: %s",
+                    p.name(),
+                    self.tank.project_path
                 )
                 p.setProjectRoot(self.tank.project_path)
 
@@ -681,7 +735,7 @@ class NukeEngine(tank.platform.Engine):
         Return the QWidget parent for all dialogs created through
         show_dialog and show_modal.
         """
-        # See https://github.com/shotgunsoftware/tk-nuke/commit/35ca540d152cc5357dc7e347b5efc728a3a89f4a 
+        # See https://github.com/shotgunsoftware/tk-nuke/commit/35ca540d152cc5357dc7e347b5efc728a3a89f4a
         # for more info. There have been instability issues with nuke 7 causing
         # various crashes, so window parenting on Nuke versions above 6 is
         # currently disabled.
@@ -740,7 +794,7 @@ class NukeEngine(tank.platform.Engine):
         except Exception, e:
             # If anything went wrong, we can just let the finally block
             # run, which will put things back to the way they were.
-            self.log_debug("Unable to pre-load environment: %s" % str(e))
+            self.logger.debug("Unable to pre-load environment: %s", str(e))
         finally:
             # If the context was changed during the course of the handling
             # of the selection event, we need to go back to what we had.
@@ -784,21 +838,21 @@ class NukeEngine(tank.platform.Engine):
             if new_context != self.context:
                 tank.platform.change_context(new_context)
         except Exception:
-            self.log_debug("Unable to determine context for file: %s" % script_path)
-    
+            self.logger.debug("Unable to determine context for file: %s", script_path)
+
     def __setup_favorite_dirs(self):
         """
-        Sets up nuke shortcut "favorite dirs" that are presented in the left hand side of 
+        Sets up nuke shortcut "favorite dirs" that are presented in the left hand side of
         Nuke common dialogs (open, save).
 
-        Nuke currently only writes favorites to disk in ~/.nuke/folders.nk. If you add/remove 
-        one in the UI. Doing them via the api only updates them for the session (Nuke bug #3740). 
+        Nuke currently only writes favorites to disk in ~/.nuke/folders.nk. If you add/remove
+        one in the UI. Doing them via the api only updates them for the session (Nuke bug #3740).
         See http://forums.thefoundry.co.uk/phpBB2/viewtopic.php?t=3481&start=15
         """
         engine_root_dir = self.disk_location
         sg_logo = os.path.abspath(os.path.join(engine_root_dir, "resources", "sg_logo_80px.png"))
 
-        # Ensure old favorites we used to use are removed. 
+        # Ensure old favorites we used to use are removed.
         supported_entity_types = ["Shot", "Sequence", "Scene", "Asset", "Project"]
         for x in supported_entity_types:
             nuke.removeFavoriteDir("Tank Current %s" % x)
@@ -822,10 +876,10 @@ class NukeEngine(tank.platform.Engine):
                 nuke.removeFavoriteDir(dir_name)
 
                 # Add new path
-                nuke.addFavoriteDir(dir_name, 
-                                    directory=root_path,  
-                                    type=(nuke.IMAGE|nuke.SCRIPT|nuke.GEO), 
-                                    icon=sg_logo, 
+                nuke.addFavoriteDir(dir_name,
+                                    directory=root_path,
+                                    type=(nuke.IMAGE | nuke.SCRIPT | nuke.GEO),
+                                    icon=sg_logo,
                                     tooltip=root_path)
 
         # Add favorites directories from the config
@@ -839,17 +893,16 @@ class NukeEngine(tank.platform.Engine):
             except Exception, e:
                 msg = "Error processing template '%s' to add to favorite " \
                       "directories: %s" % (favorite['template_directory'], e)
-                self.log_exception(msg)
+                self.logger.exception(msg)
                 continue
 
-            # Add new directory 
+            # Add new directory
             icon_path = favorite.get('icon')
             if not os.path.isfile(icon_path) or not os.path.exists(icon_path):
                 icon_path = sg_logo
 
-            nuke.addFavoriteDir(favorite['display_name'], 
-                                directory=path,  
-                                type=(nuke.IMAGE|nuke.SCRIPT|nuke.GEO), 
-                                icon=icon_path, 
+            nuke.addFavoriteDir(favorite['display_name'],
+                                directory=path,
+                                type=(nuke.IMAGE | nuke.SCRIPT | nuke.GEO),
+                                icon=icon_path,
                                 tooltip=path)
-        

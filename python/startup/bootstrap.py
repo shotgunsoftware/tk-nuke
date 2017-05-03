@@ -1,15 +1,16 @@
 # Copyright (c) 2016 Shotgun Software Inc.
-# 
+#
 # CONFIDENTIAL AND PROPRIETARY
-# 
-# This work is provided "AS IS" and subject to the Shotgun Pipeline Toolkit 
+#
+# This work is provided "AS IS" and subject to the Shotgun Pipeline Toolkit
 # Source Code License included in this distribution package. See LICENSE.
-# By accessing, using, copying or modifying this work you indicate your 
-# agreement to the Shotgun Pipeline Toolkit Source Code License. All rights 
+# By accessing, using, copying or modifying this work you indicate your
+# agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 import os
 import sys
+
 
 def bootstrap(engine_name, context, app_path, app_args, extra_args):
     """
@@ -22,8 +23,15 @@ def bootstrap(engine_name, context, app_path, app_args, extra_args):
     """
     import tank
 
-    startup_path = os.path.dirname(
-        os.path.abspath(sys.modules[bootstrap.__module__].__file__)
+    startup_path = os.path.normpath(
+        os.path.join(
+            os.path.dirname(
+                os.path.abspath(sys.modules[bootstrap.__module__].__file__)
+            ), # tk-nuke/python/startup
+            "..", # tk-nuke/python
+            "..",  # tk-nuke
+            "classic_startup"
+        ) # tk-nuke/classic_startup
     )
     app_args = app_args or ""
 
@@ -44,4 +52,3 @@ def bootstrap(engine_name, context, app_path, app_args, extra_args):
                 app_args = file_to_open
 
     return (app_path, app_args)
-

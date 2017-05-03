@@ -1,3 +1,5 @@
+[![Build Status](https://secure.travis-ci.org/shotgunsoftware/tk-nuke.png?branch=master)](http://travis-ci.org/shotgunsoftware/tk-nuke)
+
 ## Documentation
 This repository is a part of the Shotgun Pipeline Toolkit.
 
