@@ -245,7 +245,18 @@ class TestStartup(TankTestBase):
         else:
             yield
 
-    def _get_plugin_environment(self, dcc_path):
+    def _join_existing_environment(self, dcc_path, startup_path):
+        """
+        Returns the pre-existing environment paths for dcc_path, os.pathsep joined with the startup_paths
+        """
+        startup_path = [startup_path]
+        existing_paths = os.environ.get(dcc_path)
+        # combine the existing dcc_path paths, with the sgtk startup_paths only if there are preexisting paths
+        startup_paths = existing_paths.split(os.pathsep) + startup_path if existing_paths else startup_path
+        # now combine the list of paths with the os specific separator
+        return os.pathsep.join(startup_paths)
+
+    def _get_plugin_environment(self, dcc_path, ):
         """
         Returns the expected environment variables dictionary for a plugin.
         """
@@ -253,7 +264,7 @@ class TestStartup(TankTestBase):
             "SHOTGUN_ENGINE": "tk-nuke",
             "SHOTGUN_PIPELINE_CONFIGURATION_ID": str(self.sg_pc_entity["id"]),
             "SHOTGUN_SITE": sgtk.util.shotgun.get_associated_sg_base_url(),
-            dcc_path: os.path.join(repo_root, "plugins", "basic")
+            dcc_path: self._join_existing_environment(dcc_path, os.path.join(repo_root, "plugins", "basic")),
         }
         return expected
 
@@ -261,10 +272,12 @@ class TestStartup(TankTestBase):
         """
         Returns the expected environment variables dictionary for a Toolkit classic launch.
         """
+
+
         expected = {
             "TANK_CONTEXT": sgtk.context.create_empty(self.tk).serialize(),
             "TANK_ENGINE": "tk-nuke-classic",
-            dcc_path: os.path.join(repo_root, "classic_startup")
+            dcc_path: self._join_existing_environment(dcc_path, os.path.join(repo_root, "classic_startup")),
         }
         return expected
 
@@ -391,13 +404,13 @@ class TestStartup(TankTestBase):
             launch_info.args
         )
 
-        # Ensure the environment variatiables from the LaunchInfo are the same as the expected ones.
+        # Ensure the environment variables from the LaunchInfo are the same as the expected ones.
         self.assertListEqual(sorted(expected_env.keys()), sorted(launch_info.environment.keys()))
 
         # Ensure each environment variable's value is the same as they expected ones.
         for key, value in expected_env.iteritems():
             self.assertIn(key, launch_info.environment)
-            self.assertIn(value, launch_info.environment[key])
+            self.assertEqual(launch_info.environment[key], value)
 
     def _test_nuke(self, expected_variations, expected_version):
         """
