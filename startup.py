@@ -342,8 +342,11 @@ class NukeLauncher(SoftwareLauncher):
         elif "nukestudio" in app_path.lower() or "--studio" in app_args:
             env["HIERO_PLUGIN_PATH"] = os.pathsep.join(startup_paths)
         else:
-            current_paths = (os.environ.get("NUKE_PATH") or "").split(os.pathsep)
-            env["NUKE_PATH"] = os.pathsep.join(current_paths + startup_paths)
+            existing_paths = os.environ.get("NUKE_PATH")
+            # combine the existing NUKE_PATH paths, with the sgtk startup_paths only if there are preexisting paths
+            startup_paths = existing_paths.split(os.pathsep) + startup_paths if existing_paths else startup_paths
+
+            env["NUKE_PATH"] = os.pathsep.join(startup_paths)
 
             # A Nuke script can't be launched from the menu.py, so we
             # have to tack it onto the launch arguments instead.
