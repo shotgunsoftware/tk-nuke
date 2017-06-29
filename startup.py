@@ -241,7 +241,7 @@ class NukeLauncher(SoftwareLauncher):
         launch_plugins = self.get_setting("launch_builtin_plugins")
 
         if launch_plugins:
-            self.logger.info("Launch plugins: %s", launch_plugins)
+            self.logger.debug("Launch plugins: %s", launch_plugins)
 
             # Get Nuke environment for plugin launch.
             required_env, required_args = self._get_plugin_startup_env(
