@@ -254,7 +254,7 @@ class NukeLauncher(SoftwareLauncher):
             # Make sure we are picking the right engine.
             required_env["SHOTGUN_ENGINE"] = self.engine_name
         else:
-            self.logger.info("Preparing Nuke Launch via Toolkit Classic methodology ...")
+            self.logger.debug("Preparing Nuke Launch via Toolkit Classic methodology ...")
 
             # Get Nuke environment for Toolkit Classic launch.
             required_env, required_args = self._get_classic_startup_env(
