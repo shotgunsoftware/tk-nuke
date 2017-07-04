@@ -248,6 +248,10 @@ class TestStartup(TankTestBase):
     def _join_existing_environment(self, dcc_path, startup_path):
         """
         Returns the pre-existing environment paths for dcc_path, os.pathsep joined with the startup_paths
+
+        :param str dcc_path: name of DCC's environment variable used for storing sgtk startup path
+        :param str startup_path: a string containing a single path to be joined with the existing env var
+        :return str: environment variable paths combined into one string, separated by the os's default separator
         """
         startup_path = [startup_path]
         existing_paths = os.environ.get(dcc_path)
