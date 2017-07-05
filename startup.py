@@ -321,6 +321,27 @@ class NukeLauncher(SoftwareLauncher):
         return self._compute_environment(app_path, app_args, startup_paths, file_to_open)
 
     @classmethod
+    def _join_paths_with_existing_env_paths(cls, env_key, startup_paths):
+        """
+        Takes a list of paths  and joins them with existing paths found on the environment variable
+        matching the passed env_key. Returns the complete joined path string
+        without setting the environment variable.
+
+        :param env_key: the environment variable name who's path values we need to join with our startup paths
+        :param startup_paths: list of string paths
+        :return: str of the joined environment paths
+        """
+        # get any existing nuke path to custom gizmos, scripts etc.
+        existing_path_str = os.environ.get(env_key,"")
+        existing_path_list = existing_path_str.split(os.pathsep)
+
+        # append the toolkit extensions in order to ensure the right integrations execute
+        new_path_list = existing_path_list + startup_paths
+
+        # now filter out any empty strings/paths and join the remainder back together with separators
+        return os.pathsep.join(filter(None, new_path_list))
+
+    @classmethod
     def _compute_environment(cls, app_path, app_args, startup_paths, file_to_open):
         """
         Computes the environment variables and command line arguments required to launch Nuke.
@@ -338,20 +359,11 @@ class NukeLauncher(SoftwareLauncher):
         env = {}
 
         if "hiero" in app_path.lower() or "--hiero" in app_args:
-            env["HIERO_PLUGIN_PATH"] = os.pathsep.join(startup_paths)
+            env["HIERO_PLUGIN_PATH"] = cls._join_paths_with_existing_env_paths("HIERO_PLUGIN_PATH", startup_paths)
         elif "nukestudio" in app_path.lower() or "--studio" in app_args:
-            env["HIERO_PLUGIN_PATH"] = os.pathsep.join(startup_paths)
+            env["HIERO_PLUGIN_PATH"] = cls._join_paths_with_existing_env_paths("HIERO_PLUGIN_PATH", startup_paths)
         else:
-
-            # get any existing nuke path to custom gizmos, scripts etc.
-            existing_nuke_path_str = os.environ.get("NUKE_PATH")
-            existing_nuke_path_list = existing_nuke_path_str.split(os.pathsep)
-
-            # append the toolkit extensions in order to ensure the right integrations execute
-            new_nuke_path_list = existing_nuke_path_list + startup_paths
-
-            # now filter out any empty strings/paths and join the remainder back together with separators
-            env["NUKE_PATH"] = os.pathsep.join(filter(None, new_nuke_path_list))
+            env["NUKE_PATH"] = cls._join_paths_with_existing_env_paths("NUKE_PATH", startup_paths)
 
             # A Nuke script can't be launched from the menu.py, so we
             # have to tack it onto the launch arguments instead.

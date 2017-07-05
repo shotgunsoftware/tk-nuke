@@ -254,11 +254,11 @@ class TestStartup(TankTestBase):
         :return str: environment variable paths combined into one string, separated by the os's default separator
         """
         startup_path = [startup_path]
-        existing_paths = os.environ.get(dcc_path)
-        # combine the existing dcc_path paths, with the sgtk startup_paths only if there are preexisting paths
-        startup_paths = existing_paths.split(os.pathsep) + startup_path if existing_paths else startup_path
-        # now combine the list of paths with the os specific separator
-        return os.pathsep.join(startup_paths)
+        existing_paths = os.environ.get(dcc_path,"")
+        # combine the existing dcc_path paths, with the sgtk startup_paths
+        startup_paths = existing_paths.split(os.pathsep) + startup_path
+        # now combine the list of paths with the os specific separator, and filter out any empty path strings
+        return os.pathsep.join(filter(None, startup_paths))
 
     def _get_plugin_environment(self, dcc_path, ):
         """
@@ -316,75 +316,101 @@ class TestStartup(TankTestBase):
         """
         Ensures Nuke Studio LaunchInformation is correct.
         """
-        for engine_instance, is_classic in self._get_engine_configurations():
-            self._test_launch_information(
-                engine_instance, "NukeStudio.app", "", None,
-                self._get_hiero_environment(is_classic=is_classic)
-            )
+        # loop over an empty path and a test path to simulate having no pr-existing environment path
+        # and having a pre-existing environment path
+        for env_path in ['','/a/prexisting/path/']:
+            for engine_instance, is_classic in self._get_engine_configurations():
+                # set the appropriate environment path with either the empty or existing path.
+                os.environ['HIERO_PLUGIN_PATH'] = env_path
+                self._test_launch_information(
+                    engine_instance, "NukeStudio.app", "", None,
+                    self._get_hiero_environment(is_classic=is_classic)
+                )
 
-            self._test_launch_information(
-                engine_instance, "Nuke.exe", "--studio", None,
-                self._get_hiero_environment(is_classic=is_classic)
-            )
+                self._test_launch_information(
+                    engine_instance, "Nuke.exe", "--studio", None,
+                    self._get_hiero_environment(is_classic=is_classic)
+                )
 
     def test_nuke(self):
         """
         Ensures Nuke LaunchInformation is correct.
         """
-        for engine_instance, is_classic in self._get_engine_configurations():
-            self._test_launch_information(
-                engine_instance, "Nuke.app", "", "/file/to/open",
-                self._get_nuke_environment(is_classic=is_classic)
-            )
 
-            self._test_launch_information(
-                engine_instance, "Nuke.exe", "", "/file/to/open",
-                self._get_nuke_environment(is_classic=is_classic)
-            )
+        # loop over an empty path and a test path to simulate having no pr-existing environment path
+        # and having a pre-existing environment path
+        for env_path in ['', '/a/prexisting/path/']:
+            for engine_instance, is_classic in self._get_engine_configurations():
+                # set the appropriate environment path with either the empty or existing path.
+                os.environ['NUKE_PATH'] = env_path
+                self._test_launch_information(
+                    engine_instance, "Nuke.app", "", "/file/to/open",
+                    self._get_nuke_environment(is_classic=is_classic)
+                )
+
+                self._test_launch_information(
+                    engine_instance, "Nuke.exe", "", "/file/to/open",
+                    self._get_nuke_environment(is_classic=is_classic)
+                )
 
     def test_nukex(self):
         """
         Ensures NukeX LaunchInformation is correct.
         """
-        for engine_instance, is_classic in self._get_engine_configurations():
-            self._test_launch_information(
-                engine_instance, "NukeX.app", "", "/file/to/open",
-                self._get_nuke_environment(is_classic=is_classic)
-            )
+        # loop over an empty path and a test path to simulate having no pr-existing environment path
+        # and having a pre-existing environment path
+        for env_path in ['', '/a/prexisting/path/']:
+            for engine_instance, is_classic in self._get_engine_configurations():
+                # set the appropriate environment path with either the empty or existing path.
+                os.environ['NUKE_PATH'] = env_path
+                self._test_launch_information(
+                    engine_instance, "NukeX.app", "", "/file/to/open",
+                    self._get_nuke_environment(is_classic=is_classic)
+                )
 
-            self._test_launch_information(
-                engine_instance, "Nuke.exe", "--nukex", "/file/to/open",
-                self._get_nuke_environment(is_classic=is_classic)
-            )
+                self._test_launch_information(
+                    engine_instance, "Nuke.exe", "--nukex", "/file/to/open",
+                    self._get_nuke_environment(is_classic=is_classic)
+                )
 
     def test_nukeassist(self):
         """
         Ensures Nuke Assist LaunchInformation is correct.
         """
-        for engine_instance, is_classic in self._get_engine_configurations():
-            self._test_launch_information(
-                engine_instance, "NukeAssist.app", "", "/file/to/open",
-                self._get_nuke_environment(is_classic=is_classic)
-            )
+        # loop over an empty path and a test path to simulate having no pr-existing environment path
+        # and having a pre-existing environment path
+        for env_path in ['', '/a/prexisting/path/']:
+            for engine_instance, is_classic in self._get_engine_configurations():
+                # set the appropriate environment path with either the empty or existing path.
+                os.environ['NUKE_PATH'] = env_path
+                self._test_launch_information(
+                    engine_instance, "NukeAssist.app", "", "/file/to/open",
+                    self._get_nuke_environment(is_classic=is_classic)
+                )
 
-            self._test_launch_information(
-                engine_instance, "Nuke.exe", "--nukeassist", "/file/to/open",
-                self._get_nuke_environment(is_classic=is_classic)
-            )
+                self._test_launch_information(
+                    engine_instance, "Nuke.exe", "--nukeassist", "/file/to/open",
+                    self._get_nuke_environment(is_classic=is_classic)
+                )
 
     def test_hiero(self):
         """
         Ensures Hiero LaunchInformation is correct.
         """
-        self._test_launch_information(
-            "tk-nuke-classic", "Hiero.app", "", None,
-            self._get_hiero_environment(is_classic=True)
-        )
+        # loop over an empty path and a test path to simulate having no pr-existing environment path
+        # and having a pre-existing environment path
+        for env_path in ['', '/a/prexisting/path/']:
+            # set the appropriate environment path with either the empty or existing path.
+            os.environ['HIERO_PLUGIN_PATH'] = env_path
+            self._test_launch_information(
+                "tk-nuke-classic", "Hiero.app", "", None,
+                self._get_hiero_environment(is_classic=True)
+            )
 
-        self._test_launch_information(
-            "tk-nuke-classic", "Nuke.exe", "--hiero", None,
-            self._get_hiero_environment(is_classic=True)
-        )
+            self._test_launch_information(
+                "tk-nuke-classic", "Nuke.exe", "--hiero", None,
+                self._get_hiero_environment(is_classic=True)
+            )
 
     def _test_launch_information(self, engine_name, dcc_path, args, file_to_open, expected_env):
         """
