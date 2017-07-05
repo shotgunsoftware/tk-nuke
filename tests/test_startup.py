@@ -276,8 +276,6 @@ class TestStartup(TankTestBase):
         """
         Returns the expected environment variables dictionary for a Toolkit classic launch.
         """
-
-
         expected = {
             "TANK_CONTEXT": sgtk.context.create_empty(self.tk).serialize(),
             "TANK_ENGINE": "tk-nuke-classic",
