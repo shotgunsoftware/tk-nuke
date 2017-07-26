@@ -141,6 +141,10 @@ class TestStartup(TankTestBase):
                 current_folder = current_folder[t]
             current_folder.update(self._linux_mock_hierarchy["usr"]["local"])
 
+        # clear any pre existing nuke startup environment variables
+        os.environ.pop('NUKE_PATH', None)
+        os.environ.pop('HIERO_PLUGIN_PATH', None)
+
     def _recursive_split(self, path):
         """
         Splits a path into several tokens such as there is no / in the tokens and no empty
@@ -245,7 +249,7 @@ class TestStartup(TankTestBase):
         else:
             yield
 
-    def _get_plugin_environment(self, dcc_path):
+    def _get_plugin_environment(self, dcc_path, ):
         """
         Returns the expected environment variables dictionary for a plugin.
         """
@@ -253,7 +257,7 @@ class TestStartup(TankTestBase):
             "SHOTGUN_ENGINE": "tk-nuke",
             "SHOTGUN_PIPELINE_CONFIGURATION_ID": str(self.sg_pc_entity["id"]),
             "SHOTGUN_SITE": sgtk.util.shotgun.get_associated_sg_base_url(),
-            dcc_path: os.path.join(repo_root, "plugins", "basic")
+            dcc_path: os.path.join(repo_root, "plugins", "basic"),
         }
         return expected
 
@@ -264,7 +268,7 @@ class TestStartup(TankTestBase):
         expected = {
             "TANK_CONTEXT": sgtk.context.create_empty(self.tk).serialize(),
             "TANK_ENGINE": "tk-nuke-classic",
-            dcc_path: os.path.join(repo_root, "classic_startup")
+            dcc_path: os.path.join(repo_root, "classic_startup"),
         }
         return expected
 
@@ -315,6 +319,7 @@ class TestStartup(TankTestBase):
         Ensures Nuke LaunchInformation is correct.
         """
         for engine_instance, is_classic in self._get_engine_configurations():
+
             self._test_launch_information(
                 engine_instance, "Nuke.app", "", "/file/to/open",
                 self._get_nuke_environment(is_classic=is_classic)
@@ -330,6 +335,7 @@ class TestStartup(TankTestBase):
         Ensures NukeX LaunchInformation is correct.
         """
         for engine_instance, is_classic in self._get_engine_configurations():
+
             self._test_launch_information(
                 engine_instance, "NukeX.app", "", "/file/to/open",
                 self._get_nuke_environment(is_classic=is_classic)
@@ -345,6 +351,7 @@ class TestStartup(TankTestBase):
         Ensures Nuke Assist LaunchInformation is correct.
         """
         for engine_instance, is_classic in self._get_engine_configurations():
+
             self._test_launch_information(
                 engine_instance, "NukeAssist.app", "", "/file/to/open",
                 self._get_nuke_environment(is_classic=is_classic)
@@ -391,7 +398,7 @@ class TestStartup(TankTestBase):
             launch_info.args
         )
 
-        # Ensure the environment variatiables from the LaunchInfo are the same as the expected ones.
+        # Ensure the environment variables from the LaunchInfo are the same as the expected ones.
         self.assertListEqual(sorted(expected_env.keys()), sorted(launch_info.environment.keys()))
 
         # Ensure each environment variable's value is the same as they expected ones.
