@@ -263,7 +263,9 @@ class NukeLauncher(SoftwareLauncher):
             )
             # Add context information info to the env.
             required_env["TANK_CONTEXT"] = sgtk.Context.serialize(self.context)
-            required_env["TANK_ENGINE"] = self.engine_name
+
+            if "TANK_ENGINE" not in required_env:
+                required_env["TANK_ENGINE"] = self.engine_name
 
         self.logger.debug("Launch environment: %s", pprint.pformat(required_env))
         self.logger.debug("Launch arguments: %s", required_args)
@@ -362,6 +364,13 @@ class NukeLauncher(SoftwareLauncher):
             env["HIERO_PLUGIN_PATH"] = cls._join_paths_with_existing_env_paths("HIERO_PLUGIN_PATH", startup_paths)
         elif "nukestudio" in app_path.lower() or "--studio" in app_args:
             env["HIERO_PLUGIN_PATH"] = cls._join_paths_with_existing_env_paths("HIERO_PLUGIN_PATH", startup_paths)
+
+            # A bit of magic here. Since we know we're in a classic config, we also know
+            # that Nuke Studio is configured differently than Nuke. Because of that, and
+            # because we have a single Software entity for the Nuke family of products,
+            # we highjack the process here and direct the launch towards the tk-nukestudio
+            # engine instance.
+            env["TANK_ENGINE"] = "tk-nukestudio"
         else:
             env["NUKE_PATH"] = cls._join_paths_with_existing_env_paths("NUKE_PATH", startup_paths)
 
