@@ -18,7 +18,7 @@ import unicodedata
 import nukescripts.openurl
 import nukescripts
 
-from PySide import QtGui
+from sgtk.platform.qt import QtGui
 
 # -----------------------------------------------------------------------------
 
