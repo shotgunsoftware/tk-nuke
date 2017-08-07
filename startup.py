@@ -291,7 +291,11 @@ class NukeLauncher(SoftwareLauncher):
             to specify.
         """
         return cls._compute_environment(
-            app_path, app_args, [os.path.join(bundle_root, "classic_startup")], file_to_open
+            app_path,
+            app_args,
+            [os.path.join(bundle_root, "classic_startup")],
+            file_to_open,
+            is_classic=True,
         )
 
     def _get_plugin_startup_env(self, plugin_names, app_path, app_args, file_to_open):
@@ -344,7 +348,7 @@ class NukeLauncher(SoftwareLauncher):
         return os.pathsep.join(filter(None, new_path_list))
 
     @classmethod
-    def _compute_environment(cls, app_path, app_args, startup_paths, file_to_open):
+    def _compute_environment(cls, app_path, app_args, startup_paths, file_to_open, is_classic=False):
         """
         Computes the environment variables and command line arguments required to launch Nuke.
 
@@ -352,6 +356,8 @@ class NukeLauncher(SoftwareLauncher):
         :param str app_args: Arguments for the app being launched.
         :param list startup_paths: List of paths to plugins that need to be added to the DCC's path.
         :param str file_to_open: Path to a file to open.
+        :param bool is_classic: Whether we're computing an environment for a classic config or not.
+            Default is False.
 
         :returns: Dictionary of environment variables to set and the command line arguments
             to specify.
@@ -370,7 +376,8 @@ class NukeLauncher(SoftwareLauncher):
             # because we have a single Software entity for the Nuke family of products,
             # we highjack the process here and direct the launch towards the tk-nukestudio
             # engine instance.
-            env["TANK_ENGINE"] = "tk-nukestudio"
+            if is_classic:
+                env["TANK_ENGINE"] = "tk-nukestudio"
         else:
             env["NUKE_PATH"] = cls._join_paths_with_existing_env_paths("NUKE_PATH", startup_paths)
 
