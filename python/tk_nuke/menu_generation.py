@@ -856,12 +856,14 @@ class NukeAppCommand(BaseAppCommand):
     """
     Wraps a single command that you get from engine.commands.
     """
-    def _non_pane_menu_callback_wrapper(self, callback):
+    def __init__(self, *args, **kwargs):
+        super(NukeAppCommand, self).__init__(*args, **kwargs)
+        self._original_callback = self._callback
+        self.callback = self._non_pane_menu_callback_wrapper
+
+    def _non_pane_menu_callback_wrapper(self):
         """
         Callback for all non-pane menu commands.
-
-        :param callback:    A callable object that is triggered
-                            when the wrapper is invoked.
         """
         # This is a wrapped menu callback for whenever an item is clicked
         # in a menu which isn't the standard nuke pane menu. This ie because 
@@ -879,9 +881,12 @@ class NukeAppCommand(BaseAppCommand):
         # object like this.
         setattr(tank, "_callback_from_non_pane_menu", True)
         try:
-            callback()
-        finally:    
-            delattr(tank, "_callback_from_non_pane_menu")
+            self._original_callback()
+        finally:
+            try:
+                delattr(tank, "_callback_from_non_pane_menu")
+            except AttributeError:
+                pass
         
     def add_command_to_pane_menu(self, menu):
         """
@@ -890,7 +895,7 @@ class NukeAppCommand(BaseAppCommand):
         :param menu: The menu object to add the new item to.
         """
         icon = self.properties.get("icon")
-        menu.addCommand(self.name, self.callback, icon=icon)
+        menu.addCommand(self.name, self._original_callback, icon=icon)
         
     def add_command_to_menu(self, menu, enabled=True, icon=None):
         """
@@ -914,7 +919,6 @@ class NukeAppCommand(BaseAppCommand):
         # NOTE: setting the new callback lambda on the object to resolve
         # a crash on close happening in Nuke 11. Likely a GC issue, and having
         # the callable associated with an object resolves it.
-        self.callback = lambda: self._non_pane_menu_callback_wrapper(self.callback)
         if hotkey:
             menu.addCommand(self.name, self.callback, hotkey, icon=icon)
         else:
