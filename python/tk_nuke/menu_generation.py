@@ -18,7 +18,7 @@ import unicodedata
 import nukescripts.openurl
 import nukescripts
 
-from PySide import QtGui
+from sgtk.platform.qt import QtGui
 
 # -----------------------------------------------------------------------------
 
@@ -693,6 +693,10 @@ class BaseAppCommand(object):
         """The callback function associated with the command."""
         return self._callback
 
+    @callback.setter
+    def callback(self, cb):
+        self._callback = cb
+
     @property
     def favourite(self):
         """Whether the command is a favourite."""
@@ -906,11 +910,15 @@ class NukeAppCommand(BaseAppCommand):
         # by the show_panel so that it can correctly establish 
         # the flow for when a pane menu is clicked and you want
         # the potential new panel to open in that window.
-        cb = lambda: self._non_pane_menu_callback_wrapper(self.callback)
+        #
+        # NOTE: setting the new callback lambda on the object to resolve
+        # a crash on close happening in Nuke 11. Likely a GC issue, and having
+        # the callable associated with an object resolves it.
+        self.callback = lambda: self._non_pane_menu_callback_wrapper(self.callback)
         if hotkey:
-            menu.addCommand(self.name, cb, hotkey, icon=icon)
+            menu.addCommand(self.name, self.callback, hotkey, icon=icon)
         else:
-            menu.addCommand(self.name, cb, icon=icon)
+            menu.addCommand(self.name, self.callback, icon=icon)
 
 # -----------------------------------------------------------------------------
 

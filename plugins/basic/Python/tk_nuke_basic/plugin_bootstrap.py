@@ -314,6 +314,6 @@ class NukeBootstraper(object):
         :param exception: Exception that was raised.
         """
         try:
-            nuke.error("Initialization failed: " % str(exception))
+            nuke.error("Initialization failed: %s" % str(exception))
         finally:
             self._on_finish()
