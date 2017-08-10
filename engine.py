@@ -94,6 +94,7 @@ class NukeEngine(tank.platform.Engine):
         self._context_change_menu_rebuild = True
         self._processed_paths = []
         self._processed_environments = []
+        self._previous_generators = []
 
         super(NukeEngine, self).__init__(*args, **kwargs)
 
@@ -385,6 +386,11 @@ class NukeEngine(tank.platform.Engine):
             import tk_nuke
 
             # Create the menu!
+            #
+            # We keep a reference to any previous menu generators that have
+            # existed. This is to prevent a crash on close in Nuke 11 that occurs
+            # after a context change is triggered.
+            self._previous_generators.append(self._menu_generator)
             self._menu_generator = tk_nuke.NukeMenuGenerator(self, menu_name)
             self._menu_generator.create_menu()
 
