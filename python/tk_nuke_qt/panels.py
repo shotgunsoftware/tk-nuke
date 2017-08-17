@@ -231,13 +231,13 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
         # note that we search for the tab widget by unique id rather than going
         # up in the widget hierarchy, because the hierarchy has not been properly
         # established at this point yet. 
-        for widget in QtGui.QApplication.allWidgets():
-            if widget.objectName() == panel_id:
-                filter = CloseEventFilter(widget)
-                filter.parent_closed.connect(self._on_parent_closed)
-                widget.installEventFilter(filter)
-                bundle.logger.debug("Installed close-event filter watcher on tab %s", widget)
-                break
+        # for widget in QtGui.QApplication.allWidgets():
+        #     if widget.objectName() == panel_id:
+        #         filter = CloseEventFilter(widget)
+        #         filter.parent_closed.connect(self._on_parent_closed)
+        #         widget.installEventFilter(filter)
+        #         bundle.logger.debug("Installed close-event filter watcher on tab %s", widget)
+        #         break
 
         # We should have a parent panel object. If we do, we can alert it to the
         # concrete sgtk panel widget we're wrapping. This will allow is to provide
@@ -271,7 +271,6 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
         """
         Overridden close event method
         """
-        return QWidget.closeEvent(self, event)
         try:
             # close child widget
             self.toolkit_widget.close()
