@@ -134,6 +134,10 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
         
         # first, call the base class and let it do its thing.
         QtGui.QWidget.__init__(self)
+
+        if sys.platform.startswith("linux"):
+            import nuke
+            nuke.addOnScriptClose(self.close)
         
         # pick up the rest of the construction parameters
         # these are set via the class emthod set_init_parameters() 
