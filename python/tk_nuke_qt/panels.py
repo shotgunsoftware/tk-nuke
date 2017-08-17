@@ -302,8 +302,11 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
         """
         Callback slot from the event filter
         """
-        # close this widget
-        self.close()
+        try:
+            # close this widget
+            self.close()
+        except Exception:
+            pass
          
 
 class CloseEventFilter(QtCore.QObject):
