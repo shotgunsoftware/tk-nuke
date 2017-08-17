@@ -295,7 +295,7 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
                 self.deleteLater()
             # okay to close dialog
             event.accept()
-        except RuntimeError:
+        except Exception:
             pass
         
     def _on_parent_closed(self):
