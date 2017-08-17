@@ -435,7 +435,6 @@ class NukeEngine(tank.platform.Engine):
             pass
 
     def _run_commands_at_startup(self):
-        return
         # Build a dictionary mapping app instance names to dictionaries of commands they registered with the engine.
         app_instance_commands = {}
         for (command_name, value) in self.commands.iteritems():
