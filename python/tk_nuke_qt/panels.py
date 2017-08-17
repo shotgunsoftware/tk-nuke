@@ -134,6 +134,13 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
         
         # first, call the base class and let it do its thing.
         QtGui.QWidget.__init__(self)
+
+        # On Linux, in Nuke 11, we have a crash on close problem. This
+        # should be safe across the board, though, so no need to limit
+        # it to a specific version of Nuke. We just want to make sure
+        # that panel apps, specifically shotgunpanel, have the opportunity
+        # to shut down gracefully prior to application close.
+        QtGui.QApplication.instance().aboutToQuit.connect(self._on_parent_closed)
         
         # pick up the rest of the construction parameters
         # these are set via the class emthod set_init_parameters() 
