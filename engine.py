@@ -499,29 +499,29 @@ class NukeEngine(tank.platform.Engine):
         """
         self.logger.debug("%s: Destroying...", self)
 
-        if self._context_switcher:
-            self._context_switcher.destroy()
+        # if self._context_switcher:
+        #     self._context_switcher.destroy()
 
-        if self.has_ui:
-            self._menu_generator.destroy_menu()
+        # if self.has_ui:
+        #     self._menu_generator.destroy_menu()
 
-        if self.hiero_enabled or self.studio_enabled:
-            import hiero.core
+        # if self.hiero_enabled or self.studio_enabled:
+        #     import hiero.core
 
-            hiero.core.events.unregisterInterest(
-                "kAfterNewProjectCreated",
-                self.set_project_root,
-            )
-            hiero.core.events.unregisterInterest(
-                "kAfterProjectLoad",
-                self._on_project_load_callback,
-            )
+        #     hiero.core.events.unregisterInterest(
+        #         "kAfterNewProjectCreated",
+        #         self.set_project_root,
+        #     )
+        #     hiero.core.events.unregisterInterest(
+        #         "kAfterProjectLoad",
+        #         self._on_project_load_callback,
+        #     )
 
-            if self.studio_enabled:
-                hiero.core.events.unregisterInterest(
-                    "kSelectionChanged",
-                    self._handle_studio_selection_change,
-                )
+        #     if self.studio_enabled:
+        #         hiero.core.events.unregisterInterest(
+        #             "kSelectionChanged",
+        #             self._handle_studio_selection_change,
+        #         )
 
     def post_context_change(self, old_context, new_context):
         """

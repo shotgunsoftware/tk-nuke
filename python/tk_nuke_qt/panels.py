@@ -134,8 +134,6 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
         
         # first, call the base class and let it do its thing.
         QtGui.QWidget.__init__(self)
-
-        nuke.addOnScriptClose(self.hide)
         
         # pick up the rest of the construction parameters
         # these are set via the class emthod set_init_parameters() 
@@ -231,13 +229,13 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
         # note that we search for the tab widget by unique id rather than going
         # up in the widget hierarchy, because the hierarchy has not been properly
         # established at this point yet. 
-        # for widget in QtGui.QApplication.allWidgets():
-        #     if widget.objectName() == panel_id:
-        #         filter = CloseEventFilter(widget)
-        #         filter.parent_closed.connect(self._on_parent_closed)
-        #         widget.installEventFilter(filter)
-        #         bundle.logger.debug("Installed close-event filter watcher on tab %s", widget)
-        #         break
+        for widget in QtGui.QApplication.allWidgets():
+            if widget.objectName() == panel_id:
+                filter = CloseEventFilter(widget)
+                filter.parent_closed.connect(self._on_parent_closed)
+                widget.installEventFilter(filter)
+                bundle.logger.debug("Installed close-event filter watcher on tab %s", widget)
+                break
 
         # We should have a parent panel object. If we do, we can alert it to the
         # concrete sgtk panel widget we're wrapping. This will allow is to provide
@@ -271,45 +269,38 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
         """
         Overridden close event method
         """
-        try:
-            # close child widget
-            self.toolkit_widget.close()
-            # delete this widget and all children
-            if nuke.env.get("NukeVersionMajor") >= 11:
-                # We don't seem to be able to deleteLater safely in Nuke 11, which
-                # is a PySide2/Qt5 app. My guess is that deleteLater is more "efficient"
-                # than it was in Qt4, and as a result, the deleteLater actually seems
-                # to delete RIGHT NOW. That plays havoc with the shutdown routines in
-                # some of our lower-level objects from the qtwidgets and shotgunutils
-                # frameworks. The result was that we ended up with dangling Python objects
-                # that have had their C++ object deleted by Qt before we're done with
-                # them in Python.
-                #
-                # However, we do need to get this widget out of the way, because there's
-                # logic that looks up existing stuff by object name and activates, which
-                # prevents us from opening up multiple, concurrent panel apps. We can
-                # just rename the widget, and let Qt/Python decide when to delete it.
-                self.toolkit_widget.setObjectName("%s.CLOSED" % self.objectName())
-            else:
-                # This was safe in Nuke versions previous to 11.x, so
-                # we can let Qt delete the widget hierarchy as soon as
-                # it has a free cycle.
-                self.deleteLater()
-            # okay to close dialog
-            event.accept()
-        except Exception:
-            pass
+        # close child widget
+        self.toolkit_widget.close()
+        # delete this widget and all children
+        if nuke.env.get("NukeVersionMajor") >= 11:
+            # We don't seem to be able to deleteLater safely in Nuke 11, which
+            # is a PySide2/Qt5 app. My guess is that deleteLater is more "efficient"
+            # than it was in Qt4, and as a result, the deleteLater actually seems
+            # to delete RIGHT NOW. That plays havoc with the shutdown routines in
+            # some of our lower-level objects from the qtwidgets and shotgunutils
+            # frameworks. The result was that we ended up with dangling Python objects
+            # that have had their C++ object deleted by Qt before we're done with
+            # them in Python.
+            #
+            # However, we do need to get this widget out of the way, because there's
+            # logic that looks up existing stuff by object name and activates, which
+            # prevents us from opening up multiple, concurrent panel apps. We can
+            # just rename the widget, and let Qt/Python decide when to delete it.
+            self.toolkit_widget.setObjectName("%s.CLOSED" % self.objectName())
+        else:
+            # This was safe in Nuke versions previous to 11.x, so
+            # we can let Qt delete the widget hierarchy as soon as
+            # it has a free cycle.
+            self.deleteLater()
+        # okay to close dialog
+        event.accept()
         
     def _on_parent_closed(self):
         """
         Callback slot from the event filter
         """
-        return
-        try:
-            # close this widget
-            self.close()
-        except Exception:
-            pass
+        # close this widget
+        self.close()
          
 
 class CloseEventFilter(QtCore.QObject):
