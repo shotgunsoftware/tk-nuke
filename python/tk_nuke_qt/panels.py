@@ -135,9 +135,7 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
         # first, call the base class and let it do its thing.
         QtGui.QWidget.__init__(self)
 
-        if sys.platform.startswith("linux"):
-            import nuke
-            nuke.addOnScriptClose(self.close)
+        nuke.addOnScriptClose(self.hide)
         
         # pick up the rest of the construction parameters
         # these are set via the class emthod set_init_parameters() 
@@ -273,6 +271,7 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
         """
         Overridden close event method
         """
+        return QWidget.closeEvent(self, event)
         try:
             # close child widget
             self.toolkit_widget.close()
@@ -306,6 +305,7 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
         """
         Callback slot from the event filter
         """
+        return
         try:
             # close this widget
             self.close()
