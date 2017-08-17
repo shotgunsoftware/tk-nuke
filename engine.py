@@ -392,7 +392,7 @@ class NukeEngine(tank.platform.Engine):
             # after a context change is triggered.
             self._previous_generators.append(self._menu_generator)
             self._menu_generator = tk_nuke.NukeMenuGenerator(self, menu_name)
-            # self._menu_generator.create_menu()
+            self._menu_generator.create_menu()
 
             # Initialize favourite dirs in the file open/file save dialogs
             self.__setup_favorite_dirs()
@@ -435,6 +435,7 @@ class NukeEngine(tank.platform.Engine):
             pass
 
     def _run_commands_at_startup(self):
+        return
         # Build a dictionary mapping app instance names to dictionaries of commands they registered with the engine.
         app_instance_commands = {}
         for (command_name, value) in self.commands.iteritems():
