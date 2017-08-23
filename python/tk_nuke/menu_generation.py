@@ -18,8 +18,6 @@ import unicodedata
 import nukescripts.openurl
 import nukescripts
 
-from sgtk.platform.qt import QtGui
-
 # -----------------------------------------------------------------------------
 
 class BaseMenuGenerator(object):
@@ -179,6 +177,8 @@ class HieroMenuGenerator(BaseMenuGenerator):
         import hiero
         if self._menu_handle is not None:
             self.destroy_menu()
+
+        from sgtk.platform.qt import QtGui
 
         self._menu_handle = QtGui.QMenu("Shotgun")
         help = hiero.ui.findMenuAction("Cache")
@@ -802,6 +802,7 @@ class HieroAppCommand(BaseAppCommand):
         action = menu.addAction(self.name)
         action.setEnabled(enabled)
         if icon:
+            from sgtk.platform.qt import QtGui
             action.setIcon(QtGui.QIcon(icon))
 
         def handler():
