@@ -407,8 +407,9 @@ class NukeEngine(tank.platform.Engine):
     @property
     def host_info(self):
         """
-        :returns: A (name, release) tuple with informations about the
-                  application hosting this engine.
+        :returns: A {"name": application name, "version": application version} 
+                  dictionary with informations about the application hosting this
+                  engine.
         """
         app_name = "Nuke"
         version = ""
@@ -443,7 +444,7 @@ class NukeEngine(tank.platform.Engine):
                 app_name = "Nuke Assist"
             version = nuke.env["NukeVersionString"]
 
-        return (app_name, version)
+        return {"name": app_name, "version": version}
 
     def _run_commands_at_startup(self):
         # Build a dictionary mapping app instance names to dictionaries of commands they registered with the engine.
