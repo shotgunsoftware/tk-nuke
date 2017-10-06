@@ -131,7 +131,7 @@ class NukeStudioStartVersionControlPlugin(HookBaseClass):
         path = project.path()
 
         if path:
-            version_number = publisher.util.get_version_number(path)
+            version_number = self._get_version_number(path, item)
             if version_number is not None:
                 self.logger.info(
                     "Nuke Studio '%s' plugin rejected project: %s..." %
@@ -192,6 +192,12 @@ class NukeStudioStartVersionControlPlugin(HookBaseClass):
             )
             return False
 
+        # NOTE: If the plugin is attached to an item, that means no version
+        # number could be found in the path. If that's the case, the work file
+        # template won't be much use here as it likely has a version number
+        # field defined within it. Simply use the path info hook to inject a
+        # version number into the current file path
+
         # get the path to a versioned copy of the file.
         version_path = publisher.util.get_version_path(path, "v001")
         if os.path.exists(version_path):
@@ -246,6 +252,46 @@ class NukeStudioStartVersionControlPlugin(HookBaseClass):
         :param item: Item to process
         """
         pass
+
+    def _get_version_number(self, path, item):
+        """
+        Try to extract and return a version number for the supplied path.
+
+        :param path: The path to the current session
+
+        :return: The version number as an `int` if it can be determined, else
+            None.
+
+        NOTE: This method will use the work file template provided by the
+        session collector, if configured, to determine the version number. If
+        not configured, the version number will be extracted using the zero
+        config path_info hook.
+        """
+
+        publisher = self.parent
+        version_number = None
+
+        work_file_template = item.properties.get("work_file_template")
+        if work_file_template:
+            if work_file_template.validate(path):
+                self.logger.debug(
+                    "Using work file template to determine version number.")
+                work_file_fields = work_file_template.get_fields(path)
+                if "version" in work_file_fields:
+                    version_number = work_file_fields.get("version")
+            else:
+                self.logger.debug(
+                    "Work file template did not match path")
+        else:
+            self.logger.debug(
+                "Work file template unavailable for version extraction.")
+
+        if version_number is None:
+            self.logger.debug(
+                "Using path info hook to determine version number.")
+            version_number = publisher.util.get_version_number(path)
+
+        return version_number
 
 
 def _get_save_as_action(project):
