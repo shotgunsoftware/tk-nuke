@@ -246,8 +246,8 @@ class NukeStudioProjectPublishPlugin(HookBaseClass):
                     extra={
                         "action_button": {
                             "label": "Save File",
-                            "tooltip": "Save the current Houdini session to a "
-                                       "different file name",
+                            "tooltip": "Save the current Nuke Studio session "
+                                       "to a different file name",
                             # will launch wf2 if configured
                             "callback": _get_save_as_action(project)
                         }
@@ -629,11 +629,23 @@ def _get_save_as_action(project):
     """
     Simple helper for returning a log action dict for saving the session
     """
+
+    engine = sgtk.platform.current_engine()
+
+    # default save callback
+    callback = lambda: _project_save_as(project)
+
+    # if workfiles2 is configured, use that for file save
+    if "tk-multi-workfiles2" in engine.apps:
+        app = engine.apps["tk-multi-workfiles2"]
+        if hasattr(app, "show_file_save_dlg"):
+            callback = app.show_file_save_dlg
+
     return {
         "action_button": {
             "label": "Save As...",
             "tooltip": "Save the current session",
-            "callback": lambda: _project_save_as(project)
+            "callback": callback
         }
     }
 
