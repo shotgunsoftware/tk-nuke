@@ -97,6 +97,7 @@ class NukeSessionCollector(HookBaseClass):
 
         # run node collection if not in hiero
         if hasattr(engine, "hiero_enabled") and not engine.hiero_enabled:
+            self.collect_sg_writenodes(project_item)
             self.collect_node_outputs(project_item)
 
         # TODO: collect tk nuke write nodes
@@ -233,7 +234,7 @@ class NukeSessionCollector(HookBaseClass):
         Scan known output node types in the session and see if they reference
         files that have been written to disk.
 
-        :param parent_item: The parent item for any write geo nodes collected
+        :param parent_item: The parent item for any nodes collected
         """
 
         # iterate over all the known output types
@@ -271,6 +272,98 @@ class NukeSessionCollector(HookBaseClass):
                 # collected within the current session.
                 item.name = "%s (%s)" % (item.name, node.name())
 
+    def collect_sg_writenodes(self, parent_item):
+        """
+        Collect any rendered sg write nodes in the session.
+
+        :param parent_item:  The parent item for any sg write nodes collected
+        """
+
+        publisher = self.parent
+        engine = publisher.engine
+
+        sg_writenode_app = engine.apps.get("tk-nuke-writenode")
+        if not sg_writenode_app:
+            self.logger.debug(
+                "The tk-nuke-writenode app is not installed. "
+                "Will not attempt to collect those nodes."
+            )
+            return
+
+        for node in sg_writenode_app.get_write_nodes():
+
+            # see if any frames have been rendered for this write node
+            rendered_files = sg_writenode_app.get_node_render_files(node)
+            if not rendered_files:
+                continue
+
+            # some files rendered, use first frame to get some publish item info
+            path = rendered_files[0]
+            item_info = super(NukeSessionCollector, self)._get_item_info(path)
+
+            # item_info will be for the single file. we'll update the type and
+            # display to represent a sequence. This is the same pattern used by
+            # the base collector for image sequences. We're not using the base
+            # collector to create the publish item though since we already have
+            # the sequence path, template knowledge provided by the
+            # tk-nuke-writenode app. The base collector makes some "zero config"
+            # assupmtions about the path that we don't need to make here.
+            item_type = "%s.sequence" % (item_info["item_type"],)
+            type_display = "%s Sequence" % (item_info["type_display"],)
+
+            # we'll publish the path with the frame/eye spec (%V, %04d)
+            publish_path = sg_writenode_app.get_node_render_path(node)
+
+            # construct publish name:
+            render_template = sg_writenode_app.get_node_render_template(node)
+            render_path_fields = render_template.get_fields(publish_path)
+
+            rp_name = render_path_fields.get("name")
+            rp_channel = render_path_fields.get("channel")
+            if not rp_name and not rp_channel:
+                publish_name = "Publish"
+            elif not rp_name:
+                publish_name = "Channel %s" % rp_channel
+            elif not rp_channel:
+                publish_name = rp_name
+            else:
+                publish_name = "%s, Channel %s" % (rp_name, rp_channel)
+
+            # get the version number from the render path
+            version_number = render_path_fields.get("version")
+
+            # use the path basename and nuke writenode name for display
+            (_, filename) = os.path.split(publish_path)
+            display_name = "%s (%s)" % (publish_name, node.name())
+
+            # create and populate the item
+            item = parent_item.create_item(
+                item_type, type_display, display_name)
+            item.set_icon_from_path(item_info["icon_path"])
+
+            # if the supplied path is an image, use the path as # the thumbnail.
+            item.set_thumbnail_from_path(path)
+
+            # disable thumbnail creation since we get it for free
+            item.thumbnail_enabled = False
+
+            # all we know about the file is its path. set the path in its
+            # properties for the plugins to use for processing.
+            item.properties["path"] = publish_path
+
+            # include an indicator that this is an image sequence and the known
+            # file that belongs to this sequence
+            item.properties["is_sequence"] = True
+            item.properties["sequence_files"] = rendered_files
+
+            # store publish info on the item so that the base publish plugin
+            # doesn't fall back to zero config path parsing
+            item.properties["publish_name"] = publish_name
+            item.properties["publish_version"] = version_number
+            item.properties["publish_template"] = \
+                sg_writenode_app.get_node_publish_template(node)
+
+            self.logger.info("Collected file: %s" % (publish_path,))
 
 def _session_path():
     """
