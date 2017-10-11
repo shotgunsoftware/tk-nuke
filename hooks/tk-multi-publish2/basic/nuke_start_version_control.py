@@ -260,14 +260,14 @@ class NukeStartVersionControlPlugin(HookBaseClass):
         publisher = self.parent
         version_number = None
 
-        work_file_template = item.properties.get("work_file_template")
-        if work_file_template:
-            if work_file_template.validate(path):
+        work_template = item.properties.get("work_template")
+        if work_template:
+            if work_template.validate(path):
                 self.logger.debug(
                     "Using work file template to determine version number.")
-                work_file_fields = work_file_template.get_fields(path)
-                if "version" in work_file_fields:
-                    version_number = work_file_fields.get("version")
+                work_fields = work_template.get_fields(path)
+                if "version" in work_fields:
+                    version_number = work_fields.get("version")
             else:
                 self.logger.debug(
                     "Work file template did not match path")

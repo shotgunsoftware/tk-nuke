@@ -52,7 +52,7 @@ class NukeSessionCollector(HookBaseClass):
 
         # settings specific to this collector
         nuke_session_settings = {
-            "Work file Template": {
+            "Work Template": {
                 "type": "template",
                 "default": None,
                 "description": "Template path for artist work files. Should "
@@ -100,8 +100,6 @@ class NukeSessionCollector(HookBaseClass):
             self.collect_sg_writenodes(project_item)
             self.collect_node_outputs(project_item)
 
-        # TODO: collect tk nuke write nodes
-
     def collect_current_nuke_session(self, settings, parent_item):
         """
         Analyzes the current session open in Nuke and parents a subtree of items
@@ -139,9 +137,9 @@ class NukeSessionCollector(HookBaseClass):
         )
         project_item.set_icon_from_path(icon_path)
 
-        # if a work file template is defined, add it to the item properties so
+        # if a work template is defined, add it to the item properties so
         # that it can be used by attached publish plugins
-        work_template_setting = settings.get("Work file Template")
+        work_template_setting = settings.get("Work Template")
         if work_template_setting:
             work_template = publisher.engine.get_template_by_name(
                 work_template_setting.value)
@@ -151,9 +149,9 @@ class NukeSessionCollector(HookBaseClass):
             # current session path won't change once the item has been created.
             # the attached publish plugins will need to resolve the fields at
             # execution time.
-            project_item.properties["work_file_template"] = work_template
+            project_item.properties["work_template"] = work_template
             self.logger.debug(
-                "Work file template defined for Nuke collection.")
+                "Work template defined for Nuke collection.")
 
         self.logger.info("Collected current Nuke script")
         return project_item
@@ -183,9 +181,9 @@ class NukeSessionCollector(HookBaseClass):
 
         active_project = hiero.ui.activeSequence().project()
 
-        # attempt to retrive a configured work file template. we can attach
+        # attempt to retrive a configured work template. we can attach
         # it to the collected project items
-        work_template_setting = settings.get("Work file Template")
+        work_template_setting = settings.get("Work Template")
         work_template = None
         if work_template_setting:
             work_template = publisher.engine.get_template_by_name(
@@ -225,9 +223,9 @@ class NukeSessionCollector(HookBaseClass):
             # the attached publish plugins will need to resolve the fields at
             # execution time.
             if work_template:
-                project_item.properties["work_file_template"] = work_template
+                project_item.properties["work_template"] = work_template
                 self.logger.debug(
-                    "Work file template defined for NukeStudio collection.")
+                    "Work template defined for NukeStudio collection.")
 
     def collect_node_outputs(self, parent_item):
         """
@@ -353,8 +351,7 @@ class NukeSessionCollector(HookBaseClass):
 
             # include an indicator that this is an image sequence and the known
             # file that belongs to this sequence
-            item.properties["is_sequence"] = True
-            item.properties["sequence_files"] = rendered_files
+            item.properties["sequence_paths"] = rendered_files
 
             # store publish info on the item so that the base publish plugin
             # doesn't fall back to zero config path parsing
@@ -362,6 +359,8 @@ class NukeSessionCollector(HookBaseClass):
             item.properties["publish_version"] = version_number
             item.properties["publish_template"] = \
                 sg_writenode_app.get_node_publish_template(node)
+            item.properties["work_template"] = \
+                sg_writenode_app.get_node_render_template(node)
 
             self.logger.info("Collected file: %s" % (publish_path,))
 

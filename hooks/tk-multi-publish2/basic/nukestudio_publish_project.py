@@ -120,7 +120,7 @@ class NukeStudioProjectPublishPlugin(HookBaseClass):
         """
         return {
             "Publish Type": {
-                "type": "shotgun_publish_type",
+                "type": "publish_type",
                 "default": "NukeStudio Project",
                 "description": "SG publish type to associate publishes with."
             },
