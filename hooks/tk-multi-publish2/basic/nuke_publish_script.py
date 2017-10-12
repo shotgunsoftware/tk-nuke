@@ -210,14 +210,14 @@ class NukeSessionPublishPlugin(HookBaseClass):
             )
             return False
 
-        # ---- check the session against any attached work file template
+        # ---- check the session against any attached work template
 
         # get the path in a normalized state. no trailing separator,
         # separators are appropriate for current os, no double separators,
         # etc.
-        sgtk.util.ShotgunPath.normalize(path)
+        path = sgtk.util.ShotgunPath.normalize(path)
 
-        # if the session item has a known work file template, see if the path
+        # if the session item has a known work template, see if the path
         # matches. if not, warn the user and provide a way to save the file to
         # a different path
         work_template = item.properties.get("work_template")
@@ -225,7 +225,7 @@ class NukeSessionPublishPlugin(HookBaseClass):
             if not work_template.validate(path):
                 self.logger.warning(
                     "The current session does not match the configured work "
-                    "file template.",
+                    "template.",
                     extra={
                         "action_button": {
                             "label": "Save File",
@@ -238,9 +238,9 @@ class NukeSessionPublishPlugin(HookBaseClass):
                 )
             else:
                 self.logger.debug(
-                    "Work file template configured and matches session file.")
+                    "Work template configured and matches session file.")
         else:
-            self.logger.debug("No work file template configured.")
+            self.logger.debug("No work template configured.")
 
         # ---- see if the version can be bumped post-publish
 
@@ -294,8 +294,6 @@ class NukeSessionPublishPlugin(HookBaseClass):
             instances.
         :param item: Item to process
         """
-
-        publisher = self.parent
 
         # get the path in a normalized state. no trailing separator, separators
         # are appropriate for current os, no double separators, etc.

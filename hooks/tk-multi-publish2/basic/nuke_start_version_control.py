@@ -17,7 +17,8 @@ HookBaseClass = sgtk.get_hook_baseclass()
 
 class NukeStartVersionControlPlugin(HookBaseClass):
     """
-    Plugin for creating the next version of a file.
+    Simple plugin to insert a version number into the nuke file path if one
+    does not exist.
     """
 
     @property
@@ -121,7 +122,6 @@ class NukeStartVersionControlPlugin(HookBaseClass):
         :returns: dictionary with boolean keys accepted, required and enabled
         """
 
-        publisher = self.parent
         path = _session_path()
 
         if path:
@@ -251,7 +251,7 @@ class NukeStartVersionControlPlugin(HookBaseClass):
         :return: The version number as an `int` if it can be determined, else
             None.
 
-        NOTE: This method will use the work file template provided by the
+        NOTE: This method will use the work template provided by the
         session collector, if configured, to determine the version number. If
         not configured, the version number will be extracted using the zero
         config path_info hook.
@@ -264,16 +264,16 @@ class NukeStartVersionControlPlugin(HookBaseClass):
         if work_template:
             if work_template.validate(path):
                 self.logger.debug(
-                    "Using work file template to determine version number.")
+                    "Using work template to determine version number.")
                 work_fields = work_template.get_fields(path)
                 if "version" in work_fields:
                     version_number = work_fields.get("version")
             else:
                 self.logger.debug(
-                    "Work file template did not match path")
+                    "Work template did not match path")
         else:
             self.logger.debug(
-                "Work file template unavailable for version extraction.")
+                "Work template unavailable for version extraction.")
 
         if version_number is None:
             self.logger.debug(

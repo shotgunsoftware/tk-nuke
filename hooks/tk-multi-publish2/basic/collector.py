@@ -122,7 +122,7 @@ class NukeSessionCollector(HookBaseClass):
             display_name = "Current Nuke Session"
 
         # create the session item for the publish hierarchy
-        project_item = parent_item.create_item(
+        session_item = parent_item.create_item(
             "nuke.session",
             "Nuke Script",
             display_name
@@ -135,7 +135,7 @@ class NukeSessionCollector(HookBaseClass):
             "icons",
             "nuke.png"
         )
-        project_item.set_icon_from_path(icon_path)
+        session_item.set_icon_from_path(icon_path)
 
         # if a work template is defined, add it to the item properties so
         # that it can be used by attached publish plugins
@@ -149,12 +149,12 @@ class NukeSessionCollector(HookBaseClass):
             # current session path won't change once the item has been created.
             # the attached publish plugins will need to resolve the fields at
             # execution time.
-            project_item.properties["work_template"] = work_template
+            session_item.properties["work_template"] = work_template
             self.logger.debug(
                 "Work template defined for Nuke collection.")
 
         self.logger.info("Collected current Nuke script")
-        return project_item
+        return session_item
 
     def collect_current_nukestudio_session(self, settings, parent_item):
         """
