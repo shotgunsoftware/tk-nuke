@@ -922,7 +922,7 @@ class NukeEngine(tank.platform.Engine):
         disk. If unsaved, it returns None.
 
         :return: Path to the current scene if file is saved, else returns
-                 and empty string..
+                 and empty string.
         """
         # retrieve the name of the nuke file. In case of a saved file, the
         # absolute path of the file is returned, for an unsaved file,
