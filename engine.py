@@ -927,9 +927,7 @@ class NukeEngine(tank.platform.Engine):
         # retrieve the name of the nuke file. In case of a saved file, the
         # absolute path of the file is returned, for an unsaved file,
         # an empty string is returned.
-        path = nuke.root().knob("name").value()
-
-        return path
+        return nuke.root().knob("name").value()
 
     def get_session_dependencies(self):
         """
@@ -945,8 +943,13 @@ class NukeEngine(tank.platform.Engine):
         start_frame = int(nuke.root().knob("first_frame").value())
         end_frame = int(nuke.root().knob("last_frame").value())
 
-        # retrieve the enabled Write nodes
-        enabled_write_nodes = self._get_enabled_write_nodes()
+        # create a list of enabled write node in the session
+        enabled_write_nodes = []
+        write_nodes = [node for node in nuke.allNodes()
+                       if node.Class() == "Write"]
+        if write_nodes:
+            enabled_write_nodes = [node for node in write_nodes
+                                   if not node.knob("disable").value()]
 
         # find file dependencies for each write node
         for write_node in enabled_write_nodes:
