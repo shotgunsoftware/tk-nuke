@@ -912,3 +912,55 @@ class NukeEngine(tank.platform.Engine):
                                 type=(nuke.IMAGE | nuke.SCRIPT | nuke.GEO),
                                 icon=icon_path,
                                 tooltip=path)
+
+    #####################################################################################
+    # Script and session related methods
+
+    def get_session_path(self):
+        """
+        Returns the path to the current file if it resides on
+        disk. If unsaved, it returns None.
+
+        :return: Path to the current scene if file is saved, else returns
+                 and empty string..
+        """
+        # retrieve the name of the nuke file. In case of a saved file, the
+        # absolute path of the file is returned, for an unsaved file,
+        # an empty string is returned.
+        path = nuke.root().knob("name").value()
+
+        return path
+
+    def get_session_dependencies(self):
+        """
+         Returns the list of file or folder dependencies for the current
+         session.
+
+         :return: A list of file or folder paths that the current
+                  session depends on.
+         """
+        dependencies = []
+
+        # we shall query for file dependencies for the file frame range
+        start_frame = int(nuke.root().knob("first_frame").value())
+        end_frame = int(nuke.root().knob("last_frame").value())
+
+        # retrieve the enabled Write nodes
+        enabled_write_nodes = self._get_enabled_write_nodes()
+
+        # find file dependencies for each write node
+        for write_node in enabled_write_nodes:
+            file_dependencies = write_node.fileDependencies(
+                start=start_frame,
+                end=end_frame
+            )
+            # extract the file path dependencies of all
+            # the Read nodes
+            for node, file_paths in file_dependencies:
+                if node.Class() == "Read":
+                    dependencies.extend(file_paths)
+
+        # filter out the unique paths
+        dependencies = list(set(dependencies))
+
+        return dependencies
