@@ -307,7 +307,7 @@ def _get_save_as_action():
     engine = sgtk.platform.current_engine()
 
     # default save callback
-    callback = engine.nuke.scriptSaveAs
+    callback = nuke.scriptSaveAs
 
     # if workfiles2 is configured, use that for file save
     if "tk-multi-workfiles2" in engine.apps:
