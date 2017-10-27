@@ -362,6 +362,11 @@ class NukeSessionCollector(HookBaseClass):
             item.properties["work_template"] = \
                 sg_writenode_app.get_node_render_template(node)
 
+            # we have a publish template so disable context change. This
+            # is a temporary measure until the publisher handles context
+            # switching natively.
+            item.context_change_allowed = False
+
             self.logger.info("Collected file: %s" % (publish_path,))
 
 def _session_path():

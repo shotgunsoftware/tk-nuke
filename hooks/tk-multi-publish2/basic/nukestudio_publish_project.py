@@ -167,6 +167,12 @@ class NukeStudioProjectPublishPlugin(HookBaseClass):
             self.logger.warn("Could not determine the project.")
             return {"accepted": False}
 
+        # if a publish template is configured, disable context change. This
+        # is a temporary measure until the publisher handles context switching
+        # natively.
+        if settings.get("Publish Template"):
+            item.context_change_allowed = False
+
         path = project.path()
 
         if not path:
