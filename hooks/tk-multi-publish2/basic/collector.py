@@ -179,7 +179,10 @@ class NukeSessionCollector(HookBaseClass):
             "nukestudio.png"
         )
 
-        active_project = hiero.ui.activeSequence().project()
+        if hiero.ui.activeSequence():
+            active_project = hiero.ui.activeSequence().project()
+        else:
+            active_project = None
 
         # attempt to retrive a configured work template. we can attach
         # it to the collected project items
