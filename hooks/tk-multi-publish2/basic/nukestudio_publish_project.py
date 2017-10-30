@@ -215,12 +215,13 @@ class NukeStudioProjectPublishPlugin(HookBaseClass):
         if not path:
             # the session still requires saving. provide a save button.
             # validation fails.
+            error_msg = "The Nuke Studio project '%s' has not been saved." % \
+                        (project.name(),),
             self.logger.error(
-                "The Nuke Studio project '%s' has not been saved." %
-                (project.name(),),
+                error_msg,
                 extra=_get_save_as_action(project)
             )
-            return False
+            raise Exception(error_msg)
 
         # ---- check the session against any attached work template
 
@@ -268,8 +269,9 @@ class NukeStudioProjectPublishPlugin(HookBaseClass):
                 (next_version_path, version) = self._get_next_version_info(
                     next_version_path, item)
 
+            error_msg = "The next version of this file already exists on disk."
             self.logger.error(
-                "The next version of this file already exists on disk.",
+                error_msg,
                 extra={
                     "action_button": {
                         "label": "Save to v%s" % (version,),
@@ -279,7 +281,7 @@ class NukeStudioProjectPublishPlugin(HookBaseClass):
                     }
                 }
             )
-            return False
+            raise Exception(error_msg)
 
         # ---- populate the necessary properties and call base class validation
 
