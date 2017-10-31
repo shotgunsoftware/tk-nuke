@@ -316,24 +316,11 @@ class NukeEngine(tank.platform.Engine):
                     self._handle_studio_selection_change,
                 )
 
-            hiero_ver_str = "%s.%s%s" % (
-                hiero_env["VersionMajor"],
-                hiero_env["VersionMinor"],
-                hiero_env["VersionRelease"],
-            )
-            self.log_user_attribute_metric("Nuke Studio version", hiero_ver_str)
-
     def log_user_attribute_metric(self, name, value):
         """
-        Logs usage metrics if core supports it.
-
-        :param str name: Name of the metric to log.
-        :param str value: Value of the metric to log.
+        This method is deprecated and shouldn't be used anymore
         """
-        if hasattr(tank.platform.Engine, "log_user_attribute_metric"):
-            super(NukeEngine, self).log_user_attribute_metric(name, value)
-        else:
-            self.log_debug("The current version of core doesn't support usage metrics.")
+        pass
 
     def post_app_init_hiero(self, menu_name="Shotgun"):
         """
@@ -361,17 +348,6 @@ class NukeEngine(tank.platform.Engine):
                 "kAfterProjectLoad",
                 self._on_project_load_callback,
             )
-
-            try:
-                hiero_ver_str = "%s.%s%s" % (
-                    hiero_env["VersionMajor"],
-                    hiero_env["VersionMinor"],
-                    hiero_env["VersionRelease"],
-                )
-                self.log_user_attribute_metric("Hiero version", hiero_ver_str)
-            except:
-                # ignore all errors. ex: using a core that doesn't support metrics
-                pass
 
     def post_app_init_nuke(self, menu_name="Shotgun"):
         """
@@ -428,11 +404,47 @@ class NukeEngine(tank.platform.Engine):
         if not (nuke.env.get("NukeVersionMajor") == 9 and nuke.env.get("studio")):
             self._run_commands_at_startup()
 
-        try:
-            self.log_user_attribute_metric("Nuke version", nuke.env.get("NukeVersionString"))
-        except:
-            # ignore all errors. ex: using a core that doesn't support metrics
-            pass
+    @property
+    def host_info(self):
+        """
+        :returns: A {"name": application name, "version": application version} 
+                  dictionary with informations about the application hosting this
+                  engine.
+        """
+        app_name = "Nuke"
+        version = ""
+        if self.studio_enabled:
+            app_name = "Nuke Studio"
+            from hiero.core import env as hiero_env
+            # VersionRelease is something like "v8", so we don't put a '.'
+            # between it and VersionMinor
+            version = "%s.%s%s" % (
+                hiero_env["VersionMajor"],
+                hiero_env["VersionMinor"],
+                hiero_env["VersionRelease"],
+            )
+        elif self.hiero_enabled:
+            from hiero.core import env as hiero_env
+            # VersionString is something like 'Hiero 10.5v1', it seems safer to
+            # deal with the app name and version more explicitly
+            app_name = hiero_env["ApplicationName"]
+            # VersionRelease is something like "v8", so we don't put a '.'
+            # between it and VersionMinor
+            version = "%s.%s%s" % (
+                hiero_env["VersionMajor"],
+                hiero_env["VersionMinor"],
+                hiero_env["VersionRelease"],
+            )
+        else:
+            # Check which Nuke favor we're running. No need to check for PLE or
+            # non-commercial: the engine does not support them.
+            if nuke.env["nukex"]:
+                app_name = "NukeX"
+            elif nuke.env["assist"]:
+                app_name = "Nuke Assist"
+            version = nuke.env["NukeVersionString"]
+
+        return {"name": app_name, "version": version}
 
     def _run_commands_at_startup(self):
         # Build a dictionary mapping app instance names to dictionaries of commands they registered with the engine.
