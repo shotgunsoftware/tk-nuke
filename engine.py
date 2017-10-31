@@ -916,54 +916,116 @@ class NukeEngine(tank.platform.Engine):
     #####################################################################################
     # Script and session related methods
 
-    def get_session_path(self):
+    def get_session_path(self, session=None):
         """
-        Returns the path to the current file if it resides on
-        disk. If unsaved, it returns None.
+        Returns the absolute path to the current file if it resides
+        on disk. If the session has never been saved and isn't
+        associated with a file on disk yet, an empty string is returned.
 
-        :return: Path to the current scene if file is saved, else returns
-                 and empty string.
+        :param session: An object representing the active document
+                        (for MDI applications).
+        :returns: Path to the current file if it has been saved to disk,
+                  else returns an empty string.
+        :raises TankError: Raises a `TankError` if the application is
+                           unable to determine the session that is
+                           being referred to.
         """
-        # retrieve the name of the nuke file. In case of a saved file, the
-        # absolute path of the file is returned, for an unsaved file,
-        # an empty string is returned.
-        return nuke.root().knob("name").value()
+        if self.hiero_enabled or self.studio_enabled:
+            import hiero
 
-    def get_session_dependencies(self):
+            # first find what the current project is. Hiero is a multi
+            # project environment so we can ask the engine which
+            # project was last clicked.
+            selection = self.get_menu_selection()
+
+            # to guard against multiple selections, make sure we have
+            # only one selection.
+            if len(selection) != 1:
+                raise tank.TankError("Please select a single project.")
+            if not isinstance(selection[0], hiero.core.Bin):
+                raise tank.TankError("Please select a Hiero project.")
+
+            project = selection[0].project()
+
+            if project is None:
+                # apparently bins can be without projects (child bins)
+                raise tank.TankError("Please select a Hiero Project.")
+
+            session_path = project.path()
+        else:
+            session_path = nuke.root().knob("name").value()
+
+        # replace forward slashes with the OS-specific path separator
+        # to make Nuke happy on Windows.
+        return session_path.replace("/", os.path.sep)
+
+    def get_session_dependencies(self, session=None):
         """
-         Returns the list of file or folder dependencies for the current
-         session.
+        Returns a list of file dependencies for the current session.
 
-         :return: A list of file or folder paths that the current
-                  session depends on.
+        :param session: An object representing the active document
+                        (for MDI applications).
+        :returns: A list of file dependencies required to load
+                  the session. The data returned is of the form:
+                  [
+                    {"path": "/foo/bar/hello.%04d.jpeg",
+                     "engine": "tk-nuke",
+                     "type": "Read"
+                     },
+                    {"path": "/foo/bar/hello.%04d.obj",
+                     "engine": "tk-nuke",
+                     "type": "ReadGeo2"
+                     },
+                  ]
          """
         dependencies = []
 
-        # we shall query for file dependencies for the file frame range
-        start_frame = int(nuke.root().knob("first_frame").value())
-        end_frame = int(nuke.root().knob("last_frame").value())
+        if self.hiero_enabled or self.studio_enabled:
+            import hiero.core
 
-        # create a list of enabled write node in the session
-        enabled_write_nodes = []
-        write_nodes = [node for node in nuke.allNodes()
-                       if node.Class() == "Write"]
-        if write_nodes:
-            enabled_write_nodes = [node for node in write_nodes
-                                   if not node.knob("disable").value()]
+            # collect dependencies for all projects opened
+            # in the Hiero session.
+            for project in hiero.core.projects():
+                for clip in project.clips():
+                    mediaSource = clip.mediaSource()
+                    for info in mediaSource.fileinfos():
+                        # replace forward slashes with the OS-
+                        # specific path separator to make
+                        # Nuke happy on Windows.
+                        dependencies.append(
+                            {
+                                "path": info.filename().replace(
+                                    "/",
+                                    os.path.sep
+                                ),
+                                "engine": self.name,
+                                "type": "MediaSource",
+                            }
+                        )
+        else:
+            # create a list of Read-like nodes in the session
+            read_nodes = [node for node in nuke.allNodes()
+                           if node.Class().startswith("Read")]
 
-        # find file dependencies for each write node
-        for write_node in enabled_write_nodes:
-            file_dependencies = write_node.fileDependencies(
-                start=start_frame,
-                end=end_frame
-            )
-            # extract the file path dependencies of all
-            # the Read nodes
-            for node, file_paths in file_dependencies:
-                if node.Class() == "Read":
-                    dependencies.extend(file_paths)
+            # find file dependencies for each Read node
+            for read_node in read_nodes:
+                # extract the file knob of the Read node
+                file_knob = read_node.knob("file")
 
-        # filter out the unique paths
-        dependencies = list(set(dependencies))
+                # include the file path as a dependency
+                if file_knob:
+                    # replace forward slashes with the OS-
+                    # specific path separator to make
+                    # Nuke happy on Windows.
+                    dependencies.append(
+                        {
+                            "path": file_knob.value().replace(
+                                "/",
+                                os.path.sep,
+                            ),
+                            "engine": self.name,
+                            "type": read_node.Class(),
+                        }
+                    )
 
         return dependencies
