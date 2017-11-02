@@ -150,8 +150,7 @@ class NukeSessionCollector(HookBaseClass):
             # the attached publish plugins will need to resolve the fields at
             # execution time.
             session_item.properties["work_template"] = work_template
-            self.logger.debug(
-                "Work template defined for Nuke collection.")
+            self.logger.debug("Work template defined for Nuke collection.")
 
         self.logger.info("Collected current Nuke script")
         return session_item
@@ -184,6 +183,11 @@ class NukeSessionCollector(HookBaseClass):
         else:
             active_project = None
 
+            # FIXME: returning 'None' for now since we're limiting the publisher
+            # to only handle the active project. remove this line when we have
+            # multi context support
+            return None
+
         # attempt to retrive a configured work template. we can attach
         # it to the collected project items
         work_template_setting = settings.get("Work Template")
@@ -192,7 +196,17 @@ class NukeSessionCollector(HookBaseClass):
             work_template = publisher.engine.get_template_by_name(
                 work_template_setting.value)
 
+        # TODO: do we need to context switch as we process each project in order
+        # to associate the proper context?
+
         for project in hiero.core.projects():
+
+            # FIXME: temporarily only create an item for the current project.
+            # This buys us some time as we update the publish2 app to handle
+            # multi context scenarios in a robust way. remove these lines when
+            # we have multi context support.
+            if active_project.guid() != project.guid():
+                continue
 
             # create the session item for the publish hierarchy
             project_item = parent_item.create_item(
@@ -209,16 +223,20 @@ class NukeSessionCollector(HookBaseClass):
             self.logger.info(
                 "Collected Nuke Studio project: %s" % (project.name(),))
 
+            # FIXME: This following line are not needed while we're only
+            # creating items for the active project. Reevaluate once we have
+            # multi context support.
+
             # enable the active project and expand it. other projects are
             # collapsed and disabled.
-            if active_project and active_project.guid() == project.guid():
-                project_item.expanded = True
-                project_item.checked = True
-            elif active_project:
-                # there is an active project, but this isn't it. collapse and
-                # disable this item
-                project_item.expanded = False
-                project_item.checked = False
+            #if active_project and active_project.guid() == project.guid():
+            #    project_item.expanded = True
+            #    project_item.checked = True
+            #elif active_project:
+            #    # there is an active project, but this isn't it. collapse and
+            #    # disable this item
+            #    project_item.expanded = False
+            #    project_item.checked = False
 
             # store the template on the item for use by publish plugins. we
             # can't evaluate the fields here because there's no guarantee the
