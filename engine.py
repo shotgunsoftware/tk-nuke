@@ -1028,4 +1028,10 @@ class NukeEngine(tank.platform.Engine):
                         }
                     )
 
-        return dependencies
+        # apply any custom filtering before returning
+        # the list of dependency data.
+        return self.execute_hook_method(
+            "hook_filter_dependencies",
+            "filter_dependencies",
+            dependencies=dependencies
+        )
