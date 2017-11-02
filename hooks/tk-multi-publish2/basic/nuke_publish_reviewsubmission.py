@@ -133,7 +133,7 @@ class NukeReviewSubmissionPublishPlugin(HookBaseClass):
         accept() method. Strings can contain glob patters such as *, for example
         ["maya.*", "file.maya"]
         """
-        return ["nuke.reviewsubmission"]
+        return ["*.sequence"]
 
     def accept(self, settings, item):
         """
@@ -165,20 +165,11 @@ class NukeReviewSubmissionPublishPlugin(HookBaseClass):
         # if a publish template is configured, disable context change. This
         # is a temporary measure until the publisher handles context switching
         # natively.
-        if settings.get("Publish Template").value:
-            item.context_change_allowed = False
         review_submission_app = self.parent.engine.apps.get("tk-multi-reviewsubmission")
         if review_submission_app is None:
             accepted = False
             self.logger.warning(
                 "Review submission app is not available. skipping item: %s" %
-                (item.properties["publish_name"],)
-            )
-        write_node_app = self.parent.engine.apps.get("tk-nuke-writenode")
-        if write_node_app is None:
-            accepted = False
-            self.logger.warning(
-                "Write Node app is not available. skipping item: %s" %
                 (item.properties["publish_name"],)
             )
 
@@ -204,17 +195,6 @@ class NukeReviewSubmissionPublishPlugin(HookBaseClass):
         :returns: True if item is valid, False otherwise.
         """
 
-        review_submission_app = self.parent.engine.apps.get("tk-multi-reviewsubmission")
-        if review_submission_app is None:
-            error_msg = "Item cannot be validated. Review Submission App is not available."
-            self.logger.error(error_msg)
-            raise Exception(error_msg)
-        write_node_app = self.parent.engine.apps.get("tk-nuke-writenode")
-        if write_node_app is None:
-            error_msg = "Item cannot be validated. Write Node App is not available."
-            self.logger.error(error_msg)
-            raise Exception(error_msg)
-
         # the render task will always render full-res frames when publishing. If we're
         # in proxy mode in Nuke, that task will fail since there will be no full-res 
         # frames rendered. The exceptions are if there is no proxy_render_template set 
@@ -229,15 +209,6 @@ class NukeReviewSubmissionPublishPlugin(HookBaseClass):
             self.logger.error(error_msg)
             raise Exception(error_msg)
 
-        publisher = self.parent
-
-        # populate the publish template on the item if found
-        publish_template_setting = settings.get("Publish Template")
-        publish_template = publisher.engine.get_template_by_name(
-            publish_template_setting.value)
-        if publish_template:
-            item.properties["publish_template"] = publish_template
-
         return True
 
     def publish(self, settings, item):
@@ -250,60 +221,22 @@ class NukeReviewSubmissionPublishPlugin(HookBaseClass):
         :param item: Item to process
         """
 
-        review_submission_app = self.parent.engine.apps.get("tk-multi-reviewsubmission")
-        if review_submission_app is None:
-            error_msg = "Item cannot be validated. Review Submission App is not available."
-            self.logger.error(error_msg)
-            return
-        write_node_app = self.parent.engine.apps.get("tk-nuke-writenode")
-        if write_node_app is None:
-            error_msg = "Item cannot be validated. Write Node App is not available."
-            self.logger.error(error_msg)
-            return
-
-        self._send_to_screening_room(item,
-                                     item.parent.properties["sg_publish_data"],
-                                     self.parent.context.task,
-                                     item.description,
-                                     item.get_thumbnail_as_path(),
-                                     lambda *args, **kwargs: None)
-
-    def finalize(self, settings, item):
-        """
-        Execute the finalization pass. This pass executes once all the publish
-        tasks have completed, and can for example be used to version up files.
-
-        :param settings: Dictionary of Settings. The keys are strings, matching
-            the keys returned in the settings property. The values are `Setting`
-            instances.
-        :param item: Item to process
-        """
-        pass
-
-    def _send_to_screening_room(self, item, sg_publish, sg_task, comment, thumbnail_path, progress_cb):
-        """
-        Take a write node's published files and run them through the review_submission app 
-        to get a movie and Shotgun Version.
-
-        :param item:            The item to be published
-        :param sg_publish:      The Shotgun publish entity dictionary to link the version with
-        :param sg_task:         The Shotgun task entity dictionary for the publish
-        :param comment:         The publish comment
-        :param thumbnail_path:  The path to a thumbnail for the publish
-        :param progress_cb:     A callback to use to report any progress
-        """
-        write_node_app = self.parent.engine.apps.get("tk-nuke-writenode")
+        sg_publish = item.properties["sg_publish_data"]
+        sg_task = self.parent.context.task
+        comment = item.description
+        thumbnail_path = item.get_thumbnail_as_path()
+        progress_cb = lambda *args, **kwargs: None
         review_submission_app = self.parent.engine.apps.get("tk-multi-reviewsubmission")
 
-        render_path = item.parent.properties.get("path")
-        render_template = item.parent.properties.get("work_template")
-        publish_template = item.properties.get("publish_template") or item.parent.properties.get("publish_template")                        
+        render_path = item.properties.get("path")
+        render_template = item.properties.get("work_template")
+        publish_template = item.properties.get("publish_template")
         render_path_fields = render_template.get_fields(render_path)
 
         if hasattr(review_submission_app, "render_and_submit_version"):
             # this is a recent version of the review submission app that contains
             # the new method that also accepts a colorspace argument.
-            colorspace = item.parent.properties.get("color_space")
+            colorspace = item.properties.get("color_space")
             review_submission_app.render_and_submit_version(
                 publish_template,
                 render_path_fields,
@@ -331,3 +264,15 @@ class NukeReviewSubmissionPublishPlugin(HookBaseClass):
                 thumbnail_path,
                 progress_cb
             )
+
+    def finalize(self, settings, item):
+        """
+        Execute the finalization pass. This pass executes once all the publish
+        tasks have completed, and can for example be used to version up files.
+
+        :param settings: Dictionary of Settings. The keys are strings, matching
+            the keys returned in the settings property. The values are `Setting`
+            instances.
+        :param item: Item to process
+        """
+        pass

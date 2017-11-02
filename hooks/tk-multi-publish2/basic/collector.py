@@ -283,16 +283,6 @@ class NukeSessionCollector(HookBaseClass):
         publisher = self.parent
         engine = publisher.engine
 
-        review_submission_app = self.parent.engine.apps.get("tk-multi-reviewsubmission")
-        # get the icon path to display for this review items
-        if review_submission_app:
-            movie_icon_path = os.path.join(
-                self.disk_location,
-                os.pardir,
-                "icons",
-                "review.png"
-            )
-
         sg_writenode_app = engine.apps.get("tk-nuke-writenode")
         if not sg_writenode_app:
             self.logger.debug(
@@ -382,19 +372,6 @@ class NukeSessionCollector(HookBaseClass):
             item.context_change_allowed = False
 
             self.logger.info("Collected file: %s" % (publish_path,))
-
-            if review_submission_app is None:
-                error_msg = "Review Submission App is not available. Will not add review movie for export"
-                self.logger.error(error_msg)
-                raise Exception(error_msg)
-            else:
-                review_submission_item = item.create_item("nuke.reviewsubmission", "Movie File", display_name + " Review Submission")
-                review_submission_item.set_icon_from_path(movie_icon_path)
-                review_submission_item.properties["publish_name"] = item.properties["publish_name"]
-                # we have a publish template so disable context change. This
-                # is a temporary measure until the publisher handles context
-                # switching natively.
-                review_submission_item.context_change_allowed = False
 
     def _get_node_colorspace(self, node):
         """
