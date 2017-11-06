@@ -916,16 +916,14 @@ class NukeEngine(tank.platform.Engine):
     #####################################################################################
     # Script and session related methods
 
-    def get_session_path(self, session=None):
+    def get_session_path(self):
         """
-        Returns the absolute path to the current file if it resides
+        Returns the absolute path to the current session if it resides
         on disk. If the session has never been saved and isn't
         associated with a file on disk yet, an empty string is returned.
 
-        :param session: An object representing the active document
-                        (for MDI applications).
-        :returns: Path to the current file if it has been saved to disk,
-                  else returns an empty string.
+        :returns: Path to the current session if it has been saved to disk,
+                  else returns None.
         :raises TankError: Raises a `TankError` if the application is
                            unable to determine the session that is
                            being referred to.
@@ -957,14 +955,15 @@ class NukeEngine(tank.platform.Engine):
 
         # replace forward slashes with the OS-specific path separator
         # to make Nuke happy on Windows.
-        return session_path.replace("/", os.path.sep)
+        session_path = session_path.replace("/", os.path.sep)
 
-    def get_session_dependencies(self, session=None):
+        # return None if the session path is empty.
+        return session_path if session_path else None
+
+    def get_session_dependencies(self):
         """
         Returns a list of file dependencies for the current session.
 
-        :param session: An object representing the active document
-                        (for MDI applications).
         :returns: A list of file dependencies required to load
                   the session. The data returned is of the form:
                   [
