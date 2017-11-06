@@ -291,6 +291,9 @@ class NukeSessionCollector(HookBaseClass):
             )
             return
 
+        first_frame =  int(nuke.root()["first_frame"].value())
+        last_frame = int(nuke.root()["last_frame"].value())
+
         for node in sg_writenode_app.get_write_nodes():
 
             # see if any frames have been rendered for this write node
@@ -365,6 +368,8 @@ class NukeSessionCollector(HookBaseClass):
             item.properties["work_template"] = \
                 sg_writenode_app.get_node_render_template(node)
             item.properties["color_space"] = self._get_node_colorspace(node)
+            item.properties["first_frame"] = first_frame
+            item.properties["last_frame"] = last_frame
 
             # we have a publish template so disable context change. This
             # is a temporary measure until the publisher handles context
