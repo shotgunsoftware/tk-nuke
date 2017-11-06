@@ -183,11 +183,6 @@ class NukeSessionCollector(HookBaseClass):
         else:
             active_project = None
 
-            # FIXME: returning 'None' for now since we're limiting the publisher
-            # to only handle the active project. remove this line when we have
-            # multi context support
-            return None
-
         # attempt to retrive a configured work template. we can attach
         # it to the collected project items
         work_template_setting = settings.get("Work Template")
@@ -196,17 +191,32 @@ class NukeSessionCollector(HookBaseClass):
             work_template = publisher.engine.get_template_by_name(
                 work_template_setting.value)
 
-        # TODO: do we need to context switch as we process each project in order
-        # to associate the proper context?
+        # FIXME: begin temporary workaround
+        # we use different logic here only because we don't have proper support
+        # for multi context workflows when templates are in play. So if we have
+        # a work template configured, for now we'll only collect the current,
+        # active document. Once we have proper multi context support, we can
+        # remove this.
+        if work_template:
+            # same logic as the loop below but only processing the active doc
+            if not active_project:
+                return
+            project_item = parent_item.create_item(
+                "nukestudio.project",
+                "NukeStudio Project",
+                active_project.name()
+            )
+            self.logger.info(
+                "Collected Nuke Studio project: %s" % (active_project.name(),))
+            project_item.set_icon_from_path(icon_path)
+            project_item.properties["project"] = active_project
+            project_item.properties["work_template"] = work_template
+            self.logger.debug(
+                "Work template defined for NukeStudio collection.")
+            return
+        # FIXME: end temporary workaround
 
         for project in hiero.core.projects():
-
-            # FIXME: temporarily only create an item for the current project.
-            # This buys us some time as we update the publish2 app to handle
-            # multi context scenarios in a robust way. remove these lines when
-            # we have multi context support.
-            if active_project.guid() != project.guid():
-                continue
 
             # create the session item for the publish hierarchy
             project_item = parent_item.create_item(
@@ -223,20 +233,16 @@ class NukeSessionCollector(HookBaseClass):
             self.logger.info(
                 "Collected Nuke Studio project: %s" % (project.name(),))
 
-            # FIXME: This following line are not needed while we're only
-            # creating items for the active project. Reevaluate once we have
-            # multi context support.
-
             # enable the active project and expand it. other projects are
             # collapsed and disabled.
-            #if active_project and active_project.guid() == project.guid():
-            #    project_item.expanded = True
-            #    project_item.checked = True
-            #elif active_project:
-            #    # there is an active project, but this isn't it. collapse and
-            #    # disable this item
-            #    project_item.expanded = False
-            #    project_item.checked = False
+            if active_project and active_project.guid() == project.guid():
+                project_item.expanded = True
+                project_item.checked = True
+            elif active_project:
+                # there is an active project, but this isn't it. collapse and
+                # disable this item
+                project_item.expanded = False
+                project_item.checked = False
 
             # store the template on the item for use by publish plugins. we
             # can't evaluate the fields here because there's no guarantee the
