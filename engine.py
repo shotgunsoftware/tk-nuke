@@ -924,3 +924,157 @@ class NukeEngine(tank.platform.Engine):
                                 type=(nuke.IMAGE | nuke.SCRIPT | nuke.GEO),
                                 icon=icon_path,
                                 tooltip=path)
+
+    #####################################################################################
+    # Script and session related methods
+
+    def get_session_path(self):
+        """
+        Returns the absolute path to the current session if it resides
+        on disk. If the session has never been saved and isn't
+        associated with a file on disk yet, None is returned.
+
+        :returns: Path to the current session if it has been saved to disk,
+                  else returns None.
+        """
+
+        if self.hiero_enabled or self.studio_enabled:
+            import hiero
+
+            # first find what the current project is. Hiero is a multi
+            # project environment so we can ask the engine which
+            # project was last clicked.
+            selection = self.get_menu_selection()
+
+            # to guard against multiple selections, make sure we have
+            # only one selection.
+            if len(selection) != 1:
+                hiero.core.log.error("Cannot determine the current session " +
+                                     "filename as a single project selection " +
+                                     "is required to do so.")
+                return None
+
+            # if the user has selected a non-project element,
+            # return None
+            if not isinstance(selection[0], hiero.core.Bin):
+                hiero.core.log.error("Cannot determine the current session " +
+                                     "filename because an element other than" +
+                                     "a project is selected.")
+                return None
+
+            project = selection[0].project()
+
+            if project is None:
+                # apparently bins can be without projects (child bins)
+                hiero.core.log.error("Cannot determine the current session " +
+                                     "as the project could not be deduced.")
+            else:
+                session_path = project.path()
+        else:
+            session_path = nuke.root().knob("name").value()
+
+        # replace forward slashes with the OS-specific path separator
+        # to make Nuke happy on Windows.
+        session_path = session_path.replace("/", os.path.sep)
+
+        # return None if the session path is empty.
+        return session_path if session_path else None
+
+    def get_session_dependencies(self):
+        """
+        Returns a list of file dependencies for the current session.
+
+        :returns: A list of file dependencies required to load
+                  the session. The data returned is of the form:
+                  [
+                    {"path": "/foo/bar/hello.%04d.jpeg",
+                     "engine": "tk-nuke",
+                     "type": "Read"
+                     },
+                    {"path": "/foo/bar/hello.%04d.obj",
+                     "engine": "tk-nuke",
+                     "type": "ReadGeo2"
+                     },
+                  ]
+         """
+        dependencies = []
+
+        if self.hiero_enabled or self.studio_enabled:
+            import hiero.core
+
+            # first find what the current project is. Hiero is a multi
+            # project environment so we can ask the engine which
+            # project was last clicked.
+            selection = self.get_menu_selection()
+
+            # to guard against multiple selections, make sure we have
+            # only one selection.
+            if len(selection) != 1:
+                hiero.core.log.error("Cannot determine the current session " +
+                                     "dependencies as a single project selection " +
+                                     "is required to do so.")
+            # if the user has selected a non-project element, return an
+            # empty list
+            elif not isinstance(selection[0], hiero.core.Bin):
+                hiero.core.log.error("Cannot determine the current session " +
+                                     "dependencies because an element other " +
+                                     "than a project is selected.")
+            else:
+                project = selection[0].project()
+
+                if project is None:
+                    # apparently bins can be without projects (child bins)
+                    hiero.core.log.error("Cannot determine the current session " +
+                                         "dependencies as the project could not " +
+                                         "be deduced from the selection.")
+                else:
+                    # collect dependencies for the selected project.
+                    for clip in project.clips():
+                        mediaSource = clip.mediaSource()
+                        for info in mediaSource.fileinfos():
+                            # replace forward slashes with the OS-
+                            # specific path separator to make
+                            # Nuke happy on Windows.
+                            dependencies.append(
+                                {
+                                    "path": info.filename().replace(
+                                        "/",
+                                        os.path.sep
+                                    ),
+                                    "engine": self.name,
+                                    "type": "MediaSource",
+                                }
+                            )
+        else:
+            # create a list of Read-like nodes in the session
+            read_nodes = [node for node in nuke.allNodes()
+                           if node.Class().startswith("Read")]
+
+            # find file dependencies for each Read node
+            for read_node in read_nodes:
+                # extract the file knob of the Read node
+                file_knob = read_node.knob("file")
+
+                # include the file path as a dependency
+                if file_knob:
+                    # replace forward slashes with the OS-
+                    # specific path separator to make
+                    # Nuke happy on Windows.
+                    dependencies.append(
+                        {
+                            "path": file_knob.value().replace(
+                                "/",
+                                os.path.sep,
+                            ),
+                            "engine": self.name,
+                            "type": read_node.Class(),
+                        }
+                    )
+
+        # apply any custom filtering before returning
+        # the list of dependency data.
+        return self.execute_hook_method(
+            "hook_filter_dependencies",
+            "filter_dependencies",
+            dependencies=dependencies
+        )
