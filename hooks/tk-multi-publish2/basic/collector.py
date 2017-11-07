@@ -291,6 +291,20 @@ class NukeSessionCollector(HookBaseClass):
             )
             return
 
+        # the render task will always render full-res frames when publishing. If we're
+        # in proxy mode in Nuke, that task will fail since there will be no full-res 
+        # frames rendered. The exceptions are if there is no proxy_render_template set 
+        # in the tk-nuke-writenode app, then the write node app falls back on the
+        # full-res template. Or if they rendered in full res and then switched to 
+        # proxy mode later. In this case, this is likely user error, so we catch it.
+        root_node = nuke.root()
+        proxy_mode_on = root_node['proxy'].value()
+        if proxy_mode_on:
+            error_msg = "You cannot publish to Screening Room while Nuke is in proxy " +\
+                        "mode. Please toggle proxy mode OFF and try again."
+            self.logger.error(error_msg)
+            return
+
         first_frame =  int(nuke.root()["first_frame"].value())
         last_frame = int(nuke.root()["last_frame"].value())
 
