@@ -391,7 +391,7 @@ class NukeSessionCollector(HookBaseClass):
 
             # store the nuke writenode on the item as well. this can be used by
             # secondary publish plugins
-            item.properties["nuke_writenode"] = node
+            item.properties["sg_writenode"] = node
 
             # we have a publish template so disable context change. This
             # is a temporary measure until the publisher handles context

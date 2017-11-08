@@ -125,7 +125,6 @@ class UpdateFlameClipPlugin(HookBaseClass):
         """
 
         publisher = self.parent
-        accepted = True
 
         # ---- Ensure the write node app is configured
 
@@ -139,18 +138,18 @@ class UpdateFlameClipPlugin(HookBaseClass):
                 "environment. It is required for publishing for Flame."
                 "Plugin %s no accepting item: %s" % (self, item)
             )
-            accepted = False
+            return {"accepted": False}
 
         # ---- Ensure this item is associated with a nuke write node
 
-        if item.properties.get("nuke_writenode"):
+        if item.properties.get("sg_writenode"):
             self.logger.debug("Nuke write node instance found on item.")
         else:
             self.logger.debug(
                 "Unable to identify a nuke writenode instance for this item. "
                 "Plugin %s no accepting item: %s" % (self, item)
             )
-            accepted = False
+            return {"accepted": False}
 
         # ---- Ensure a flame clip template is configured
 
@@ -165,7 +164,7 @@ class UpdateFlameClipPlugin(HookBaseClass):
                 "No flame clip template configured. "
                 "Plugin %s no accepting item: %s" % (self, item)
             )
-            accepted = False
+            return {"accepted": False}
 
         # ---- Ensure the clip path exists
 
@@ -184,9 +183,9 @@ class UpdateFlameClipPlugin(HookBaseClass):
                 "path is '%s'. This is most likely because this Shot wasn't "
                 "created using the Flame Shot Export." % (flame_clip_path,)
             )
-            accepted = False
+            return {"accepted": False}
 
-        return {"accepted": accepted}
+        return {"accepted": True}
 
     def validate(self, settings, item):
         """
@@ -378,7 +377,7 @@ class UpdateFlameClipPlugin(HookBaseClass):
 
         # each publish task is connected to a nuke write node instance. this
         # value was populated via the collector and verified during accept()
-        write_node = item.properties["nuke_writenode"]
+        write_node = item.properties["sg_writenode"]
 
         # get the clip path as processed during validate()
         flame_clip_path = item.properties["flame_clip_path"]
