@@ -389,6 +389,10 @@ class NukeSessionCollector(HookBaseClass):
             item.properties["work_template"] = \
                 sg_writenode_app.get_node_render_template(node)
 
+            # store the nuke writenode on the item as well. this can be used by
+            # secondary publish plugins
+            item.properties["sg_writenode"] = node
+
             # we have a publish template so disable context change. This
             # is a temporary measure until the publisher handles context
             # switching natively.
