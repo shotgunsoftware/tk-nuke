@@ -182,8 +182,7 @@ class UpdateFlameClipPlugin(HookBaseClass):
             self.logger.debug(
                 "Unable to locate the Flame clip file for this Shot. Expected "
                 "path is '%s'. This is most likely because this Shot wasn't "
-                "created using the Flame Shot Export. Please uncheck this "
-                "plugin and try again." % (flame_clip_path,)
+                "created using the Flame Shot Export." % (flame_clip_path,)
             )
             accepted = False
 
