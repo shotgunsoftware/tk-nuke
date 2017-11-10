@@ -1,4 +1,4 @@
-# Copyright (c) 2017 Shotgun Software Inc.
+﻿# Copyright (c) 2017 Shotgun Software Inc.
 # 
 # CONFIDENTIAL AND PROPRIETARY
 # 
@@ -315,6 +315,9 @@ class NukeSessionCollector(HookBaseClass):
             )
             return
 
+        first_frame =  int(nuke.root()["first_frame"].value())
+        last_frame = int(nuke.root()["last_frame"].value())
+
         for node in sg_writenode_app.get_write_nodes():
 
             # see if any frames have been rendered for this write node
@@ -388,6 +391,9 @@ class NukeSessionCollector(HookBaseClass):
                 sg_writenode_app.get_node_publish_template(node)
             item.properties["work_template"] = \
                 sg_writenode_app.get_node_render_template(node)
+            item.properties["color_space"] = self._get_node_colorspace(node)
+            item.properties["first_frame"] = first_frame
+            item.properties["last_frame"] = last_frame
 
             # store the nuke writenode on the item as well. this can be used by
             # secondary publish plugins
@@ -399,6 +405,23 @@ class NukeSessionCollector(HookBaseClass):
             item.context_change_allowed = False
 
             self.logger.info("Collected file: %s" % (publish_path,))
+
+    def _get_node_colorspace(self, node):
+        """
+        Get the colorspace for the specified nuke node
+
+        :param node:    The nuke node to find the colorspace for
+        :returns:       The string representing the colorspace for the node
+        """
+        cs_knob = node.knob("colorspace")
+        if not cs_knob:
+            return
+    
+        cs = cs_knob.value()
+        # handle default value where cs would be something like: 'default (linear)'
+        if cs.startswith("default (") and cs.endswith(")"):
+            cs = cs[9:-1]
+        return cs
 
 def _session_path():
     """
