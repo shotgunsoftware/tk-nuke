@@ -58,19 +58,6 @@ class NukeSubmitForReviewPlugin(HookBaseClass):
         path on disk. Other users will be able to access the file via
         the review app on the Shotgun website.
 
-        <h3>File versioning</h3>
-        The <code>version</code> field of the resulting review in
-        Shotgun will also reflect the version number identified in the filename.
-        The basic worklfow recognizes the following version formats by default:
-
-        <ul>
-        <li><code>filename.v###.ext</code></li>
-        <li><code>filename_v###.ext</code></li>
-        <li><code>filename-v###.ext</code></li>
-        </ul>
-
-        <br><br><i>NOTE: any amount of version number padding is supported.</i>
-
         """ % (loader_url,)
 
     @property
@@ -143,27 +130,27 @@ class NukeSubmitForReviewPlugin(HookBaseClass):
         review_submission_app = self.parent.engine.apps.get("tk-multi-reviewsubmission")
         if review_submission_app is None:
             accepted = False
-            self.logger.warning(
+            self.logger.debug(
                 "Review submission app is not available. skipping item: %s" %
                 (item.properties["publish_name"],)
             )
         if item.properties.get("color_space") is None:
             accepted = False
-            self.logger.warning(
+            self.logger.debug(
                 "'color_space' property is not defined on the item. "
                 "Item will be skipped: %s." %
                 (item.properties["publish_name"],)
             )
         if item.properties.get("first_frame") is None:
             accepted = False
-            self.logger.warning(
+            self.logger.debug(
                 "'first_frame' property is not defined on the item. "
                 "Item will be skipped: %s." %
                 (item.properties["publish_name"],)
             )
         if item.properties.get("last_frame") is None:
             accepted = False
-            self.logger.warning(
+            self.logger.debug(
                 "'last_frame' property is not defined on the item. "
                 "Item will be skipped: %s." %
                 (item.properties["publish_name"],)
@@ -171,7 +158,7 @@ class NukeSubmitForReviewPlugin(HookBaseClass):
         path = item.properties.get("path")
         if path is None:
             accepted = False
-            self.logger.warning(
+            self.logger.debug(
                 "'path' property is not defined on the item. "
                 "Item will be skipped: %s." %
                 (item.properties["publish_name"],)
