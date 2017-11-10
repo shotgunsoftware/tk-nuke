@@ -1,4 +1,4 @@
-# Copyright (c) 2017 Shotgun Software Inc.
+﻿# Copyright (c) 2017 Shotgun Software Inc.
 #
 # CONFIDENTIAL AND PROPRIETARY
 #
@@ -216,7 +216,7 @@ class NukeStudioProjectPublishPlugin(HookBaseClass):
             # the session still requires saving. provide a save button.
             # validation fails.
             error_msg = "The Nuke Studio project '%s' has not been saved." % \
-                        (project.name(),),
+                        (project.name(),)
             self.logger.error(
                 error_msg,
                 extra=_get_save_as_action(project)

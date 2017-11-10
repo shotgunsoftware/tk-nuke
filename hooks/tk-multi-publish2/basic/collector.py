@@ -150,8 +150,7 @@ class NukeSessionCollector(HookBaseClass):
             # the attached publish plugins will need to resolve the fields at
             # execution time.
             session_item.properties["work_template"] = work_template
-            self.logger.debug(
-                "Work template defined for Nuke collection.")
+            self.logger.debug("Work template defined for Nuke collection.")
 
         self.logger.info("Collected current Nuke script")
         return session_item
@@ -191,6 +190,31 @@ class NukeSessionCollector(HookBaseClass):
         if work_template_setting:
             work_template = publisher.engine.get_template_by_name(
                 work_template_setting.value)
+
+        # FIXME: begin temporary workaround
+        # we use different logic here only because we don't have proper support
+        # for multi context workflows when templates are in play. So if we have
+        # a work template configured, for now we'll only collect the current,
+        # active document. Once we have proper multi context support, we can
+        # remove this.
+        if work_template:
+            # same logic as the loop below but only processing the active doc
+            if not active_project:
+                return
+            project_item = parent_item.create_item(
+                "nukestudio.project",
+                "NukeStudio Project",
+                active_project.name()
+            )
+            self.logger.info(
+                "Collected Nuke Studio project: %s" % (active_project.name(),))
+            project_item.set_icon_from_path(icon_path)
+            project_item.properties["project"] = active_project
+            project_item.properties["work_template"] = work_template
+            self.logger.debug(
+                "Work template defined for NukeStudio collection.")
+            return
+        # FIXME: end temporary workaround
 
         for project in hiero.core.projects():
 
@@ -291,20 +315,6 @@ class NukeSessionCollector(HookBaseClass):
             )
             return
 
-        # the render task will always render full-res frames when publishing. If we're
-        # in proxy mode in Nuke, that task will fail since there will be no full-res 
-        # frames rendered. The exceptions are if there is no proxy_render_template set 
-        # in the tk-nuke-writenode app, then the write node app falls back on the
-        # full-res template. Or if they rendered in full res and then switched to 
-        # proxy mode later. In this case, this is likely user error, so we catch it.
-        root_node = nuke.root()
-        proxy_mode_on = root_node['proxy'].value()
-        if proxy_mode_on:
-            error_msg = "You cannot publish to Screening Room while Nuke is in proxy " +\
-                        "mode. Please toggle proxy mode OFF and try again."
-            self.logger.error(error_msg)
-            return
-
         first_frame =  int(nuke.root()["first_frame"].value())
         last_frame = int(nuke.root()["last_frame"].value())
 
@@ -384,6 +394,10 @@ class NukeSessionCollector(HookBaseClass):
             item.properties["color_space"] = self._get_node_colorspace(node)
             item.properties["first_frame"] = first_frame
             item.properties["last_frame"] = last_frame
+
+            # store the nuke writenode on the item as well. this can be used by
+            # secondary publish plugins
+            item.properties["sg_writenode"] = node
 
             # we have a publish template so disable context change. This
             # is a temporary measure until the publisher handles context
