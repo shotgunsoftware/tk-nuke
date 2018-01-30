@@ -16,6 +16,8 @@ import xml.dom.minidom as minidom
 
 import sgtk
 
+from sgtk.util.shotgun.publish_util import get_published_file_entity_type
+
 
 HookBaseClass = sgtk.get_hook_baseclass()
 
@@ -126,66 +128,96 @@ class UpdateFlameClipPlugin(HookBaseClass):
 
         publisher = self.parent
 
-        # ---- Ensure the write node app is configured
-
+        # In the situation where the writenode app is being used, we
+        # only want to associate the clip file lookup/update with
+        # the output from the managed write nodes.
+        #
+        # In the case where there's no writenode associated with the
+        # environment we're a bit less restrictive. In that case we're
+        # likely in a zero-config situation, which means we can't
+        # expect everything written from the session to be path managed.
+        # As a result, we accept all image sequences written from the
+        # Nuke script.
         sg_writenode_app = publisher.engine.apps.get("tk-nuke-writenode")
         if sg_writenode_app:
             self.logger.debug("Nuke write node app is installed")
             item.properties["sg_writenode_app"] = sg_writenode_app
-        else:
-            self.logger.debug(
-                "The nuke write node app is not configured for this "
-                "environment. It is required for publishing for Flame."
-                "Plugin %s no accepting item: %s" % (self, item)
-            )
-            return {"accepted": False}
 
-        # ---- Ensure this item is associated with a nuke write node
+            # Ensure this item is associated with a nuke write node.
+            if item.properties.get("sg_writenode"):
+                self.logger.debug("Nuke write node instance found on item.")
+            else:
+                self.logger.debug(
+                    "Unable to identify a nuke writenode instance for this item. "
+                    "Plugin %s no accepting item: %s" % (self, item)
+                )
+                return {"accepted": False}
 
-        if item.properties.get("sg_writenode"):
-            self.logger.debug("Nuke write node instance found on item.")
-        else:
-            self.logger.debug(
-                "Unable to identify a nuke writenode instance for this item. "
-                "Plugin %s no accepting item: %s" % (self, item)
-            )
-            return {"accepted": False}
-
-        # ---- Ensure a flame clip template is configured
-
+        # Check to see if we have a template to use. In that case, the
+        # we'll be trying to find a clip file that that location. If we
+        # don't have a template configured, or the clip file doesn't
+        # exist at that location on disk, we'll look for a published
+        # clip.
+        flame_clip_path = None
         flame_clip_template_setting = settings.get("Flame Clip Template")
         flame_clip_template = publisher.engine.get_template_by_name(
-            flame_clip_template_setting.value)
+            flame_clip_template_setting.value
+        )
 
         if flame_clip_template:
+            # get the clip template and try to build the path from the item's
+            # context. if the path can be built, we're good to go.
             self.logger.debug("Flame clip template configured for this plugin.")
-        else:
-            self.logger.debug(
-                "No flame clip template configured. "
-                "Plugin %s no accepting item: %s" % (self, item)
+            flame_clip_fields = item.context.as_template_fields(flame_clip_template)
+            flame_clip_path = flame_clip_template.apply_fields(flame_clip_fields)
+        elif item.context.entity:
+            # TODO: We have a problem. The publish2 plugin acceptance routines
+            # are not re-run when the item's link changes. This means if the
+            # context hasn't been set to a shot using the panel app before
+            # publish2 is launched, we end up running this in the project
+            # context, which is never going to work for us here. Because we
+            # then aren't re-run if the user change's the item's link to be
+            # a Shot, we don't look for a clip file when we should have.
+            #
+            # As a fallback to the traditional approach of looking up the clip
+            # path using templates, we now look for a matching PublishedFile
+            # entity. This situation arises when dealing with publishes coming
+            # from Flame 2019+, which makes use of the publish2 app instead of
+            # the old flame export app.
+            publish_type = get_published_file_entity_type(publisher.sgtk)
+
+            # TODO: Should we get and update all of the clips that might be
+            # published? We're told this is an unlikely workflow by the Flame
+            # team, but it's technically possible. It raises other concerns,
+            # though, because then we have to ask the question of which (or all?)
+            # clips should be updated, and how we'd know that programmatically.
+            clip_publish = publisher.shotgun.find_one(
+                publish_type,
+                [
+                    ["entity", "is", item.context.entity],
+                    ["published_file_type.PublishedFileType.code", "is", "Flame OpenClip"],
+                ],
+                fields=("path",),
             )
-            return {"accepted": False}
+            if clip_publish:
+                flame_clip_path = clip_publish["path"].get("local_path")
 
-        # ---- Ensure the clip path exists
-
-        # get the clip template and try to build the path from the item's
-        # context. if the path can be built, we're good to go.
-        flame_clip_fields = item.context.as_template_fields(flame_clip_template)
-        flame_clip_path = flame_clip_template.apply_fields(flame_clip_fields)
-
-        if os.path.exists(flame_clip_path):
+        if flame_clip_path and not os.path.exists(flame_clip_path):
+            flame_clip_path = None
             self.logger.debug(
-                "Found clip file '%s' for this Shot" % (flame_clip_path,))
+                "Unable to locate the Flame clip file on disk. Expected "
+                "path is '%s'." % flame_clip_path
+            )
+        elif flame_clip_path:
+            # We have a path and it exists.
             item.properties["flame_clip_path"] = flame_clip_path
         else:
             self.logger.debug(
-                "Unable to locate the Flame clip file for this Shot. Expected "
-                "path is '%s'. This is most likely because this Shot wasn't "
-                "created using the Flame Shot Export." % (flame_clip_path,)
+                "No flame clip Was found to update. "
+                "Plugin %s not accepting item: %s" % (self, item)
             )
-            return {"accepted": False}
 
-        return {"accepted": True}
+        return {"accepted": (flame_clip_path is not None)}
 
     def validate(self, settings, item):
         """
