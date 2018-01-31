@@ -439,6 +439,7 @@ class UpdateFlameClipPlugin(HookBaseClass):
 
         # get a handle on the write node app, stored during accept()
         write_node_app = item.properties.get("sg_writenode_app")
+        render_path_fields = None
 
         if not write_node_app:
             # If we don't have a writenode, we just parse the first frame of the
@@ -744,8 +745,14 @@ def _generate_flame_clip_name(context, publish_fields):
 
     # if we have a channel set for the write node or a name for the scene,
     # add those
-    rp_name = publish_fields.get("name")
-    rp_channel = publish_fields.get("channel")
+    rp_name = None
+    rp_channel = None
+
+    # If we have template fields passed in, then we'll try to extract
+    # some information from them.
+    if publish_fields:
+        rp_name = publish_fields.get("name")
+        rp_channel = publish_fields.get("channel")
 
     if rp_name and rp_channel:
         name += "%s.nk (output %s), " % (rp_name, rp_channel)
