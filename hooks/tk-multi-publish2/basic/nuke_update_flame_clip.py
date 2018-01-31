@@ -658,8 +658,9 @@ def _get_flame_frame_spec_from_path(path):
 
     :param str path: The file path to parse.
 
-    :returns: None if no range could be determined, otherwise (min, max, frame_padding)
-    :rtype: tuple or None
+    :returns: If the path can be parsed, a string path replacing the frame
+        number with a frame range spec is returned.
+    :rtype: str or None
     """
     # This pattern will match the following at the end of a string and
     # retain the frame number or frame token as group(1) in the resulting
@@ -686,7 +687,8 @@ def _get_flame_frame_spec_from_path(path):
         return None
 
     # We need to get all files that match the pattern from disk so that we
-    # can determine what the min and max frame number is.
+    # can determine what the min and max frame number is. We replace the
+    # frame number or token with a * wildcard.
     glob_path = "%s%s" % (
         re.sub(match.group(2), "*", root),
         ext,
@@ -698,7 +700,7 @@ def _get_flame_frame_spec_from_path(path):
     file_roots = [os.path.splitext(f)[0] for f in files]
 
     # We know that the search will result in a match at this point, otherwise
-    # the glob wouldn't have found the file. We can search and pull group 1
+    # the glob wouldn't have found the file. We can search and pull group 2
     # to get the integer frame number from the file root name.
     frame_padding = len(re.search(frame_pattern, file_roots[0]).group(2))
     frames = [int(re.search(frame_pattern, f).group(2)) for f in file_roots]
@@ -711,6 +713,10 @@ def _get_flame_frame_spec_from_path(path):
         frame_padding
     )
 
+    # We end up with something like the following:
+    #
+    #    /project/foo.[0001-0010].jpg
+    #
     frame_spec = format_str % (min_frame, max_frame)
     return "%s%s%s" % (match.group(1), frame_spec, ext)
 
