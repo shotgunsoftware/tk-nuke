@@ -17,6 +17,7 @@ import xml.dom.minidom as minidom
 import sgtk
 
 from sgtk.util.shotgun.publish_util import get_published_file_entity_type
+from sgtk.util.shotgun.publish_resolve import resolve_publish_path
 
 
 HookBaseClass = sgtk.get_hook_baseclass()
@@ -216,13 +217,18 @@ class UpdateFlameClipPlugin(HookBaseClass):
 
             for clip_publish in clip_publishes:
                 self.logger.debug("Checking existence of OpenClip: %s" % clip_publish)
-                flame_clip_path = clip_publish["path"].get("local_path")
+                # flame_clip_path = clip_publish["path"].get("local_path")
+                try:
+                    flame_clip_path = resolve_publish_path(publisher.sgtk, clip_publish)
+                except Exception:
+                    self.logger.debug("Unable to resolve path: %s" % clip_publish)
+
                 if flame_clip_path and os.path.exists(flame_clip_path):
                     self.logger.debug("Found usable OpenClip publish: %s" % flame_clip_path)
                     break
                 else:
                     flame_clip_path = None
-                    self.logger.debug("Published OpenClip isn't accessible: %s" % clip_publish)
+                    self.logger.debug("Published OpenClip isn't accessible: %s" % flame_clip_path)
 
             if not flame_clip_path:
                 self.logger.debug("Unable to find a usable OpenClip publish.")
