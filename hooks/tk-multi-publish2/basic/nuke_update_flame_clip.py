@@ -13,6 +13,8 @@ import os
 import shutil
 import uuid
 import xml.dom.minidom as minidom
+import glob
+import re
 
 import sgtk
 
@@ -274,10 +276,7 @@ class UpdateFlameClipPlugin(HookBaseClass):
         """
 
         # update shot clip xml file with this publish
-        try:
-            self._update_flame_clip(item)
-        except Exception, e:
-            raise("Unable to update Flame clip xml: %s" % (e,))
+        self._update_flame_clip(item)
 
     def finalize(self, settings, item):
         """
@@ -435,82 +434,95 @@ class UpdateFlameClipPlugin(HookBaseClass):
 
         self.logger.info("Updating Flame clip file...")
 
-        # get a handle on the write node app, stored during accept()
-        write_node_app = item.properties["sg_writenode_app"]
-
-        # each publish task is connected to a nuke write node instance. this
-        # value was populated via the collector and verified during accept()
-        write_node = item.properties["sg_writenode"]
-
         # get the clip path as processed during validate()
         flame_clip_path = item.properties["flame_clip_path"]
 
-        # get the fields from the work file
-        render_path = write_node_app.get_node_render_path(write_node)
-        render_template = write_node_app.get_node_render_template(write_node)
-        render_path_fields = render_template.get_fields(render_path)
-        publish_template = write_node_app.get_node_publish_template(write_node)
+        # get a handle on the write node app, stored during accept()
+        write_node_app = item.properties.get("sg_writenode_app")
 
-        # set up the sequence token to be Flame friendly
-        # e.g. mi001_scene_output_v001.[0100-0150].dpx
-        # note - we cannot take the frame ranges from the write node -
-        # because those values indicate the intended frame range rather
-        # than the rendered frame range! In order for Flame to pick up
-        # the media properly, it needs to contain the actual frame data
-
-        # get all paths for all frames and all eyes
-        paths = self.parent.sgtk.paths_from_template(
-            publish_template,
-            render_path_fields,
-            skip_keys=["SEQ", "eye"]
-        )
-
-        # for each of them, extract the frame number. Track the min and the max.
-        # TODO: would be nice to have a convenience method in core for this.
-        min_frame = None
-        max_frame = None
-        for path in paths:
-            fields = publish_template.get_fields(path)
-            frame_number = fields["SEQ"]
-            if min_frame is None or frame_number < min_frame:
-                min_frame = frame_number
-            if max_frame is None or frame_number > max_frame:
-                max_frame = frame_number
-
-        # ensure we have a min/max frame
-        if min_frame is None or max_frame is None:
-            raise Exception(
-                "Couldn't extract min and max frame from the published "
-                "sequence! Will not update Flame clip xml."
+        if not write_node_app:
+            # If we don't have a writenode, we just parse the first frame of the
+            # item's sequence path to get the start and end frames.
+            publish_path_flame = _get_flame_frame_spec_from_path(
+                item.properties["sequence_paths"][0]
             )
 
-        # now when we have the real min/max frame, we can apply a proper
-        # sequence marker for the Flame xml. Note that we cannot use the normal
-        # FORMAT: token in the template system, because the Flame frame format
-        # is not totally "abstract" (e.g. %04d, ####, etc) but contains the
-        # frame ranges themselves.
-        #
-        # the format spec is something like "04"
-        sequence_key = publish_template.keys["SEQ"]
+            if not publish_path_flame:
+                raise Exception(
+                    "Couldn't extract min and max frame from the published "
+                    "sequence! Will not update Flame clip xml."
+                )
+        else:
+            # each publish task is connected to a nuke write node instance. this
+            # value was populated via the collector and verified during accept()
+            write_node = item.properties["sg_writenode"]
 
-        # now compose the format string, eg. [%04d-%04d]
-        format_str = "[%%%sd-%%%sd]" % (
-            sequence_key.format_spec,
-            sequence_key.format_spec
-        )
+            # get the fields from the work file
+            render_path = write_node_app.get_node_render_path(write_node)
+            render_template = write_node_app.get_node_render_template(write_node)
+            render_path_fields = render_template.get_fields(render_path)
+            publish_template = write_node_app.get_node_publish_template(write_node)
 
-        # and lastly plug in the values
-        render_path_fields["SEQ"] = format_str % (min_frame, max_frame)
+            # set up the sequence token to be Flame friendly
+            # e.g. mi001_scene_output_v001.[0100-0150].dpx
+            # note - we cannot take the frame ranges from the write node -
+            # because those values indicate the intended frame range rather
+            # than the rendered frame range! In order for Flame to pick up
+            # the media properly, it needs to contain the actual frame data
 
-        # contruct the final path - because flame doesn't have any windows
-        # support and because the "hub" platform is always linux (with potential
-        # flame assist and flare satellite setups on macosx), request that the
-        # paths are written out on linux form regardless of the operating system
-        # currently running.
-        publish_path_flame = publish_template.apply_fields(
-            render_path_fields,
-            "linux2"
-        )
+            # get all paths for all frames and all eyes
+            paths = self.parent.sgtk.paths_from_template(
+                publish_template,
+                render_path_fields,
+                skip_keys=["SEQ", "eye"]
+            )
+
+            # for each of them, extract the frame number. Track the min and the max.
+            # TODO: would be nice to have a convenience method in core for this.
+            min_frame = None
+            max_frame = None
+            for path in paths:
+                fields = publish_template.get_fields(path)
+                frame_number = fields["SEQ"]
+                if min_frame is None or frame_number < min_frame:
+                    min_frame = frame_number
+                if max_frame is None or frame_number > max_frame:
+                    max_frame = frame_number
+
+            # ensure we have a min/max frame
+            if min_frame is None or max_frame is None:
+                raise Exception(
+                    "Couldn't extract min and max frame from the published "
+                    "sequence! Will not update Flame clip xml."
+                )
+
+            # now when we have the real min/max frame, we can apply a proper
+            # sequence marker for the Flame xml. Note that we cannot use the normal
+            # FORMAT: token in the template system, because the Flame frame format
+            # is not totally "abstract" (e.g. %04d, ####, etc) but contains the
+            # frame ranges themselves.
+            #
+            # the format spec is something like "04"
+            sequence_key = publish_template.keys["SEQ"]
+
+            # now compose the format string, eg. [%04d-%04d]
+            format_str = "[%%%sd-%%%sd]" % (
+                sequence_key.format_spec,
+                sequence_key.format_spec
+            )
+
+            # and lastly plug in the values
+            render_path_fields["SEQ"] = format_str % (min_frame, max_frame)
+
+            # contruct the final path - because flame doesn't have any windows
+            # support and because the "hub" platform is always linux (with potential
+            # flame assist and flare satellite setups on macosx), request that the
+            # paths are written out on linux form regardless of the operating system
+            # currently running.
+            publish_path_flame = publish_template.apply_fields(
+                render_path_fields,
+                "linux2"
+            )
 
         # open up and update our xml file
         xml = minidom.parse(flame_clip_path)
@@ -631,6 +643,76 @@ class UpdateFlameClipPlugin(HookBaseClass):
             fh.write(xml_string)
         finally:
             fh.close()
+
+
+def _get_flame_frame_spec_from_path(path):
+    """
+    Parses the file name in an attempt to determine the first and last
+    frame number of a sequence. This assumes some sort of common convention
+    for the file names, where the frame number is an integer at the end of
+    the basename, just ahead of the file extension, such as
+    file.0001.jpg, or file_001.jpg. We also check for input file names with
+    abstracted frame number tokens, such as file.####.jpg, or file.%04d.jpg.
+    Once the start and end frames have been extracted, this is used to build
+    a frame-spec path, such as "/project/foo.[0001-0010].jpg".
+
+    :param str path: The file path to parse.
+
+    :returns: None if no range could be determined, otherwise (min, max, frame_padding)
+    :rtype: tuple or None
+    """
+    # This pattern will match the following at the end of a string and
+    # retain the frame number or frame token as group(1) in the resulting
+    # match object:
+    #
+    # 0001
+    # ####
+    # %04d
+    #
+    # The number of digits or hashes does not matter; we match as many as
+    # exist.
+    frame_pattern = re.compile(r"^(.+?)([0-9#]+|[%]0\dd)$")
+    root, ext = os.path.splitext(path)
+
+    # NOTE:
+    #   match.group(0) is the entire path.
+    #   match.group(1) is everything up to the frame number.
+    #   match.group(2) is the frame number.
+    match = re.search(frame_pattern, root)
+
+    # If we did not match, we don't know how to parse the file name, or there
+    # is no frame number to extract.
+    if not match:
+        return None
+
+    # We need to get all files that match the pattern from disk so that we
+    # can determine what the min and max frame number is.
+    glob_path = "%s%s" % (
+        re.sub(match.group(2), "*", root),
+        ext,
+    )
+    files = glob.glob(glob_path)
+
+    # Our pattern from above matches against the file root, so we need
+    # to chop off the extension at the end.
+    file_roots = [os.path.splitext(f)[0] for f in files]
+
+    # We know that the search will result in a match at this point, otherwise
+    # the glob wouldn't have found the file. We can search and pull group 1
+    # to get the integer frame number from the file root name.
+    frame_padding = len(re.search(frame_pattern, file_roots[0]).group(2))
+    frames = [int(re.search(frame_pattern, f).group(2)) for f in file_roots]
+    min_frame = min(frames)
+    max_frame = max(frames)
+
+    # Turn that into something like "[%04d-%04d]"
+    format_str = "[%%0%sd-%%0%sd]" % (
+        frame_padding,
+        frame_padding
+    )
+
+    frame_spec = format_str % (min_frame, max_frame)
+    return "%s%s%s" % (match.group(1), frame_spec, ext)
 
 
 def _generate_flame_clip_name(context, publish_fields):
