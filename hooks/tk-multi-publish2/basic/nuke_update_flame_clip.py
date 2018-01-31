@@ -171,6 +171,8 @@ class UpdateFlameClipPlugin(HookBaseClass):
             flame_clip_fields = item.context.as_template_fields(flame_clip_template)
             flame_clip_path = flame_clip_template.apply_fields(flame_clip_fields)
         elif item.context.entity:
+            self.logger.debug("Attempting to find OpenClip publish in %s..." % item.context)
+
             # TODO: We have a problem. The publish2 plugin acceptance routines
             # are not re-run when the item's link changes. This means if the
             # context hasn't been set to a shot using the panel app before
@@ -191,7 +193,14 @@ class UpdateFlameClipPlugin(HookBaseClass):
             # team, but it's technically possible. It raises other concerns,
             # though, because then we have to ask the question of which (or all?)
             # clips should be updated, and how we'd know that programmatically.
-            clip_publish = publisher.shotgun.find_one(
+            #
+            # UPDATE: We're going to do a middle-ground approach. If there are
+            # multiple clips, we're going to iterate over each one until we find
+            # one that has a local_path that exists. Once we find that, we use it.
+            # In most cases this will not do anything differently than the template
+            # driven solution, because we'll have a single OpenClip published for
+            # the shot, but there might be cases where this heads off a problem.
+            clip_publishes = publisher.shotgun.find(
                 publish_type,
                 [
                     ["entity", "is", item.context.entity],
@@ -199,8 +208,15 @@ class UpdateFlameClipPlugin(HookBaseClass):
                 ],
                 fields=("path",),
             )
-            if clip_publish:
+            for clip_publish in clip_publishes:
+                self.logger.debug("Checking existence of OpenClip: %s" % clip_publish)
                 flame_clip_path = clip_publish["path"].get("local_path")
+                if flame_clip_path and os.path.exists(flame_clip_path):
+                    self.logger.debug("Found usable OpenClip publish: %s" % flame_clip_path)
+                    break
+
+            if not flame_clip_path:
+                self.logger.debug("Unable to find a usable OpenClip publish.")
 
         if flame_clip_path and not os.path.exists(flame_clip_path):
             flame_clip_path = None
@@ -213,7 +229,7 @@ class UpdateFlameClipPlugin(HookBaseClass):
             item.properties["flame_clip_path"] = flame_clip_path
         else:
             self.logger.debug(
-                "No flame clip Was found to update. "
+                "No flame clip was found to update. "
                 "Plugin %s not accepting item: %s" % (self, item)
             )
 
