@@ -156,8 +156,8 @@ class UpdateFlameClipPlugin(HookBaseClass):
                 )
                 return {"accepted": False}
 
-        # Check to see if we have a template to use. In that case, the
-        # we'll be trying to find a clip file that that location. If we
+        # Check to see if we have a template to use. In that case,
+        # we'll be trying to find a clip file at that location. If we
         # don't have a template configured, or the clip file doesn't
         # exist at that location on disk, we'll look for a published
         # clip.
