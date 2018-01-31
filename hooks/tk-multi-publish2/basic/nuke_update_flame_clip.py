@@ -200,20 +200,29 @@ class UpdateFlameClipPlugin(HookBaseClass):
             # In most cases this will not do anything differently than the template
             # driven solution, because we'll have a single OpenClip published for
             # the shot, but there might be cases where this heads off a problem.
+            clip_publish_types = ["Flame OpenClip", "Flame Batch OpenClip"]
+            self.logger.debug("Clip publish types to search for: %s" % clip_publish_types)
             clip_publishes = publisher.shotgun.find(
                 publish_type,
                 [
                     ["entity", "is", item.context.entity],
-                    ["published_file_type.PublishedFileType.code", "is", "Flame OpenClip"],
+                    ["published_file_type.PublishedFileType.code", "in", clip_publish_types],
                 ],
                 fields=("path",),
             )
+
+            if clip_publishes:
+                self.logger.debug("Found clip(s): %s" % clip_publishes)
+
             for clip_publish in clip_publishes:
                 self.logger.debug("Checking existence of OpenClip: %s" % clip_publish)
                 flame_clip_path = clip_publish["path"].get("local_path")
                 if flame_clip_path and os.path.exists(flame_clip_path):
                     self.logger.debug("Found usable OpenClip publish: %s" % flame_clip_path)
                     break
+                else:
+                    flame_clip_path = None
+                    self.logger.debug("Published OpenClip isn't accessible: %s" % clip_publish)
 
             if not flame_clip_path:
                 self.logger.debug("Unable to find a usable OpenClip publish.")
