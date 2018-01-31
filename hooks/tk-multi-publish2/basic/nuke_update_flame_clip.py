@@ -219,7 +219,6 @@ class UpdateFlameClipPlugin(HookBaseClass):
 
             for clip_publish in clip_publishes:
                 self.logger.debug("Checking existence of OpenClip: %s" % clip_publish)
-                # flame_clip_path = clip_publish["path"].get("local_path")
                 try:
                     flame_clip_path = resolve_publish_path(publisher.sgtk, clip_publish)
                 except Exception:
