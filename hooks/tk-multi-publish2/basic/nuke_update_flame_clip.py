@@ -735,6 +735,11 @@ def _generate_flame_clip_name(context, publish_fields):
 
     name = ""
 
+    # If we have template fields passed in, then we'll try to extract
+    # some information from them. If we don't, then we fall back on
+    # some defaults worked out below.
+    publish_fields = publish_fields or dict()
+
     # the shot will already be implied by the clip inside Flame (the clip
     # file which we are updating is a per-shot file. But if the context
     # contains a task or a step, we can display that:
@@ -745,14 +750,8 @@ def _generate_flame_clip_name(context, publish_fields):
 
     # if we have a channel set for the write node or a name for the scene,
     # add those
-    rp_name = None
-    rp_channel = None
-
-    # If we have template fields passed in, then we'll try to extract
-    # some information from them.
-    if publish_fields:
-        rp_name = publish_fields.get("name")
-        rp_channel = publish_fields.get("channel")
+    rp_name = publish_fields.get("name")
+    rp_channel = publish_fields.get("channel")
 
     if rp_name and rp_channel:
         name += "%s.nk (output %s), " % (rp_name, rp_channel)
