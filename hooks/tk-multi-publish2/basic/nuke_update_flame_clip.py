@@ -18,9 +18,13 @@ import re
 
 import sgtk
 
-from sgtk.util.shotgun.publish_util import get_published_file_entity_type
-from sgtk.util.shotgun.publish_resolve import resolve_publish_path
+from sgtk.util import (
+    get_published_file_entity_type,
+    resolve_publish_path,
+    register_publish,
+)
 
+CLIP_PUBLISH_TYPES = ["Flame OpenClip", "Flame Batch OpenClip"]
 
 HookBaseClass = sgtk.get_hook_baseclass()
 
@@ -161,7 +165,6 @@ class UpdateFlameClipPlugin(HookBaseClass):
         # don't have a template configured, or the clip file doesn't
         # exist at that location on disk, we'll look for a published
         # clip.
-        flame_clip_path = None
         flame_clip_template_setting = settings.get("Flame Clip Template")
         flame_clip_template = publisher.engine.get_template_by_name(
             flame_clip_template_setting.value
@@ -173,6 +176,11 @@ class UpdateFlameClipPlugin(HookBaseClass):
             self.logger.debug("Flame clip template configured for this plugin.")
             flame_clip_fields = item.context.as_template_fields(flame_clip_template)
             flame_clip_path = flame_clip_template.apply_fields(flame_clip_fields)
+
+            # Just because we have a template and can build the path where
+            # the clip would exist doesn't mean it's actually there.
+            if os.path.exists(flame_clip_path):
+                item.properties["flame_clip_path"] = flame_clip_path
         elif item.context.entity:
             self.logger.debug("Attempting to find OpenClip publish in %s..." % item.context)
 
@@ -189,29 +197,27 @@ class UpdateFlameClipPlugin(HookBaseClass):
             # entity. This situation arises when dealing with publishes coming
             # from Flame 2019+, which makes use of the publish2 app instead of
             # the old flame export app.
-            publish_type = get_published_file_entity_type(publisher.sgtk)
-
-            # TODO: Should we get and update all of the clips that might be
-            # published? We're told this is an unlikely workflow by the Flame
-            # team, but it's technically possible. It raises other concerns,
-            # though, because then we have to ask the question of which (or all?)
-            # clips should be updated, and how we'd know that programmatically.
             #
-            # UPDATE: We're going to do a middle-ground approach. If there are
-            # multiple clips, we're going to iterate over each one until we find
-            # one that has a local_path that exists. Once we find that, we use it.
+            # We're going to do a middle-ground approach when it comes to multiple
+            # clips published to the same shot. If there are multiple clips, we're
+            # going to iterate over each one, newest to oldest, until we find
+            # one that exists locally. Once we find that, we use it.
+            #
             # In most cases this will not do anything differently than the template
             # driven solution, because we'll have a single OpenClip published for
             # the shot, but there might be cases where this heads off a problem.
-            clip_publish_types = ["Flame OpenClip", "Flame Batch OpenClip"]
-            self.logger.debug("Clip publish types to search for: %s" % clip_publish_types)
+            publish_entity_type = get_published_file_entity_type(publisher.sgtk)
+
+            self.logger.debug("Clip publish types to search for: %s" % CLIP_PUBLISH_TYPES)
+
             clip_publishes = publisher.shotgun.find(
-                publish_type,
+                publish_entity_type,
                 [
                     ["entity", "is", item.context.entity],
-                    ["published_file_type.PublishedFileType.code", "in", clip_publish_types],
+                    ["published_file_type.PublishedFileType.code", "in", CLIP_PUBLISH_TYPES],
                 ],
-                fields=("path",),
+                fields=("path", "version_number", "name", "published_file_type"),
+                order=[dict(field_name="desc")],
             )
 
             if clip_publishes:
@@ -219,37 +225,49 @@ class UpdateFlameClipPlugin(HookBaseClass):
 
             for clip_publish in clip_publishes:
                 self.logger.debug("Checking existence of OpenClip: %s" % clip_publish)
+
                 try:
                     flame_clip_path = resolve_publish_path(publisher.sgtk, clip_publish)
                 except Exception:
                     self.logger.debug("Unable to resolve path: %s" % clip_publish)
+                    continue
 
-                if flame_clip_path and os.path.exists(flame_clip_path):
-                    self.logger.debug("Found usable OpenClip publish: %s" % flame_clip_path)
-                    break
+                if os.path.exists(flame_clip_path):
+                    # If we already found a newer clip that we're going to use, we
+                    # log the fact that the others will NOT be used for the sake of
+                    # transparency and debuggability.
+                    if item.properties.get("flame_clip_path"):
+                        self.logger.debug(
+                            "Clip file exists, but will not be updated since "
+                            "a newer publish exists: %s" % flame_clip_path
+                        )
+
+                    self.logger.debug("Found usable clip publish: %s" % flame_clip_path)
+
+                    # Keep track of the PublishedFile entity. We'll need it
+                    # later when the clip is updated, at which time we'll
+                    # be versioning up the PublishedFile.
+                    item.properties["flame_clip_publish"] = clip_publish
+                    item.properties["flame_clip_path"] = flame_clip_path
                 else:
-                    flame_clip_path = None
-                    self.logger.debug("Published OpenClip isn't accessible: %s" % flame_clip_path)
-
-            if not flame_clip_path:
-                self.logger.debug("Unable to find a usable OpenClip publish.")
-
-        if flame_clip_path and not os.path.exists(flame_clip_path):
-            flame_clip_path = None
-            self.logger.debug(
-                "Unable to locate the Flame clip file on disk. Expected "
-                "path is '%s'." % flame_clip_path
-            )
-        elif flame_clip_path:
-            # We have a path and it exists.
-            item.properties["flame_clip_path"] = flame_clip_path
+                    self.logger.debug(
+                        "Published clip file isn't accessible: %s" % flame_clip_path
+                    )
         else:
+            self.logger.debug(
+                "Unable to look up a clip file to update. No template exists, "
+                "and the item's context is not associated with an entity. This "
+                "likely means that the we're in a Project context, which will "
+                "never contain any OpenClip publishes from Flame."
+            )
+
+        if not item.properties.get("flame_clip_path"):
             self.logger.debug(
                 "No flame clip was found to update. "
                 "Plugin %s not accepting item: %s" % (self, item)
             )
 
-        return {"accepted": (flame_clip_path is not None)}
+        return {"accepted": (item.properties.get("flame_clip_path") is not None)}
 
     def validate(self, settings, item):
         """
@@ -273,9 +291,11 @@ class UpdateFlameClipPlugin(HookBaseClass):
             instances.
         :param item: Item to process
         """
-
-        # update shot clip xml file with this publish
-        self._update_flame_clip(item)
+        try:
+            # update shot clip xml file with this publish
+            self._update_flame_clip(item)
+        except Exception as exc:
+            raise Exception("Unable to update Flame clip xml: %s" % exc)
 
     def finalize(self, settings, item):
         """
@@ -590,8 +610,8 @@ class UpdateFlameClipPlugin(HookBaseClass):
         # </version>
         date_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         formatted_name = _generate_flame_clip_name(
-            item.context,
-            render_path_fields
+            item,
+            render_path_fields,
         )
 
         # <version type="version" uid="%s">
@@ -643,6 +663,46 @@ class UpdateFlameClipPlugin(HookBaseClass):
             fh.write(xml_string)
         finally:
             fh.close()
+
+        # Finally, we create a new version of the clip's PublishedFile
+        # if we have one associated with this item.
+        self._version_up_clip_publish(item)
+
+    def _version_up_clip_publish(self, item):
+        """
+        Attempts to create a new version of the PublishedFile that's associated
+        clip that's associated with the given item. If there is no publish
+        associated with the item's clip, nothing will happen. If the creation
+        of the new publish fails, a warning will be logged but no exception
+        will be raised. A failure to version up the clip's publish does not
+        have a direct negative impact on the Flame<->Nuke workflow, so we won't
+        allow it to stop the publish entirely.
+
+        :param item: The item being published.
+        """
+        flame_clip_publish = item.properties.get("flame_clip_publish")
+        if flame_clip_publish is None:
+            return
+
+        try:
+            new_publish = register_publish(
+                self.parent.sgtk,
+                item.context,
+                item.properties("flame_clip_path"),
+                flame_clip_publish["name"],
+                flame_clip_publish["version_number"] + 1,
+                published_file_type=flame_clip_publish["published_file_type"],
+                comment=flame_clip_publish["description"],
+            )
+            self.logger.debug("New clip publish created: %s" % new_publish)
+        except Exception as exc:
+            self.logger.warning(
+                "Failed to version up the clip's associated publish. This "
+                "will not stop this publish from continuing, as the clip "
+                "file itself was successfully updated, but the following "
+                "exception must be addressed before versioning up the clip's "
+                "publish is possible: %s" % exc
+            )
 
 
 def _get_flame_frame_spec_from_path(path):
@@ -721,10 +781,11 @@ def _get_flame_frame_spec_from_path(path):
     return "%s%s%s" % (match.group(1), frame_spec, ext)
 
 
-def _generate_flame_clip_name(context, publish_fields):
+def _generate_flame_clip_name(item, publish_fields):
     """
     Generates a name which will be displayed in the dropdown in Flame.
 
+    :param item: The publish item being processed.
     :param publish_fields: Publish fields
     :returns: name string
     """
@@ -738,6 +799,7 @@ def _generate_flame_clip_name(context, publish_fields):
     # (depending on what pieces are available in context and names, names
     # may vary)
 
+    context = item.context
     name = ""
 
     # If we have template fields passed in, then we'll try to extract
@@ -767,7 +829,24 @@ def _generate_flame_clip_name(context, publish_fields):
     else:
         name += "Nuke, "
 
-    # and finish with version number
-    name += "v%03d" % (publish_fields.get("version") or 0)
+    # Do our best to get a usable version number. If we have data extracted
+    # using a template, we use that. If we don't, then we can look to see
+    # if this publish item came with a clip PublishedFile, in which case
+    # we use the version_number field from that entity +1, as a new version
+    # of that published clip will be created as part of this update process,
+    # and that is what we want to associate ourselves with here.
+    version = publish_fields.get("version")
+
+    if version is None and "flame_clip_publish" in item.properties:
+        version = item.properties["flame_clip_publish"]["version_number"] + 1
+
+    version = version or 0
+    name += "v%03d" % version
 
     return name
+
+
+
+
+
+
