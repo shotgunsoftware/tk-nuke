@@ -216,12 +216,18 @@ class UpdateFlameClipPlugin(HookBaseClass):
                     ["entity", "is", item.context.entity],
                     ["published_file_type.PublishedFileType.code", "in", CLIP_PUBLISH_TYPES],
                 ],
-                fields=("path", "version_number", "name", "published_file_type"),
-                order=[dict(field_name="desc")],
+                fields=(
+                    "path",
+                    "version_number",
+                    "name",
+                    "published_file_type",
+                    "description",
+                ),
+                order=[dict(field_name="id", direction="desc")],
             )
 
             if clip_publishes:
-                self.logger.debug("Found clip(s): %s" % clip_publishes)
+                self.logger.debug("Found published clips: %s" % clip_publishes)
 
             for clip_publish in clip_publishes:
                 self.logger.debug("Checking existence of OpenClip: %s" % clip_publish)
@@ -237,12 +243,13 @@ class UpdateFlameClipPlugin(HookBaseClass):
                     # log the fact that the others will NOT be used for the sake of
                     # transparency and debuggability.
                     if item.properties.get("flame_clip_path"):
-                        self.logger.debug(
-                            "Clip file exists, but will not be updated since "
-                            "a newer publish exists: %s" % flame_clip_path
+                        self.logger.warning(
+                            "The following clip exists, but will not be updated since a "
+                            "newer publish exists: %s" % flame_clip_path
                         )
-
-                    self.logger.debug("Found usable clip publish: %s" % flame_clip_path)
+                        continue
+                    else:
+                        self.logger.info("Clip publish found: %s" % flame_clip_path)
 
                     # Keep track of the PublishedFile entity. We'll need it
                     # later when the clip is updated, at which time we'll
@@ -295,7 +302,8 @@ class UpdateFlameClipPlugin(HookBaseClass):
             # update shot clip xml file with this publish
             self._update_flame_clip(item)
         except Exception as exc:
-            raise Exception("Unable to update Flame clip xml: %s" % exc)
+            raise
+            # raise Exception("Unable to update Flame clip xml: %s" % exc)
 
     def finalize(self, settings, item):
         """
@@ -545,6 +553,7 @@ class UpdateFlameClipPlugin(HookBaseClass):
             )
 
         # open up and update our xml file
+        self.logger.debug("Parsing clip file: %s" % flame_clip_path)
         xml = minidom.parse(flame_clip_path)
 
         # find first <track type="track" uid="video">
