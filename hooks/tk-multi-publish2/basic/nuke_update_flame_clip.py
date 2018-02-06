@@ -24,7 +24,7 @@ from sgtk.util import (
     register_publish,
 )
 
-CLIP_PUBLISH_TYPES = ["Flame OpenClip", "Flame Batch OpenClip"]
+CLIP_PUBLISH_TYPE = "Flame Batch OpenClip"
 
 HookBaseClass = sgtk.get_hook_baseclass()
 
@@ -208,13 +208,13 @@ class UpdateFlameClipPlugin(HookBaseClass):
             # the shot, but there might be cases where this heads off a problem.
             publish_entity_type = get_published_file_entity_type(publisher.sgtk)
 
-            self.logger.debug("Clip publish types to search for: %s" % CLIP_PUBLISH_TYPES)
+            self.logger.debug("Clip publish types to search for: %s" % CLIP_PUBLISH_TYPE)
 
             clip_publishes = publisher.shotgun.find(
                 publish_entity_type,
                 [
                     ["entity", "is", item.context.entity],
-                    ["published_file_type.PublishedFileType.code", "in", CLIP_PUBLISH_TYPES],
+                    ["published_file_type.PublishedFileType.code", "is", CLIP_PUBLISH_TYPE],
                 ],
                 fields=(
                     "path",
@@ -697,10 +697,10 @@ class UpdateFlameClipPlugin(HookBaseClass):
             new_publish = register_publish(
                 self.parent.sgtk,
                 item.context,
-                item.properties("flame_clip_path"),
+                item.properties["flame_clip_path"],
                 flame_clip_publish["name"],
                 flame_clip_publish["version_number"] + 1,
-                published_file_type=flame_clip_publish["published_file_type"],
+                published_file_type=CLIP_PUBLISH_TYPE,
                 comment=flame_clip_publish["description"],
             )
             self.logger.debug("New clip publish created: %s" % new_publish)
@@ -824,9 +824,22 @@ def _generate_flame_clip_name(item, publish_fields):
     elif context.step:
         name += "%s, " % context.step["name"].capitalize()
 
-    # if we have a channel set for the write node or a name for the scene,
-    # add those
-    rp_name = publish_fields.get("name")
+    # If we have a channel set for the write node or a name for the scene,
+    # add those. If we don't have a name from the template fields, then we
+    # fall back on the file sequence's basename without the extension or
+    # frame number on the end (if possible).
+    default_name, _ = os.path.splitext(
+        os.path.basename(item.properties["sequence_paths"][0])
+    )
+
+    # Strips numbers off the end of the file name, plus any underscore or
+    # . characters right before it.
+    #
+    # foo.1234 -> foo
+    # foo1234  -> foo
+    # foo_1234 -> foo
+    default_name = re.sub(r"[._]*\d+$", "", default_name)
+    rp_name = publish_fields.get("name", default_name,)
     rp_channel = publish_fields.get("channel")
 
     if rp_name and rp_channel:
