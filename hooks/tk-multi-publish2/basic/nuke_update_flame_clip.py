@@ -302,8 +302,7 @@ class UpdateFlameClipPlugin(HookBaseClass):
             # update shot clip xml file with this publish
             self._update_flame_clip(item)
         except Exception as exc:
-            raise
-            # raise Exception("Unable to update Flame clip xml: %s" % exc)
+            raise Exception("Unable to update Flame clip xml: %s" % exc)
 
     def finalize(self, settings, item):
         """
