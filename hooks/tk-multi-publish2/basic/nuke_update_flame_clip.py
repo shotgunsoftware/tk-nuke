@@ -263,9 +263,7 @@ class UpdateFlameClipPlugin(HookBaseClass):
         else:
             self.logger.debug(
                 "Unable to look up a clip file to update. No template exists, "
-                "and the item's context is not associated with an entity. This "
-                "likely means that the we're in a Project context, which will "
-                "never contain any OpenClip publishes from Flame."
+                "and the item's context is not associated with an entity."
             )
 
         if not item.properties.get("flame_clip_path"):
