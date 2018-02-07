@@ -274,12 +274,21 @@ class TestStartup(TankTestBase):
 
     def _get_hiero_environment(self, is_classic=True):
         """
-        Returns the expected environment variables dictionary for Hiero or Nuke Studio
+        Returns the expected environment variables dictionary for Hiero
         """
         if is_classic:
             env = self._get_classic_environment("HIERO_PLUGIN_PATH")
         else:
             env = self._get_plugin_environment("HIERO_PLUGIN_PATH")
+        return env
+
+    def _get_studio_environment(self, is_classic=True):
+        """
+        Returns the expected environment variables dictionary for Nuke Studio
+        """
+        env = self._get_hiero_environment(is_classic)
+        if is_classic:
+            env["TANK_ENGINE"] = "tk-nukestudio"
         return env
 
     def _get_nuke_environment(self, is_classic=True):
@@ -306,12 +315,12 @@ class TestStartup(TankTestBase):
         for engine_instance, is_classic in self._get_engine_configurations():
             self._test_launch_information(
                 engine_instance, "NukeStudio.app", "", None,
-                self._get_hiero_environment(is_classic=is_classic)
+                self._get_studio_environment(is_classic=is_classic)
             )
 
             self._test_launch_information(
                 engine_instance, "Nuke.exe", "--studio", None,
-                self._get_hiero_environment(is_classic=is_classic)
+                self._get_studio_environment(is_classic=is_classic)
             )
 
     def test_nuke(self):
