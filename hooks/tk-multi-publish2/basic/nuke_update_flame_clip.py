@@ -13,9 +13,18 @@ import os
 import shutil
 import uuid
 import xml.dom.minidom as minidom
+import glob
+import re
 
 import sgtk
 
+from sgtk.util import (
+    get_published_file_entity_type,
+    resolve_publish_path,
+    register_publish,
+)
+
+CLIP_PUBLISH_TYPE = "Flame Batch OpenClip"
 
 HookBaseClass = sgtk.get_hook_baseclass()
 
@@ -126,66 +135,144 @@ class UpdateFlameClipPlugin(HookBaseClass):
 
         publisher = self.parent
 
-        # ---- Ensure the write node app is configured
-
+        # In the situation where the writenode app is being used, we
+        # only want to associate the clip file lookup/update with
+        # the output from the managed write nodes.
+        #
+        # In the case where there's no writenode associated with the
+        # environment we're a bit less restrictive. In that case we're
+        # likely in a zero-config situation, which means we can't
+        # expect everything written from the session to be path managed.
+        # As a result, we accept all image sequences written from the
+        # Nuke script.
         sg_writenode_app = publisher.engine.apps.get("tk-nuke-writenode")
         if sg_writenode_app:
             self.logger.debug("Nuke write node app is installed")
             item.properties["sg_writenode_app"] = sg_writenode_app
-        else:
-            self.logger.debug(
-                "The nuke write node app is not configured for this "
-                "environment. It is required for publishing for Flame."
-                "Plugin %s no accepting item: %s" % (self, item)
-            )
-            return {"accepted": False}
 
-        # ---- Ensure this item is associated with a nuke write node
+            # Ensure this item is associated with a nuke write node.
+            if item.properties.get("sg_writenode"):
+                self.logger.debug("Nuke write node instance found on item.")
+            else:
+                self.logger.debug(
+                    "Unable to identify a nuke writenode instance for this item. "
+                    "Plugin %s no accepting item: %s" % (self, item)
+                )
+                return {"accepted": False}
 
-        if item.properties.get("sg_writenode"):
-            self.logger.debug("Nuke write node instance found on item.")
-        else:
-            self.logger.debug(
-                "Unable to identify a nuke writenode instance for this item. "
-                "Plugin %s no accepting item: %s" % (self, item)
-            )
-            return {"accepted": False}
-
-        # ---- Ensure a flame clip template is configured
-
+        # Check to see if we have a template to use. In that case,
+        # we'll be trying to find a clip file at that location. If we
+        # don't have a template configured, or the clip file doesn't
+        # exist at that location on disk, we'll look for a published
+        # clip.
         flame_clip_template_setting = settings.get("Flame Clip Template")
         flame_clip_template = publisher.engine.get_template_by_name(
-            flame_clip_template_setting.value)
+            flame_clip_template_setting.value
+        )
 
         if flame_clip_template:
+            # get the clip template and try to build the path from the item's
+            # context. if the path can be built, we're good to go.
             self.logger.debug("Flame clip template configured for this plugin.")
+            flame_clip_fields = item.context.as_template_fields(flame_clip_template)
+            flame_clip_path = flame_clip_template.apply_fields(flame_clip_fields)
+
+            # Just because we have a template and can build the path where
+            # the clip would exist doesn't mean it's actually there.
+            if os.path.exists(flame_clip_path):
+                item.properties["flame_clip_path"] = flame_clip_path
+        elif item.context.entity:
+            self.logger.debug("Attempting to find OpenClip publish in %s..." % item.context)
+
+            # TODO: We have a problem. The publish2 plugin acceptance routines
+            # are not re-run when the item's link changes. This means if the
+            # context hasn't been set to a shot using the panel app before
+            # publish2 is launched, we end up running this in the project
+            # context, which is never going to work for us here. Because we
+            # then aren't re-run if the user change's the item's link to be
+            # a Shot, we don't look for a clip file when we should have.
+            #
+            # As a fallback to the traditional approach of looking up the clip
+            # path using templates, we now look for a matching PublishedFile
+            # entity. This situation arises when dealing with publishes coming
+            # from Flame 2019+, which makes use of the publish2 app instead of
+            # the old flame export app.
+            #
+            # We're going to do a middle-ground approach when it comes to multiple
+            # clips published to the same shot. If there are multiple clips, we're
+            # going to iterate over each one, newest to oldest, until we find
+            # one that exists locally. Once we find that, we use it.
+            #
+            # In most cases this will not do anything differently than the template
+            # driven solution, because we'll have a single OpenClip published for
+            # the shot, but there might be cases where this heads off a problem.
+            publish_entity_type = get_published_file_entity_type(publisher.sgtk)
+
+            self.logger.debug("Clip publish types to search for: %s" % CLIP_PUBLISH_TYPE)
+
+            clip_publishes = publisher.shotgun.find(
+                publish_entity_type,
+                [
+                    ["entity", "is", item.context.entity],
+                    ["published_file_type.PublishedFileType.code", "is", CLIP_PUBLISH_TYPE],
+                ],
+                fields=(
+                    "path",
+                    "version_number",
+                    "name",
+                    "published_file_type",
+                    "description",
+                ),
+                order=[dict(field_name="id", direction="desc")],
+            )
+
+            if clip_publishes:
+                self.logger.debug("Found published clips: %s" % clip_publishes)
+
+            for clip_publish in clip_publishes:
+                self.logger.debug("Checking existence of OpenClip: %s" % clip_publish)
+
+                try:
+                    flame_clip_path = resolve_publish_path(publisher.sgtk, clip_publish)
+                except Exception:
+                    self.logger.debug("Unable to resolve path: %s" % clip_publish)
+                    continue
+
+                if os.path.exists(flame_clip_path):
+                    # If we already found a newer clip that we're going to use, we
+                    # log the fact that the others will NOT be used for the sake of
+                    # transparency and debuggability.
+                    if item.properties.get("flame_clip_path"):
+                        self.logger.warning(
+                            "The following clip exists, but will not be updated since a "
+                            "newer publish exists: %s" % flame_clip_path
+                        )
+                        continue
+                    else:
+                        self.logger.info("Clip publish found: %s" % flame_clip_path)
+
+                    # Keep track of the PublishedFile entity. We'll need it
+                    # later when the clip is updated, at which time we'll
+                    # be versioning up the PublishedFile.
+                    item.properties["flame_clip_publish"] = clip_publish
+                    item.properties["flame_clip_path"] = flame_clip_path
+                else:
+                    self.logger.debug(
+                        "Published clip file isn't accessible: %s" % flame_clip_path
+                    )
         else:
             self.logger.debug(
-                "No flame clip template configured. "
-                "Plugin %s no accepting item: %s" % (self, item)
+                "Unable to look up a clip file to update. No template exists, "
+                "and the item's context is not associated with an entity."
             )
-            return {"accepted": False}
 
-        # ---- Ensure the clip path exists
-
-        # get the clip template and try to build the path from the item's
-        # context. if the path can be built, we're good to go.
-        flame_clip_fields = item.context.as_template_fields(flame_clip_template)
-        flame_clip_path = flame_clip_template.apply_fields(flame_clip_fields)
-
-        if os.path.exists(flame_clip_path):
+        if not item.properties.get("flame_clip_path"):
             self.logger.debug(
-                "Found clip file '%s' for this Shot" % (flame_clip_path,))
-            item.properties["flame_clip_path"] = flame_clip_path
-        else:
-            self.logger.debug(
-                "Unable to locate the Flame clip file for this Shot. Expected "
-                "path is '%s'. This is most likely because this Shot wasn't "
-                "created using the Flame Shot Export." % (flame_clip_path,)
+                "No flame clip was found to update. "
+                "Plugin %s not accepting item: %s" % (self, item)
             )
-            return {"accepted": False}
 
-        return {"accepted": True}
+        return {"accepted": (item.properties.get("flame_clip_path") is not None)}
 
     def validate(self, settings, item):
         """
@@ -209,12 +296,11 @@ class UpdateFlameClipPlugin(HookBaseClass):
             instances.
         :param item: Item to process
         """
-
-        # update shot clip xml file with this publish
         try:
+            # update shot clip xml file with this publish
             self._update_flame_clip(item)
-        except Exception, e:
-            raise("Unable to update Flame clip xml: %s" % (e,))
+        except Exception as exc:
+            raise Exception("Unable to update Flame clip xml: %s" % exc)
 
     def finalize(self, settings, item):
         """
@@ -372,84 +458,99 @@ class UpdateFlameClipPlugin(HookBaseClass):
 
         self.logger.info("Updating Flame clip file...")
 
-        # get a handle on the write node app, stored during accept()
-        write_node_app = item.properties["sg_writenode_app"]
-
-        # each publish task is connected to a nuke write node instance. this
-        # value was populated via the collector and verified during accept()
-        write_node = item.properties["sg_writenode"]
-
         # get the clip path as processed during validate()
         flame_clip_path = item.properties["flame_clip_path"]
 
-        # get the fields from the work file
-        render_path = write_node_app.get_node_render_path(write_node)
-        render_template = write_node_app.get_node_render_template(write_node)
-        render_path_fields = render_template.get_fields(render_path)
-        publish_template = write_node_app.get_node_publish_template(write_node)
+        # get a handle on the write node app, stored during accept()
+        write_node_app = item.properties.get("sg_writenode_app")
+        render_path_fields = None
 
-        # set up the sequence token to be Flame friendly
-        # e.g. mi001_scene_output_v001.[0100-0150].dpx
-        # note - we cannot take the frame ranges from the write node -
-        # because those values indicate the intended frame range rather
-        # than the rendered frame range! In order for Flame to pick up
-        # the media properly, it needs to contain the actual frame data
-
-        # get all paths for all frames and all eyes
-        paths = self.parent.sgtk.paths_from_template(
-            publish_template,
-            render_path_fields,
-            skip_keys=["SEQ", "eye"]
-        )
-
-        # for each of them, extract the frame number. Track the min and the max.
-        # TODO: would be nice to have a convenience method in core for this.
-        min_frame = None
-        max_frame = None
-        for path in paths:
-            fields = publish_template.get_fields(path)
-            frame_number = fields["SEQ"]
-            if min_frame is None or frame_number < min_frame:
-                min_frame = frame_number
-            if max_frame is None or frame_number > max_frame:
-                max_frame = frame_number
-
-        # ensure we have a min/max frame
-        if min_frame is None or max_frame is None:
-            raise Exception(
-                "Couldn't extract min and max frame from the published "
-                "sequence! Will not update Flame clip xml."
+        if not write_node_app:
+            # If we don't have a writenode, we just parse the first frame of the
+            # item's sequence path to get the start and end frames.
+            publish_path_flame = _get_flame_frame_spec_from_path(
+                item.properties["sequence_paths"][0]
             )
 
-        # now when we have the real min/max frame, we can apply a proper
-        # sequence marker for the Flame xml. Note that we cannot use the normal
-        # FORMAT: token in the template system, because the Flame frame format
-        # is not totally "abstract" (e.g. %04d, ####, etc) but contains the
-        # frame ranges themselves.
-        #
-        # the format spec is something like "04"
-        sequence_key = publish_template.keys["SEQ"]
+            if not publish_path_flame:
+                raise Exception(
+                    "Couldn't extract min and max frame from the published "
+                    "sequence! Will not update Flame clip xml."
+                )
+        else:
+            # each publish task is connected to a nuke write node instance. this
+            # value was populated via the collector and verified during accept()
+            write_node = item.properties["sg_writenode"]
 
-        # now compose the format string, eg. [%04d-%04d]
-        format_str = "[%%%sd-%%%sd]" % (
-            sequence_key.format_spec,
-            sequence_key.format_spec
-        )
+            # get the fields from the work file
+            render_path = write_node_app.get_node_render_path(write_node)
+            render_template = write_node_app.get_node_render_template(write_node)
+            render_path_fields = render_template.get_fields(render_path)
+            publish_template = write_node_app.get_node_publish_template(write_node)
 
-        # and lastly plug in the values
-        render_path_fields["SEQ"] = format_str % (min_frame, max_frame)
+            # set up the sequence token to be Flame friendly
+            # e.g. mi001_scene_output_v001.[0100-0150].dpx
+            # note - we cannot take the frame ranges from the write node -
+            # because those values indicate the intended frame range rather
+            # than the rendered frame range! In order for Flame to pick up
+            # the media properly, it needs to contain the actual frame data
 
-        # contruct the final path - because flame doesn't have any windows
-        # support and because the "hub" platform is always linux (with potential
-        # flame assist and flare satellite setups on macosx), request that the
-        # paths are written out on linux form regardless of the operating system
-        # currently running.
-        publish_path_flame = publish_template.apply_fields(
-            render_path_fields,
-            "linux2"
-        )
+            # get all paths for all frames and all eyes
+            paths = self.parent.sgtk.paths_from_template(
+                publish_template,
+                render_path_fields,
+                skip_keys=["SEQ", "eye"]
+            )
+
+            # for each of them, extract the frame number. Track the min and the max.
+            # TODO: would be nice to have a convenience method in core for this.
+            min_frame = None
+            max_frame = None
+            for path in paths:
+                fields = publish_template.get_fields(path)
+                frame_number = fields["SEQ"]
+                if min_frame is None or frame_number < min_frame:
+                    min_frame = frame_number
+                if max_frame is None or frame_number > max_frame:
+                    max_frame = frame_number
+
+            # ensure we have a min/max frame
+            if min_frame is None or max_frame is None:
+                raise Exception(
+                    "Couldn't extract min and max frame from the published "
+                    "sequence! Will not update Flame clip xml."
+                )
+
+            # now when we have the real min/max frame, we can apply a proper
+            # sequence marker for the Flame xml. Note that we cannot use the normal
+            # FORMAT: token in the template system, because the Flame frame format
+            # is not totally "abstract" (e.g. %04d, ####, etc) but contains the
+            # frame ranges themselves.
+            #
+            # the format spec is something like "04"
+            sequence_key = publish_template.keys["SEQ"]
+
+            # now compose the format string, eg. [%04d-%04d]
+            format_str = "[%%%sd-%%%sd]" % (
+                sequence_key.format_spec,
+                sequence_key.format_spec
+            )
+
+            # and lastly plug in the values
+            render_path_fields["SEQ"] = format_str % (min_frame, max_frame)
+
+            # contruct the final path - because flame doesn't have any windows
+            # support and because the "hub" platform is always linux (with potential
+            # flame assist and flare satellite setups on macosx), request that the
+            # paths are written out on linux form regardless of the operating system
+            # currently running.
+            publish_path_flame = publish_template.apply_fields(
+                render_path_fields,
+                "linux2"
+            )
 
         # open up and update our xml file
+        self.logger.debug("Parsing clip file: %s" % flame_clip_path)
         xml = minidom.parse(flame_clip_path)
 
         # find first <track type="track" uid="video">
@@ -515,8 +616,8 @@ class UpdateFlameClipPlugin(HookBaseClass):
         # </version>
         date_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         formatted_name = _generate_flame_clip_name(
-            item.context,
-            render_path_fields
+            item,
+            render_path_fields,
         )
 
         # <version type="version" uid="%s">
@@ -569,11 +670,128 @@ class UpdateFlameClipPlugin(HookBaseClass):
         finally:
             fh.close()
 
+        # Finally, we create a new version of the clip's PublishedFile
+        # if we have one associated with this item.
+        self._version_up_clip_publish(item)
 
-def _generate_flame_clip_name(context, publish_fields):
+    def _version_up_clip_publish(self, item):
+        """
+        Attempts to create a new version of the PublishedFile that's associated
+        clip that's associated with the given item. If there is no publish
+        associated with the item's clip, nothing will happen. If the creation
+        of the new publish fails, a warning will be logged but no exception
+        will be raised. A failure to version up the clip's publish does not
+        have a direct negative impact on the Flame<->Nuke workflow, so we won't
+        allow it to stop the publish entirely.
+
+        :param item: The item being published.
+        """
+        flame_clip_publish = item.properties.get("flame_clip_publish")
+        if flame_clip_publish is None:
+            return
+
+        try:
+            new_publish = register_publish(
+                self.parent.sgtk,
+                item.context,
+                item.properties["flame_clip_path"],
+                flame_clip_publish["name"],
+                flame_clip_publish["version_number"] + 1,
+                published_file_type=CLIP_PUBLISH_TYPE,
+                comment=flame_clip_publish["description"],
+            )
+            self.logger.debug("New clip publish created: %s" % new_publish)
+        except Exception as exc:
+            self.logger.warning(
+                "Failed to version up the clip's associated publish. This "
+                "will not stop this publish from continuing, as the clip "
+                "file itself was successfully updated, but the following "
+                "exception must be addressed before versioning up the clip's "
+                "publish is possible: %s" % exc
+            )
+
+
+def _get_flame_frame_spec_from_path(path):
+    """
+    Parses the file name in an attempt to determine the first and last
+    frame number of a sequence. This assumes some sort of common convention
+    for the file names, where the frame number is an integer at the end of
+    the basename, just ahead of the file extension, such as
+    file.0001.jpg, or file_001.jpg. We also check for input file names with
+    abstracted frame number tokens, such as file.####.jpg, or file.%04d.jpg.
+    Once the start and end frames have been extracted, this is used to build
+    a frame-spec path, such as "/project/foo.[0001-0010].jpg".
+
+    :param str path: The file path to parse.
+
+    :returns: If the path can be parsed, a string path replacing the frame
+        number with a frame range spec is returned.
+    :rtype: str or None
+    """
+    # This pattern will match the following at the end of a string and
+    # retain the frame number or frame token as group(1) in the resulting
+    # match object:
+    #
+    # 0001
+    # ####
+    # %04d
+    #
+    # The number of digits or hashes does not matter; we match as many as
+    # exist.
+    frame_pattern = re.compile(r"^(.+?)([0-9#]+|[%]0\dd)$")
+    root, ext = os.path.splitext(path)
+
+    # NOTE:
+    #   match.group(0) is the entire path.
+    #   match.group(1) is everything up to the frame number.
+    #   match.group(2) is the frame number.
+    match = re.search(frame_pattern, root)
+
+    # If we did not match, we don't know how to parse the file name, or there
+    # is no frame number to extract.
+    if not match:
+        return None
+
+    # We need to get all files that match the pattern from disk so that we
+    # can determine what the min and max frame number is. We replace the
+    # frame number or token with a * wildcard.
+    glob_path = "%s%s" % (
+        re.sub(match.group(2), "*", root),
+        ext,
+    )
+    files = glob.glob(glob_path)
+
+    # Our pattern from above matches against the file root, so we need
+    # to chop off the extension at the end.
+    file_roots = [os.path.splitext(f)[0] for f in files]
+
+    # We know that the search will result in a match at this point, otherwise
+    # the glob wouldn't have found the file. We can search and pull group 2
+    # to get the integer frame number from the file root name.
+    frame_padding = len(re.search(frame_pattern, file_roots[0]).group(2))
+    frames = [int(re.search(frame_pattern, f).group(2)) for f in file_roots]
+    min_frame = min(frames)
+    max_frame = max(frames)
+
+    # Turn that into something like "[%04d-%04d]"
+    format_str = "[%%0%sd-%%0%sd]" % (
+        frame_padding,
+        frame_padding
+    )
+
+    # We end up with something like the following:
+    #
+    #    /project/foo.[0001-0010].jpg
+    #
+    frame_spec = format_str % (min_frame, max_frame)
+    return "%s%s%s" % (match.group(1), frame_spec, ext)
+
+
+def _generate_flame_clip_name(item, publish_fields):
     """
     Generates a name which will be displayed in the dropdown in Flame.
 
+    :param item: The publish item being processed.
     :param publish_fields: Publish fields
     :returns: name string
     """
@@ -587,7 +805,13 @@ def _generate_flame_clip_name(context, publish_fields):
     # (depending on what pieces are available in context and names, names
     # may vary)
 
+    context = item.context
     name = ""
+
+    # If we have template fields passed in, then we'll try to extract
+    # some information from them. If we don't, then we fall back on
+    # some defaults worked out below.
+    publish_fields = publish_fields or dict()
 
     # the shot will already be implied by the clip inside Flame (the clip
     # file which we are updating is a per-shot file. But if the context
@@ -597,9 +821,22 @@ def _generate_flame_clip_name(context, publish_fields):
     elif context.step:
         name += "%s, " % context.step["name"].capitalize()
 
-    # if we have a channel set for the write node or a name for the scene,
-    # add those
-    rp_name = publish_fields.get("name")
+    # If we have a channel set for the write node or a name for the scene,
+    # add those. If we don't have a name from the template fields, then we
+    # fall back on the file sequence's basename without the extension or
+    # frame number on the end (if possible).
+    default_name, _ = os.path.splitext(
+        os.path.basename(item.properties["sequence_paths"][0])
+    )
+
+    # Strips numbers off the end of the file name, plus any underscore or
+    # . characters right before it.
+    #
+    # foo.1234 -> foo
+    # foo1234  -> foo
+    # foo_1234 -> foo
+    default_name = re.sub(r"[._]*\d+$", "", default_name)
+    rp_name = publish_fields.get("name", default_name,)
     rp_channel = publish_fields.get("channel")
 
     if rp_name and rp_channel:
@@ -611,7 +848,24 @@ def _generate_flame_clip_name(context, publish_fields):
     else:
         name += "Nuke, "
 
-    # and finish with version number
-    name += "v%03d" % (publish_fields.get("version") or 0)
+    # Do our best to get a usable version number. If we have data extracted
+    # using a template, we use that. If we don't, then we can look to see
+    # if this publish item came with a clip PublishedFile, in which case
+    # we use the version_number field from that entity +1, as a new version
+    # of that published clip will be created as part of this update process,
+    # and that is what we want to associate ourselves with here.
+    version = publish_fields.get("version")
+
+    if version is None and "flame_clip_publish" in item.properties:
+        version = item.properties["flame_clip_publish"]["version_number"] + 1
+
+    version = version or 0
+    name += "v%03d" % version
 
     return name
+
+
+
+
+
+
