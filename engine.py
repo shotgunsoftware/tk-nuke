@@ -413,36 +413,43 @@ class NukeEngine(tank.platform.Engine):
         """
         app_name = "Nuke"
         version = ""
-        if self.studio_enabled:
-            app_name = "Nuke Studio"
-            from hiero.core import env as hiero_env
-            # VersionRelease is something like "v8", so we don't put a '.'
-            # between it and VersionMinor
-            version = "%s.%s%s" % (
-                hiero_env["VersionMajor"],
-                hiero_env["VersionMinor"],
-                hiero_env["VersionRelease"],
-            )
-        elif self.hiero_enabled:
-            from hiero.core import env as hiero_env
-            # VersionString is something like 'Hiero 10.5v1', it seems safer to
-            # deal with the app name and version more explicitly
-            app_name = hiero_env["ApplicationName"]
-            # VersionRelease is something like "v8", so we don't put a '.'
-            # between it and VersionMinor
-            version = "%s.%s%s" % (
-                hiero_env["VersionMajor"],
-                hiero_env["VersionMinor"],
-                hiero_env["VersionRelease"],
-            )
-        else:
-            # Check which Nuke favor we're running. No need to check for PLE or
-            # non-commercial: the engine does not support them.
-            if nuke.env["nukex"]:
-                app_name = "NukeX"
-            elif nuke.env["assist"]:
-                app_name = "Nuke Assist"
-            version = nuke.env["NukeVersionString"]
+        try:
+            if self.studio_enabled:
+                app_name = "Nuke Studio"
+                from hiero.core import env as hiero_env
+                # VersionRelease is something like "v8", so we don't put a '.'
+                # between it and VersionMinor
+                version = "%s.%s%s" % (
+                    hiero_env["VersionMajor"],
+                    hiero_env["VersionMinor"],
+                    hiero_env["VersionRelease"],
+                )
+            elif self.hiero_enabled:
+                from hiero.core import env as hiero_env
+                # VersionString is something like 'Hiero 10.5v1', it seems safer to
+                # deal with the app name and version more explicitly
+                app_name = hiero_env["ApplicationName"]
+                # VersionRelease is something like "v8", so we don't put a '.'
+                # between it and VersionMinor
+                version = "%s.%s%s" % (
+                    hiero_env["VersionMajor"],
+                    hiero_env["VersionMinor"],
+                    hiero_env["VersionRelease"],
+                )
+            else:
+                # Check which Nuke favor we're running. No need to check for PLE or
+                # non-commercial: the engine does not support them.
+                if nuke.env["nukex"]:
+                    app_name = "NukeX"
+                elif nuke.env["assist"]:
+                    app_name = "Nuke Assist"
+                version = nuke.env["NukeVersionString"]
+        except Exception:
+            # If we couldn't figure out the version, it's likely an old version
+            # of Nuke we're in (pre-10.0). We don't want that to let us stop the
+            # the integration from working properly, so we just return an empty
+            # string for the version in this situation.
+            pass
 
         return {"name": app_name, "version": version}
 
