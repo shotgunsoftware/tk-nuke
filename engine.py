@@ -10,6 +10,7 @@
 
 import tank
 import nuke
+import sys
 import os
 import nukescripts
 import logging
@@ -167,6 +168,15 @@ class NukeEngine(tank.platform.Engine):
         elif nuke_version[0] == 7 and nuke_version[1] == 0 and nuke_version[2] < 10:
             self.logger.error(msg)
             return
+
+        # Disable the importing of the web engine widgets submodule from PySide2
+        # if this is a Windows environment.
+        if nuke_version[0] > 10 and sys.platform.startswith("win"):
+            self.logger.debug(
+                "Nuke 11+ on Windows can deadlock if QtWebEngineWidgets "
+                "is imported. Setting SHOTGUN_SKIP_QTWEBENGINEWIDGETS_IMPORT=1..."
+            )
+            os.environ["SHOTGUN_SKIP_QTWEBENGINEWIDGETS_IMPORT"] = "1"
 
         # Versions > 10.5 have not yet been tested so show a message to that effect.
         if nuke_version[0] > 11 or (nuke_version[0] == 11 and nuke_version[1] > 1):
