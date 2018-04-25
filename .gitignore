@@ -25,3 +25,9 @@ pip-log.txt
 
 #Mr Developer
 .mr.developer.cfg
+
+# PyCharm project settings
+.idea
+
+# Max OS X Desktop Services Store files
+.DS_Store
