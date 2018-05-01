@@ -49,17 +49,14 @@ class NukeSubmitForReviewPlugin(HookBaseClass):
         contain simple html for formatting.
         """
 
-        loader_url = "https://support.shotgunsoftware.com/hc/en-us/articles/219033078"
+        review_url = "https://support.shotgunsoftware.com/hc/en-us/articles/114094032014-The-review-workflow"
 
-        return """
-
-        Submits a movie file to Shotgun for review. An entry will be
+        return """<p>
+        Submits a movie file to Shotgun for review. An entry will beß
         created in Shotgun which will include a reference to the movie file's current
         path on disk. Other users will be able to access the file via
-        the review app on the Shotgun website.
-        %s
-
-        """ % (loader_url,)
+        the <b><a href='%s'>review app</a></b> on the Shotgun website.</p>
+        """ % (review_url)
 
     @property
     def settings(self):
