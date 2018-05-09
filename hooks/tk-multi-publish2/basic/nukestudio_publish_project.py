@@ -11,6 +11,7 @@
 import os
 import sgtk
 from sgtk.platform.qt import QtGui
+from sgtk.util.filesystem import ensure_folder_exists
 
 HookBaseClass = sgtk.get_hook_baseclass()
 
@@ -343,7 +344,7 @@ class NukeStudioProjectPublishPlugin(HookBaseClass):
         project = item.properties["project"]
         path = item.properties["path"]
 
-        save_callback = project.saveAs
+        save_callback = lambda path: _save_session(path,project)
 
         # bump the session file to the next version
         self._save_to_next_version(path, item, save_callback)
@@ -373,6 +374,17 @@ def _get_save_as_action(project):
         }
     }
 
+def _save_session(path, project):
+    """
+    Save the current session to the supplied path.
+    :param path: str path to save the file
+    :param project: Nuke Studio Project obj
+    :return: None
+    """
+
+    # Nuke Studio won't ensure that the folder is created when saving, so we must make sure it exists
+    ensure_folder_exists(os.path.dirname(path))
+    project.saveAs(path)
 
 def _project_save_as(project):
     """
