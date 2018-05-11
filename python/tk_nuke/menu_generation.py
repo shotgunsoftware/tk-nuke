@@ -165,14 +165,17 @@ class HieroMenuGenerator(BaseMenuGenerator):
         self._menu_handle = None
         self._context_menus_to_apps = dict()
 
-    def create_menu(self, add_commands=True):
+    def _create_hiero_menu(self, add_commands=True, commands=None):
         """
         Creates the "Shotgun" menu in Hiero.
 
-        :param add_commands:    If True, menu commands will be added to
-                                the newly-created menu. If False, the menu
-                                will be created, but no contents will be
-                                added. Defaults to True.
+        :param bool add_commands: If True, menu commands will be added to the
+            newly-created menu. If False, the menu will be created, but no
+            contents will be added. Defaults to True.
+        :param dict commands: The engine commands to add to the various menus.
+            The dictionary is structured the same as engine.commands is, where
+            the key is the name of the command, and the value is a dictionary
+            of command properties.
         """
         import hiero
         if self._menu_handle is not None:
@@ -196,9 +199,12 @@ class HieroMenuGenerator(BaseMenuGenerator):
         self._context_menu = self._add_context_menu()
         self._menu_handle.addSeparator()
 
+        if not commands:
+            return
+
         # Now enumerate all items and create menu objects for them.
         menu_items = []
-        for (cmd_name, cmd_details) in self.engine.commands.items():
+        for (cmd_name, cmd_details) in commands.items():
             menu_items.append(HieroAppCommand(self.engine, cmd_name, cmd_details))
 
         # Now add favourites.
@@ -276,6 +282,17 @@ class HieroMenuGenerator(BaseMenuGenerator):
 
         # Now add all apps to main menu.
         self._add_app_menu(commands_by_app)
+
+    def create_menu(self, add_commands=True):
+        """
+        Creates the "Shotgun" menu in Hiero.
+
+        :param add_commands:    If True, menu commands will be added to
+                                the newly-created menu. If False, the menu
+                                will be created, but no contents will be
+                                added. Defaults to True.
+        """
+        self._create_hiero_menu(add_commands=add_commands, commands=self.engine.commands)
 
     def destroy_menu(self):
         """
@@ -403,6 +420,59 @@ class NukeStudioMenuGenerator(HieroMenuGenerator):
     """
     A Nuke Studio specific menu generator.
     """
+    def _is_node_command(self, cmd_name, cmd_details):
+        """
+        Tests whether a given engine command is a "node" type command or not.
+
+        :param str cmd_name: The name of the engine command.
+        :param dict cmd_details: The engine command's properties dictionary.
+
+        :rtype: bool
+        """
+        return NukeAppCommand(self.engine, cmd_name, cmd_details).type == "node"
+
+    def create_menu(self, add_commands=True):
+        """
+        Adds all engine commands to one of various menus in Nuke Studio.
+
+        :param bool add_commands: If True, menus will be created and menu items
+            added for all engine commands. If False, the menus will be created,
+            but will not be populated with engine commands.
+        """
+        # We're going to divide up the engine command. For "node" type commands,
+        # which are commands from apps like tk-nuke-quickdailies, or tk-nuke-writenode,
+        # we register them in the Nuke-style node context menu. For everything else, we
+        # just pass them on to the standard Hiero-style menu creation logic.
+        node_commands = dict()
+        non_node_commands = dict()
+
+        for cmd_name, cmd_details in self.engine.commands.items():
+            if self._is_node_command(cmd_name, cmd_details):
+                node_commands[cmd_name] = cmd_details
+            else:
+                non_node_commands[cmd_name] = cmd_details
+
+        self._create_hiero_menu(add_commands=add_commands, commands=non_node_commands)
+
+        node_menu_handle = nuke.menu("Nodes").addMenu(self._menu_name, icon=self._shotgun_logo)
+        node_menu_handle.clearMenu()
+
+        if not add_commands:
+            return
+
+        for (cmd_name, cmd_details) in node_commands.items():
+            cmd = NukeAppCommand(self.engine, cmd_name, cmd_details)
+
+            # Get icon if specified - default to tank icon if not specified.
+            icon = cmd.properties.get("icon", self._shotgun_logo)
+            command_context = cmd.properties.get("context")
+
+            # If the app recorded a context that it wants the command to be associated
+            # with, we need to check it against the current engine context. If they
+            # don't match then we don't add it.
+            if command_context is None or command_context is self.engine.context:
+                node_menu_handle.addCommand(cmd.name, cmd.callback, icon=icon)
+
     def create_disabled_menu(self, cmd_name, msg):
         """
         Creates the contents of the "disabled" menu in Nuke Studio.
