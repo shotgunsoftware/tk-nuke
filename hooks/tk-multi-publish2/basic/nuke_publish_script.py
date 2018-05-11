@@ -11,7 +11,7 @@
 import os
 import nuke
 import sgtk
-
+from sgtk.util.filesystem import ensure_folder_exists
 
 HookBaseClass = sgtk.get_hook_baseclass()
 
@@ -364,6 +364,9 @@ def _save_session(path):
     """
     Save the current session to the supplied path.
     """
+    # Nuke won't ensure that the folder is created when saving, so we must make sure it exists
+    ensure_folder_exists(os.path.dirname(path))
+
     nuke.scriptSaveAs(path, True)
 
 
