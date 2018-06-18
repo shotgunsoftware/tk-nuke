@@ -565,7 +565,7 @@ class UpdateFlameClipPlugin(HookBaseClass):
 
         for track in xml.getElementsByTagName("track"):
             for track_type in track.getElementsByTagName("trackType"):
-                if "track" in [c.nodeValue for c in track_type.childNodes]:
+                if "video" in [c.nodeValue for c in track_type.childNodes]:
                     first_video_track = track
                     break
             if first_video_track is not None:
@@ -573,7 +573,7 @@ class UpdateFlameClipPlugin(HookBaseClass):
 
         if first_video_track is None:
             raise Exception(
-                "Could not find <track type='track' uid='video'> in clip file!")
+                "Could not find the first video track in the published clip file!")
 
         clip_version = None
         for span in xml.getElementsByTagName("spans"):
