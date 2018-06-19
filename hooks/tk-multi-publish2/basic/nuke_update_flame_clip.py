@@ -553,16 +553,40 @@ class UpdateFlameClipPlugin(HookBaseClass):
         self.logger.debug("Parsing clip file: %s" % flame_clip_path)
         xml = minidom.parse(flame_clip_path)
 
-        # find first <track type="track" uid="video">
+        # We need to find the first video track. We do that by getting all of
+        # the tracks:
+        #
+        #   <track type="track" uid="video">
+        #       <trackType>video</trackType>
+        #
+        # We then look at the trackType element within, looking for a type
+        # of "video". When we find one, we break out and move on.
         first_video_track = None
+
         for track in xml.getElementsByTagName("track"):
-            if track.attributes["uid"].value == "video":
-                first_video_track = track
+            for track_type in track.getElementsByTagName("trackType"):
+                if "video" in [c.nodeValue for c in track_type.childNodes]:
+                    first_video_track = track
+                    break
+            if first_video_track is not None:
                 break
 
         if first_video_track is None:
             raise Exception(
-                "Could not find <track type='track' uid='video'> in clip file!")
+                "Could not find the first video track in the published clip file!")
+
+        clip_version = None
+        for span in xml.getElementsByTagName("spans"):
+            span_version = span.attributes.get("version")
+            if span_version is not None:
+                clip_version = span_version.value
+            if clip_version is not None:
+                break
+
+        # For backwards compatibility's sake, we default to version 4.
+        # For a long time, we just hardcoded this to 4, so it makes
+        # sense to default to it here.
+        clip_version = clip_version or "4"
 
         # now contruct our feed xml chunk we want to insert
         #
@@ -586,13 +610,13 @@ class UpdateFlameClipPlugin(HookBaseClass):
         # <spans type="spans" version="4">
         spans_node = xml.createElement("spans")
         spans_node.setAttribute("type", "spans")
-        spans_node.setAttribute("version", "4")
+        spans_node.setAttribute("version", clip_version)
         feed_node.appendChild(spans_node)
 
         # <span type="span" version="4">
         span_node = xml.createElement("span")
         span_node.setAttribute("type", "span")
-        span_node.setAttribute("version", "4")
+        span_node.setAttribute("version", clip_version)
         spans_node.appendChild(span_node)
 
         # <path encoding="pattern">%s</path>
