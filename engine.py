@@ -566,7 +566,7 @@ class NukeEngine(tank.platform.Engine):
         if not self.hiero_enabled:
             self.post_app_init_nuke()
 
-        if self._context_change_menu_rebuild:
+        if self.has_ui and self._context_change_menu_rebuild:
             self.menu_generator.create_menu()
 
     #####################################################################################
