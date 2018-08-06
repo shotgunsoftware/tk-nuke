@@ -549,12 +549,13 @@ class NukeMenuGenerator(BaseMenuGenerator):
         for fav in self.engine.get_setting("menu_favourites"):
             app_instance_name = fav["app_instance"]
             menu_name = fav["name"]
+            hotkey = fav.get("hotkey")
 
             # Scan through all menu items.
             for cmd in menu_items:
                  if cmd.app_instance_name == app_instance_name and cmd.name == menu_name:
                      # Found our match!
-                     cmd.add_command_to_menu(menu_handle)
+                     cmd.add_command_to_menu(menu_handle, hotkey=hotkey)
                      # Mark as a favourite item.
                      cmd.favourite = True
         menu_handle.addSeparator()
@@ -967,8 +968,8 @@ class NukeAppCommand(BaseAppCommand):
         """
         icon = self.properties.get("icon")
         menu.addCommand(self.name, self._original_callback, icon=icon)
-        
-    def add_command_to_menu(self, menu, enabled=True, icon=None):
+
+    def add_command_to_menu(self, menu, enabled=True, icon=None, hotkey=None):
         """
         Adds a command to the menu.
         
@@ -979,8 +980,8 @@ class NukeAppCommand(BaseAppCommand):
                         for the menu command.
         """
         icon = icon or self.properties.get("icon")
-        hotkey = self.properties.get("hotkey")
-        
+        hotkey = hotkey or self.properties.get("hotkey")
+
         # Now wrap the command callback in a wrapper (see above)
         # which sets a global state variable. This is detected
         # by the show_panel so that it can correctly establish 
