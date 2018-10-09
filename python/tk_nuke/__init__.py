@@ -131,18 +131,23 @@ def __tank_on_save_callback():
     try:
         # this file could be in another project altogether, so create a new Tank
         # API instance.
-        try:
-            tk = tank.tank_from_path(file_name)
-        except tank.TankError, e:
-            __create_tank_disabled_menu(e)
-            return
-        
-        # try to get current ctx and inherit its values if possible
+
         curr_ctx = None
-        if tank.platform.current_engine():
-            curr_ctx = tank.platform.current_engine().context
-        
-        # and now extract a new context based on the file
+        curr_engine = tank.platform.current_engine()
+
+        if curr_engine:
+            tk = curr_engine.tank
+            curr_ctx = curr_engine.context
+        else:
+            # no current engine running, so create a fresh tk object
+            try:
+                tk = tank.tank_from_path(file_name)
+            except tank.TankError, e:
+                __create_tank_disabled_menu(e)
+                return
+
+        # extract a new context based on the file
+        # and inherits from the current context
         new_ctx = tk.context_from_path(file_name, curr_ctx)
         
         # now restart the engine with the new context
@@ -158,14 +163,21 @@ def tank_startup_node_callback():
     Carefully manage exceptions here so that a bug in Tank never
     interrupts the normal workflows in Nuke.    
     """    
-    try:    
-        if nuke.root().name() == "Root":
+    try:
+        file_name = nuke.root().name()
+        curr_engine = tank.platform.current_engine()
+
+        if file_name == "Root":
             # file->new
+
+            if curr_engine:
+                tk = curr_engine.tank
+            else:
+                project_root = os.environ.get("TANK_NUKE_ENGINE_INIT_PROJECT_ROOT")
+                tk = tank.Tank(project_root)
+
             # base it on the context we 'inherited' from the prev session
             # get the context from the previous session - this is helpful if user does file->new
-            project_root = os.environ.get("TANK_NUKE_ENGINE_INIT_PROJECT_ROOT")
-            tk = tank.Tank(project_root)
-            
             ctx_str = os.environ.get("TANK_NUKE_ENGINE_INIT_CONTEXT")
             if ctx_str:
                 try:
@@ -177,19 +189,19 @@ def tank_startup_node_callback():
     
         else:
             # file->open
-            file_name = nuke.root().name()
-            
-            try:
-                tk = tank.tank_from_path(file_name)
-            except tank.TankError, e:
-                __create_tank_disabled_menu(e)
-                return
+            curr_ctx = None
+
+            if curr_engine:
+                tk = curr_engine.tank
+                curr_ctx = curr_engine.context
+            else:
+                try:
+                    tk = tank.tank_from_path(file_name)
+                except tank.TankError, e:
+                    __create_tank_disabled_menu(e)
+                    return
                 
             # try to get current ctx and inherit its values if possible
-            curr_ctx = None
-            if tank.platform.current_engine():
-                curr_ctx = tank.platform.current_engine().context                
-                
             new_ctx = tk.context_from_path(file_name, curr_ctx)
     
         # now restart the engine with the new context
