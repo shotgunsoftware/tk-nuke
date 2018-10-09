@@ -48,7 +48,7 @@ def __create_tank_disabled_menu(details):
     """
     Creates a std "disabled" shotgun menu
     """
-    if nuke.env.get("gui"):
+    if nuke.GUI:
         nuke_menu = nuke.menu("Nuke")
         sg_menu = nuke_menu.addMenu("Shotgun")
         sg_menu.clearMenu()
@@ -71,7 +71,7 @@ def __create_tank_error_menu():
     message += "Traceback (most recent call last):\n"
     message += "\n".join( traceback.format_tb(exc_traceback))
     
-    if nuke.env.get("gui"):
+    if nuke.GUI:
         nuke_menu = nuke.menu("Nuke")
         sg_menu = nuke_menu.addMenu("Shotgun")
         sg_menu.clearMenu()
