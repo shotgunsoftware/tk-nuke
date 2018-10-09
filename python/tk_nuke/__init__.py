@@ -82,22 +82,33 @@ def __create_tank_error_menu():
     
 def __engine_refresh(tk, new_context):
     """
-    Checks the the tank engine should be 
+    Change the current engine context if the engine is up.
+    Otherwise start the engine with the given context
     """
-    
-    engine_name = os.environ.get("TANK_NUKE_ENGINE_INIT_NAME")
-    
     curr_engine = tank.platform.current_engine()
+
     if curr_engine:
-        # an old engine is running. 
+        # an old engine is running.
         if new_context == curr_engine.context:
-            # no need to restart the engine!
-            return         
+            # no need to change the context!
+            return
+
+        if curr_engine.context_change_allowed:
+            # change the context with the new one
+            try:
+                curr_engine.change_context(new_context)
+                # the context is changed stop here
+                return
+            except tank.TankError:
+                # context was not sufficient! - disable tank!
+                __create_tank_disabled_menu(e)
         else:
-            # shut down the engine
+            # changing context on the fly is not allowed
+            # so before restarting the engine destroy it
             curr_engine.destroy()
-        
-    # try to create new engine
+
+    # try to create new engine with the new context
+    engine_name = os.environ.get("TANK_NUKE_ENGINE_INIT_NAME")
     try:
         tank.platform.start_engine(engine_name, tk, new_context)
     except tank.TankEngineInitError, e:
