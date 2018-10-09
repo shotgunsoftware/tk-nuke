@@ -79,12 +79,14 @@ def __create_tank_error_menu():
         sg_menu.addCommand("[Shotgun Error - Click for details]", cmd)
     else:
         nuke.error("The Shotgun Pipeline Toolkit caught an error: %s" % message)
-    
-def __engine_refresh(tk, new_context):
+
+
+def __engine_refresh(new_context):
     """
     Change the current engine context if the engine is up.
     Otherwise start the engine with the given context
     """
+    tk = new_context.tank
     curr_engine = tank.platform.current_engine()
 
     if curr_engine:
@@ -144,7 +146,7 @@ def __tank_on_save_callback():
         new_ctx = tk.context_from_path(file_name, curr_ctx)
         
         # now restart the engine with the new context
-        __engine_refresh(tk, new_ctx)
+        __engine_refresh(new_ctx)
     except Exception, e:
         __create_tank_error_menu()
 
@@ -191,7 +193,7 @@ def tank_startup_node_callback():
             new_ctx = tk.context_from_path(file_name, curr_ctx)
     
         # now restart the engine with the new context
-        __engine_refresh(tk, new_ctx)
+        __engine_refresh(new_ctx)
     except Exception, e:
         __create_tank_error_menu()
         
