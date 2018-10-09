@@ -61,7 +61,7 @@ def _setup_sgtk():
         return
 
     try:
-        engine = tank.platform.start_engine(engine_name, context.tank, context)
+        tank.platform.start_engine(engine_name, context.tank, context)
     except Exception, e:
         hiero.core.log.error("Shotgun: Could not start engine: %s" % str(e))
         return

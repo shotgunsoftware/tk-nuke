@@ -56,7 +56,7 @@ def _setup_sgtk(output_handle):
         return
 
     try:
-        engine = tank.platform.start_engine(engine_name, context.tank, context)
+        tank.platform.start_engine(engine_name, context.tank, context)
     except Exception, e:
         output_handle("Shotgun: Could not start engine: %s" % str(e))
         return
