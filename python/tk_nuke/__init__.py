@@ -18,7 +18,6 @@ QT to be imported should be placed in the tk_nuke_qt module instead
 in order to avoid import errors at startup and context switch.
 """
 import os
-import textwrap
 import nuke
 import tank
 import sys

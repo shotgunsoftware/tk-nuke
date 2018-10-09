@@ -12,8 +12,6 @@
 Panel support for Nuke
 """
 
-import os
-import sys
 import nuke
 import sgtk
 import nukescripts
