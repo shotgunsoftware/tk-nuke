@@ -61,12 +61,4 @@ def _setup_sgtk(output_handle):
         output_handle("Shotgun: Could not start engine: %s" % str(e))
         return
 
-    path = os.environ.get("TANK_NUKE_ENGINE_MOD_PATH")
-    if path:
-        sys.path.append(path)
-        import tk_nuke
-        tk_nuke.tank_ensure_callbacks_registered()
-    else:
-        output_handle("Shotgun could not find the environment variable TANK_NUKE_ENGINE_MOD_PATH!")
-
 bootstrap_sgtk()

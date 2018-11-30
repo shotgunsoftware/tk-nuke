@@ -144,11 +144,21 @@ class NukeEngine(tank.platform.Engine):
     #####################################################################################
     # Engine Initialization and Destruction
 
-    def init_engine(self):
+    def pre_app_init(self):
         """
-        Called at Engine startup.
+        Sets up the engine into an operational state. This method called before
+        any apps are loaded.
         """
+
         self.logger.debug("%s: Initializing...", self)
+
+        local_python_path = os.path.abspath(os.path.join(self.disk_location, "python"))
+        # append the local path so that the tk_nuke and tk_nuke_qt packages can be imported
+        sys.path.append(local_python_path)
+        import tk_nuke
+        engine = tank.platform.current_engine()
+        self.logger.info("ENGINE: %s" % engine)
+        tk_nuke.tank_ensure_callbacks_registered(engine=self)
 
         # We need to check to make sure that we are using one of the
         # supported versions of Nuke. Right now that is anything between
@@ -218,26 +228,26 @@ class NukeEngine(tank.platform.Engine):
 
         # Do our mode-specific initializations.
         if self.hiero_enabled:
-            self.init_engine_hiero()
+            self.pre_app_init_hiero()
         elif self.studio_enabled:
-            self.init_engine_studio()
+            self.pre_app_init_studio()
         else:
-            self.init_engine_nuke()
+            self.pre_app_init_nuke()
 
-    def init_engine_studio(self):
+    def pre_app_init_studio(self):
         """
         The Nuke Studio specific portion of engine initialization.
         """
-        self.init_engine_hiero()
+        self.pre_app_init_hiero()
 
-    def init_engine_hiero(self):
+    def pre_app_init_hiero(self):
         """
         The Hiero-specific portion of engine initialization.
         """
         self._last_clicked_selection = []
         self._last_clicked_area = None
 
-    def init_engine_nuke(self):
+    def pre_app_init_nuke(self):
         """
         The Nuke-specific portion of engine initialization.
         """
@@ -559,6 +569,15 @@ class NukeEngine(tank.platform.Engine):
         :param old_context: The sgtk.context.Context being switched away from.
         :param new_context: The sgtk.context.Context being switched to.
         """
+        # As we've changed contexts, we should update our environment variables so that if we spawn a new nuke instance
+        # it will start up in the same environment.
+        self.pre_app_init_nuke()
+
+        # Make sure the callbacks are updated based one the current environment settings.
+        # (for example they may be enabled or disabled in the new environment.)
+        import tk_nuke
+        tk_nuke.tank_ensure_callbacks_registered(engine=self)
+
         self.logger.debug("tk-nuke context changed to %s", str(new_context))
 
         # We also need to run the post init for Nuke, which will handle

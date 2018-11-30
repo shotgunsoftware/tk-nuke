@@ -82,27 +82,23 @@ def __create_tank_error_menu():
     
 def __engine_refresh(tk, new_context):
     """
-    Checks the the tank engine should be 
+    Checks if the nuke engine should be created or just have the context changed.
+    If an engine is already started then we just need to change context, else we need to start the engine.
     """
     
     engine_name = os.environ.get("TANK_NUKE_ENGINE_INIT_NAME")
     
     curr_engine = tank.platform.current_engine()
     if curr_engine:
-        # an old engine is running. 
-        if new_context == curr_engine.context:
-            # no need to restart the engine!
-            return         
-        else:
-            # shut down the engine
-            curr_engine.destroy()
-        
-    # try to create new engine
-    try:
-        tank.platform.start_engine(engine_name, tk, new_context)
-    except tank.TankEngineInitError, e:
-        # context was not sufficient! - disable tank!
-        __create_tank_disabled_menu(e)
+        # If we already have an engine, we can just tell it to change contexts
+        curr_engine.change_context(new_context)
+    else:
+        # try to create new engine
+        try:
+            tank.platform.start_engine(engine_name, tk, new_context)
+        except tank.TankEngineInitError, e:
+            # context was not sufficient! - disable tank!
+            __create_tank_disabled_menu(e)
          
     
 def __tank_on_save_callback():
@@ -126,14 +122,16 @@ def __tank_on_save_callback():
         
         # try to get current ctx and inherit its values if possible
         curr_ctx = None
-        if tank.platform.current_engine():
-            curr_ctx = tank.platform.current_engine().context
+        curr_engine = tank.platform.current_engine()
+        if curr_engine:
+            curr_ctx = curr_engine.context
         
         # and now extract a new context based on the file
         new_ctx = tk.context_from_path(file_name, curr_ctx)
         
         # now restart the engine with the new context
         __engine_refresh(tk, new_ctx)
+
     except Exception, e:
         __create_tank_error_menu()
 
@@ -144,55 +142,58 @@ def tank_startup_node_callback():
     
     Carefully manage exceptions here so that a bug in Tank never
     interrupts the normal workflows in Nuke.    
-    """    
+    """
     try:    
-        if nuke.root().name() == "Root":
-            # file->new
-            # base it on the context we 'inherited' from the prev session
-            # get the context from the previous session - this is helpful if user does file->new
-            project_root = os.environ.get("TANK_NUKE_ENGINE_INIT_PROJECT_ROOT")
-            tk = tank.Tank(project_root)
-            
-            ctx_str = os.environ.get("TANK_NUKE_ENGINE_INIT_CONTEXT")
-            if ctx_str:
-                try:
-                    new_ctx = tank.context.deserialize(ctx_str)
-                except:
-                    new_ctx = tk.context_empty()
-            else:
+
+        # first load up in our previous context so we can start the engine an work out if automatic context switching
+        # is enabled, and if it is we should then switch to the correct environment.
+        # base it on the context we 'inherited' from the prev session
+        # get the context from the previous session
+        project_root = os.environ.get("TANK_NUKE_ENGINE_INIT_PROJECT_ROOT")
+        tk = tank.Tank(project_root)
+
+        ctx_str = os.environ.get("TANK_NUKE_ENGINE_INIT_CONTEXT")
+        if ctx_str:
+            try:
+                new_ctx = tank.context.deserialize(ctx_str)
+            except:
                 new_ctx = tk.context_empty()
-    
         else:
+            new_ctx = tk.context_empty()
+
+        # now restart the engine with the new context
+        __engine_refresh(tk, new_ctx)
+
+        # If we have opened a file then we should check if automatic context switching is enabled and change if possible
+        engine = tank.platform.current_engine()
+        if nuke.root().name() != "Root" and engine.get_setting("automatic_context_switch"):
             # file->open
             file_name = nuke.root().name()
-            
+
             try:
                 tk = tank.tank_from_path(file_name)
             except tank.TankError, e:
                 __create_tank_disabled_menu(e)
                 return
-                
+
             # try to get current ctx and inherit its values if possible
             curr_ctx = None
             if tank.platform.current_engine():
-                curr_ctx = tank.platform.current_engine().context                
-                
+                curr_ctx = tank.platform.current_engine().context
+
             new_ctx = tk.context_from_path(file_name, curr_ctx)
-    
-        # now restart the engine with the new context
-        __engine_refresh(tk, new_ctx)
+            # Now switch to the context appropriate for the file
+            __engine_refresh(tk, new_ctx)
+
     except Exception, e:
         __create_tank_error_menu()
         
 g_tank_callbacks_registered = False
 
-def tank_ensure_callbacks_registered():   
+def tank_ensure_callbacks_registered(engine=None):
     """
     Make sure that we have callbacks tracking context state changes.
     """
-
-    import sgtk
-    engine = sgtk.platform.current_engine()
 
     # Register only if we're missing an engine (to allow going from disabled to something else)
     # or if the engine specifically requests for it.
@@ -202,3 +203,12 @@ def tank_ensure_callbacks_registered():
             nuke.addOnScriptLoad(tank_startup_node_callback)
             nuke.addOnScriptSave(__tank_on_save_callback)
             g_tank_callbacks_registered = True
+    elif engine and not engine.get_setting("automatic_context_switch"):
+        # we have an engine but the automatic context switching has been disabled, we should ensure the callbacks
+        # are removed.
+        global g_tank_callbacks_registered
+        if g_tank_callbacks_registered:
+            nuke.removeOnScriptLoad(tank_startup_node_callback)
+            nuke.removeOnScriptSave(__tank_on_save_callback)
+            g_tank_callbacks_registered = False
+
