@@ -156,8 +156,6 @@ class NukeEngine(tank.platform.Engine):
         # append the local path so that the tk_nuke and tk_nuke_qt packages can be imported
         sys.path.append(local_python_path)
         import tk_nuke
-        engine = tank.platform.current_engine()
-        self.logger.info("ENGINE: %s" % engine)
         tk_nuke.tank_ensure_callbacks_registered(engine=self)
 
         # We need to check to make sure that we are using one of the
@@ -845,7 +843,7 @@ class NukeEngine(tank.platform.Engine):
                             if env_name not in self._processed_environments:
                                 self._processed_environments.append(env_name)
                                 self._context_switcher.change_context(target_context)
-        except Exception, e:
+        except Exception as e:
             # If anything went wrong, we can just let the finally block
             # run, which will put things back to the way they were.
             self.logger.debug("Unable to pre-load environment: %s", str(e))
@@ -944,7 +942,7 @@ class NukeEngine(tank.platform.Engine):
                 template = self.get_template_by_name(favorite['template_directory'])
                 fields = self.context.as_template_fields(template)
                 path = template.apply_fields(fields)
-            except Exception, e:
+            except Exception as e:
                 msg = "Error processing template '%s' to add to favorite " \
                       "directories: %s" % (favorite['template_directory'], e)
                 self.logger.exception(msg)

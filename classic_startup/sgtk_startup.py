@@ -37,7 +37,7 @@ def _setup_sgtk(output_handle):
     """
     try:
         import tank
-    except Exception, e:
+    except Exception as e:
         output_handle("Shotgun: Could not import sgtk! Disabling: %s" % str(e))
         return
 
@@ -48,7 +48,7 @@ def _setup_sgtk(output_handle):
     engine_name = os.environ.get("TANK_ENGINE")
     try:
         context = tank.context.deserialize(os.environ.get("TANK_CONTEXT"))
-    except Exception, e:
+    except Exception as e:
         output_handle(
             "Shotgun: Could not create context! "
             "Shotgun Toolkit will be disabled. Details: %s" % str(e)
@@ -57,7 +57,7 @@ def _setup_sgtk(output_handle):
 
     try:
         engine = tank.platform.start_engine(engine_name, context.tank, context)
-    except Exception, e:
+    except Exception as e:
         output_handle("Shotgun: Could not start engine: %s" % str(e))
         return
 

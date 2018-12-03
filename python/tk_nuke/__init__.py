@@ -96,7 +96,7 @@ def __engine_refresh(tk, new_context):
         # try to create new engine
         try:
             tank.platform.start_engine(engine_name, tk, new_context)
-        except tank.TankEngineInitError, e:
+        except tank.TankEngineInitError as e:
             # context was not sufficient! - disable tank!
             __create_tank_disabled_menu(e)
          
@@ -116,7 +116,7 @@ def __tank_on_save_callback():
         # API instance.
         try:
             tk = tank.tank_from_path(file_name)
-        except tank.TankError, e:
+        except tank.TankError as e:
             __create_tank_disabled_menu(e)
             return
         
@@ -132,7 +132,7 @@ def __tank_on_save_callback():
         # now restart the engine with the new context
         __engine_refresh(tk, new_ctx)
 
-    except Exception, e:
+    except Exception as e:
         __create_tank_error_menu()
 
 
@@ -156,7 +156,7 @@ def tank_startup_node_callback():
         if ctx_str:
             try:
                 new_ctx = tank.context.deserialize(ctx_str)
-            except:
+            except Exception:
                 new_ctx = tk.context_empty()
         else:
             new_ctx = tk.context_empty()
@@ -172,7 +172,7 @@ def tank_startup_node_callback():
 
             try:
                 tk = tank.tank_from_path(file_name)
-            except tank.TankError, e:
+            except tank.TankError as e:
                 __create_tank_disabled_menu(e)
                 return
 
@@ -185,7 +185,7 @@ def tank_startup_node_callback():
             # Now switch to the context appropriate for the file
             __engine_refresh(tk, new_ctx)
 
-    except Exception, e:
+    except Exception as e:
         __create_tank_error_menu()
         
 g_tank_callbacks_registered = False
