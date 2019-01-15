@@ -272,6 +272,10 @@ class NukeBootstraper(object):
         self._is_bootstrapping = True
         nuke.removeOnCreate(self._bootstrap)
 
+        # We should attempt gather the context that was set in the Nuke session that launched/spawned this
+        # session if we can. If this Nuke session has just been launched via the launch app this env var won't be set.
+        self._previous_ctx_str = os.environ.get("TANK_NUKE_ENGINE_INIT_CONTEXT")
+
         self._toolkit_mgr.progress_callback = self._report
         self._toolkit_mgr.bootstrap_engine_async(
             os.environ.get("SHOTGUN_ENGINE", "tk-nuke"),
@@ -298,13 +302,30 @@ class NukeBootstraper(object):
         self._progress_task.report_progress(percentage, message)
         print message
 
-    def _on_finish(self):
+    def _on_finish(self, failed=False):
         """
         Called after bootstrap (success or failure) to cleanup resources.
         """
         # At this point we are guaranteed that bootstrapped is finished, so we can dismiss progress
         # reporting.
         self._progress_task.done()
+
+        # We should attempt to switch to the context that was supplied from the Nuke session that launched/spawned this
+        # session if we can. If this Nuke session has just been launched via the launch app this env var won't be set.
+        if not failed and self._previous_ctx_str:
+            # We have a context set previously, this must mean that this Nuke instance has been spawned from
+            # another which had TK context. We should switch to this context.
+
+            self._logger.debug("Context found from env var: \"TANK_NUKE_ENGINE_INIT_CONTEXT\", context: %s" %  self._previous_ctx_str)
+
+            # As the bootstrap started successfully we should have an engine present that we can grab
+            import sgtk
+            engine = sgtk.platform.current_engine()
+            context = sgtk.context.deserialize(self._previous_ctx_str)
+
+            self._logger.debug(
+                "Changing the engine context to: %s" % repr(context))
+            engine.change_context(context)
 
     def _on_failure(self, phase, exception):
         """
@@ -316,4 +337,4 @@ class NukeBootstraper(object):
         try:
             nuke.error("Initialization failed: %s" % str(exception))
         finally:
-            self._on_finish()
+            self._on_finish(failed=True)
