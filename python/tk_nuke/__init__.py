@@ -43,7 +43,8 @@ def __show_tank_disabled_message(details):
            "In order to enable the Shotgun functionality, try opening another "
            "file. <br><br><i>Details:</i> %s" % details)
     nuke.message(msg)
-    
+
+
 def __create_tank_disabled_menu(details):    
     """
     Creates a std "disabled" shotgun menu
@@ -56,7 +57,7 @@ def __create_tank_disabled_menu(details):
         sg_menu.addCommand("Toolkit is disabled.", cmd)
     else:
         nuke.error("The Shotgun Pipeline Toolkit is disabled: %s" % details)
-        
+
     
 def __create_tank_error_menu():    
     """
@@ -79,8 +80,9 @@ def __create_tank_error_menu():
         sg_menu.addCommand("[Shotgun Error - Click for details]", cmd)
     else:
         nuke.error("The Shotgun Pipeline Toolkit caught an error: %s" % message)
-    
-def __engine_refresh( new_context):
+
+
+def __engine_refresh(new_context):
     """
     Checks if the nuke engine should be created or just have the context changed.
     If an engine is already started then we just need to change context, else we need to start the engine.
@@ -135,6 +137,7 @@ def __sgtk_on_save_callback():
     except Exception as e:
         __create_tank_error_menu()
 
+
 def sgtk_on_load_callback():
     try:
         # If we have opened a file then we should check if automatic context switching is enabled and change if possible
@@ -177,6 +180,7 @@ def sgtk_on_load_callback():
         __create_tank_error_menu()
 
 g_tank_callbacks_registered = False
+
 
 def tank_ensure_callbacks_registered(engine=None):
     """

@@ -57,7 +57,7 @@ def _setup_sgtk(output_handle):
         return
 
     try:
-        engine = sgtk.platform.start_engine(engine_name, context.sgtk, context)
+        sgtk.platform.start_engine(engine_name, context.sgtk, context)
     except Exception as e:
         output_handle("Shotgun: Could not start engine: %s" % str(e))
         return

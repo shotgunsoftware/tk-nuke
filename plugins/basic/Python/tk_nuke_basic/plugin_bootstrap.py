@@ -315,7 +315,6 @@ class NukeBootstraper(object):
         if not failed and self._previous_ctx_str:
             # We have a context set previously, this must mean that this Nuke instance has been spawned from
             # another which had TK context. We should switch to this context.
-
             self._logger.debug("Context found from env var: \"TANK_CONTEXT\", context: %s" %  self._previous_ctx_str)
 
             # As the bootstrap started successfully we should have an engine present that we can grab
