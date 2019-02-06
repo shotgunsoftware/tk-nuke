@@ -134,7 +134,7 @@ def __sgtk_on_save_callback():
         # now restart the engine with the new context
         __engine_refresh(new_ctx)
 
-    except Exception as e:
+    except Exception:
         __create_tank_error_menu()
 
 
@@ -176,7 +176,7 @@ def sgtk_on_load_callback():
             # Now switch to the context appropriate for the file
             __engine_refresh(new_ctx)
 
-    except Exception as e:
+    except Exception:
         __create_tank_error_menu()
 
 g_tank_callbacks_registered = False
