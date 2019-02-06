@@ -26,9 +26,10 @@ def _clean_env():
     """
     Cleans up SGTK related environment variables.
     """
-    for var in ["TANK_ENGINE", "TANK_CONTEXT", "TANK_FILE_TO_OPEN"]:
-        if var in os.environ:
-            del os.environ[var]
+    # We don't clean up the TANK_CONTEXT or TANK_ENGINE a these get reset with the current context
+    # and used if a new Nuke session is spawned from this one.
+    if "TANK_FILE_TO_OPEN" in os.environ:
+        del os.environ["TANK_FILE_TO_OPEN"]
 
 def _setup_sgtk(output_handle):
     """
@@ -36,7 +37,7 @@ def _setup_sgtk(output_handle):
     the tk-nuke engine.
     """
     try:
-        import tank
+        import sgtk
     except Exception as e:
         output_handle("Shotgun: Could not import sgtk! Disabling: %s" % str(e))
         return
@@ -47,7 +48,7 @@ def _setup_sgtk(output_handle):
 
     engine_name = os.environ.get("TANK_ENGINE")
     try:
-        context = tank.context.deserialize(os.environ.get("TANK_CONTEXT"))
+        context = sgtk.context.deserialize(os.environ.get("TANK_CONTEXT"))
     except Exception as e:
         output_handle(
             "Shotgun: Could not create context! "
@@ -56,7 +57,7 @@ def _setup_sgtk(output_handle):
         return
 
     try:
-        engine = tank.platform.start_engine(engine_name, context.tank, context)
+        engine = sgtk.platform.start_engine(engine_name, context.sgtk, context)
     except Exception as e:
         output_handle("Shotgun: Could not start engine: %s" % str(e))
         return

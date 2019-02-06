@@ -274,7 +274,7 @@ class NukeBootstraper(object):
 
         # We should attempt gather the context that was set in the Nuke session that launched/spawned this
         # session if we can. If this Nuke session has just been launched via the launch app this env var won't be set.
-        self._previous_ctx_str = os.environ.get("TANK_NUKE_ENGINE_INIT_CONTEXT")
+        self._previous_ctx_str = os.environ.get("TANK_CONTEXT")
 
         self._toolkit_mgr.progress_callback = self._report
         self._toolkit_mgr.bootstrap_engine_async(
@@ -316,7 +316,7 @@ class NukeBootstraper(object):
             # We have a context set previously, this must mean that this Nuke instance has been spawned from
             # another which had TK context. We should switch to this context.
 
-            self._logger.debug("Context found from env var: \"TANK_NUKE_ENGINE_INIT_CONTEXT\", context: %s" %  self._previous_ctx_str)
+            self._logger.debug("Context found from env var: \"TANK_CONTEXT\", context: %s" %  self._previous_ctx_str)
 
             # As the bootstrap started successfully we should have an engine present that we can grab
             import sgtk
@@ -326,6 +326,13 @@ class NukeBootstraper(object):
             self._logger.debug(
                 "Changing the engine context to: %s" % repr(context))
             engine.change_context(context)
+
+            # as we have a previous context, this means a new Nuke session has been spawned from the old one
+            # and as the asynchronous bootstrap doesn't register the onscriptload callback in time to actually catch the
+            # loading of the new script, we should call it manually. The method will also handle the situation where
+            # new file is called and there is no path to gather context from.
+            import tk_nuke
+            tk_nuke.sgtk_on_load_callback()
 
     def _on_failure(self, phase, exception):
         """
