@@ -185,9 +185,9 @@ g_tank_callbacks_registered = False
 def tank_ensure_callbacks_registered(engine=None):
     """
     Make sure that we have callbacks tracking context state changes.
-    The OnScriptLoad callback really only come into play when your opening a file or creating a new script, when there is
-    no current script open in your Nuke session. If there is a script currently open then this will spawn a new Nuke
-    instance and the callback won't be called.
+    The OnScriptLoad callback really only comes into play when you're opening a file or creating a new script, when
+    there is no current script open in your Nuke session. If there is a script currently open then this will spawn a
+    new Nuke instance and the callback won't be called.
     """
 
     # Register only if we're missing an engine (to allow going from disabled to something else)

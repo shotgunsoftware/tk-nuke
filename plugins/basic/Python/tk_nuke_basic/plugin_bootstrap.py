@@ -133,7 +133,7 @@ def __launch_sgtk(base_config, plugin_id, bundle_cache):
     # environment. These are passed down through the app launcher when running
     # in zero config
     entity = toolkit_mgr.get_entity_from_environment()
-    sgtk_logger.debug("Will launch the engine with entity: %s" % entity)
+    sgtk_logger.debug("Will launch the engine with entity: %s", entity)
 
     bootstrapper = NukeBootstraper(toolkit_mgr, entity, sgtk_logger)
     bootstrapper.bootstrap()
@@ -315,7 +315,7 @@ class NukeBootstraper(object):
         if not failed and self._previous_ctx_str:
             # We have a context set previously, this must mean that this Nuke instance has been spawned from
             # another which had TK context. We should switch to this context.
-            self._logger.debug("Context found from env var: \"TANK_CONTEXT\", context: %s" %  self._previous_ctx_str)
+            self._logger.debug("Context found from env var: \"TANK_CONTEXT\", context: %s", (self._previous_ctx_str))
 
             # As the bootstrap started successfully we should have an engine present that we can grab
             import sgtk
@@ -323,7 +323,7 @@ class NukeBootstraper(object):
             context = sgtk.context.deserialize(self._previous_ctx_str)
 
             self._logger.debug(
-                "Changing the engine context to: %s" % repr(context))
+                "Changing the engine context to: %s", (repr(context)))
             engine.change_context(context)
 
             # as we have a previous context, this means a new Nuke session has been spawned from the old one
