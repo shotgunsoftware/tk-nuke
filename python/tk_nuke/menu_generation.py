@@ -15,6 +15,7 @@ import sys
 import nuke
 import os
 import unicodedata
+import traceback
 import nukescripts.openurl
 import nukescripts
 
