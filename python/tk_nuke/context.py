@@ -280,7 +280,7 @@ class ClassicStudioContextSwitcher(object):
             # Now change the context for the engine and apps.
             self.change_context(new_ctx)
         except Exception as e:
-            self.engine.menu_generator.create_sgtk_error_menu(e)
+            self.engine.menu_generator.create_sgtk_error_menu()
 
     ##########################################################################
     # public
