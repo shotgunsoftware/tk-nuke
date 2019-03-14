@@ -9,6 +9,7 @@
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 import os
+import sys
 import nuke
 
 # This covers initializing Toolkit for Nuke batch processes (nuke -t).
@@ -22,6 +23,7 @@ if not os.environ.get("SHOTGUN_INIT_RUN"):
     if not nuke.GUI:
         sys.path.append(os.path.dirname(__file__))
         try:
+            # importing sgtk_startup is enough to trigger the bootstrap process
             import sgtk_startup
         finally:
             sys.path.pop()
