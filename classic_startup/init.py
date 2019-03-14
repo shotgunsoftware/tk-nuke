@@ -16,7 +16,7 @@ import nuke
 # Since Nuke 11, Nuke appears to call the init.py script multiple times on start up. The first time it calls it, the
 # nuke.GUI returns true (if we genuinely are in a GUI session), but the subsequent runs of this script yield False
 # which means it tries to bootstrap again and again. To get around this, we set an environment var on the first time
-# it's called and then in use it to check and block subsequent bootstraps.
+# it's called and then in use it to check and block subsequent bootstraps. This env var is not used anywhere else.
 if not os.environ.get("SHOTGUN_INIT_RUN"):
     os.environ["SHOTGUN_INIT_RUN"] = "1"
 
