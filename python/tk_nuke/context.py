@@ -228,7 +228,7 @@ class ClassicStudioContextSwitcher(object):
                 # This file could be in another project altogether, so
                 # create a new Tank instance.
                 tk = tank.tank_from_path(file_name)
-            except tank.TankError as e:
+            except tank.TankError, e:
                 self.engine.menu_generator.create_sgtk_disabled_menu(e)
                 return
 
@@ -268,7 +268,7 @@ class ClassicStudioContextSwitcher(object):
                 file_name = nuke.root().name()
                 try:
                     tk = tank.tank_from_path(file_name)
-                except tank.TankError as e:
+                except tank.TankError, e:
                     self.engine.menu_generator.create_sgtk_disabled_menu(e)
                     return
 
@@ -279,8 +279,8 @@ class ClassicStudioContextSwitcher(object):
 
             # Now change the context for the engine and apps.
             self.change_context(new_ctx)
-        except Exception as e:
-            self.engine.menu_generator.create_sgtk_error_menu(e)
+        except Exception:
+            self.engine.menu_generator.create_sgtk_error_menu()
 
     ##########################################################################
     # public
@@ -297,7 +297,7 @@ class ClassicStudioContextSwitcher(object):
 
         try:
             tank.platform.change_context(new_context)
-        except tank.TankEngineInitError as e:
+        except tank.TankEngineInitError, e:
             # Context was not sufficient!
             self.engine.menu_generator.create_sgtk_disabled_menu(e)
 
@@ -330,7 +330,7 @@ class ClassicStudioContextSwitcher(object):
                 raise tank.TankError(
                     "Toolkit could not determine the context associated with this script."
                 )
-        except Exception as e:
+        except Exception, e:
             self.engine.menu_generator.create_sgtk_disabled_menu(e)
             self.engine.logger.debug(e)
 
