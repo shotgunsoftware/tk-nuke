@@ -347,15 +347,24 @@ class NukeSessionCollector(HookBaseClass):
             render_path_fields = render_template.get_fields(publish_path)
 
             rp_name = render_path_fields.get("name")
+            rp_output = render_path_fields.get("output")
             rp_channel = render_path_fields.get("channel")
-            if not rp_name and not rp_channel:
+            if not rp_name and not rp_output and not rp_channel:
                 publish_name = "Publish"
-            elif not rp_name:
-                publish_name = "Channel %s" % rp_channel
-            elif not rp_channel:
-                publish_name = rp_name
             else:
-                publish_name = "%s, Channel %s" % (rp_name, rp_channel)
+                publish_fields = []
+                if rp_name:
+                    publish_fields.append(rp_name)
+                if rp_output:
+                    field = []
+                    if publish_fields:
+                        field.append("Output")
+                    field.append(rp_output)
+                    publish_fields.append(" ".join(field))
+                if rp_channel:
+                    field = ["Channel", rp_channel]
+                    publish_fields.append(" ".join(field))
+                publish_name = ", ".join(publish_fields)
 
             # get the version number from the render path
             version_number = render_path_fields.get("version")
