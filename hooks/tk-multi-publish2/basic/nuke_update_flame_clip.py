@@ -682,7 +682,7 @@ class UpdateFlameClipPlugin(HookBaseClass):
 
         try:
             shutil.copy(flame_clip_path, backup_path)
-        except Exception, e:
+        except Exception as e:
             raise Exception(
                 "Failed to create a backup copy of the Flame clip file '%s': "
                 "%s" % (flame_clip_path, e)

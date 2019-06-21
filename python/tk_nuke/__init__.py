@@ -20,7 +20,7 @@ in order to avoid import errors at startup and context switch.
 import os
 import textwrap
 import nuke
-import tank
+import sgtk
 import sys
 import traceback
 
@@ -32,7 +32,7 @@ from .menu_generation import (
 
 from .context import ClassicStudioContextSwitcher, PluginStudioContextSwitcher # noqa
 
-logger = tank.LogManager.get_logger(__name__)
+logger = sgtk.LogManager.get_logger(__name__)
 
 
 def __show_tank_disabled_message(details):
@@ -46,7 +46,8 @@ def __show_tank_disabled_message(details):
            "file. <br><br><i>Details:</i> %s" % details)
     nuke.message(msg)
 
-def __create_tank_disabled_menu(details):
+
+def __create_tank_disabled_menu(details):    
     """
     Creates a std "disabled" shotgun menu
     """
@@ -61,8 +62,8 @@ def __create_tank_disabled_menu(details):
         logger.error(msg)
         nuke.error(msg)
 
-
-def __create_tank_error_menu():
+    
+def __create_tank_error_menu():    
     """
     Creates a std "error" tank menu and grabs the current context.
     Make sure that this is called from inside an except clause.
@@ -86,37 +87,39 @@ def __create_tank_error_menu():
         logger.error(msg)
         nuke.error(msg)
 
-def __engine_refresh(tk, new_context):
+
+def __engine_refresh(new_context):
     """
-    Checks if the tank engine should be refreshed.
+    Checks if the nuke engine should be created or just have the context changed.
+    If an engine is already started then we just need to change context, 
+    else we need to start the engine.
     """
 
     engine_name = os.environ.get("TANK_NUKE_ENGINE_INIT_NAME")
     logger.debug("Refreshing engine '%s'" % engine_name)
-
-    curr_engine = tank.platform.current_engine()
+    
+    curr_engine = sgtk.platform.current_engine()
     if curr_engine:
-        # an old engine is running.
-        if new_context == curr_engine.context:
-            # no need to restart the engine!
-            logger.debug("Same engine, same context. No restart needed.")
-            return
-        else:
-            # shut down the engine
-            curr_engine.destroy()
-
-    # try to create new engine
-    try:
-        logger.debug("Starting new engine: %s, %s, %s" % (engine_name, tk, new_context))
-        e = tank.platform.start_engine(engine_name, tk, new_context)
-        logger.debug("Successfully loaded %s" % e)
-    except tank.TankEngineInitError, e:
-        # context was not sufficient! - disable tank!
-        logger.exception("Engine could not be started.")
-        __create_tank_disabled_menu(e)
-
-
-def __tank_on_save_callback():
+        # If we already have an engine, we can just tell it to change contexts
+        curr_engine.change_context(new_context)
+    else:
+        # try to create new engine
+        try:
+            logger.debug(
+                "Starting new engine: %s, %s, %s" % (
+                    engine_name, 
+                    new_context.sgtk, 
+                    new_context
+                )
+            )
+            sgtk.platform.start_engine(engine_name, new_context.sgtk, new_context)
+        except sgtk.TankEngineInitError as e:
+            # context was not sufficient! - disable tank!
+            logger.exception("Engine could not be started.")
+            __create_tank_disabled_menu(e)
+         
+    
+def __sgtk_on_save_callback():
     """
     Callback that fires every time a file is saved.
 
@@ -131,30 +134,32 @@ def __tank_on_save_callback():
         # this file could be in another project altogether, so create a new Tank
         # API instance.
         try:
-            tk = tank.tank_from_path(file_name)
+            tk = sgtk.sgtk_from_path(file_name)
             logger.debug("Tk instance '%r' associated with path '%s'" % (tk, file_name))
-        except tank.TankError, e:
+        except sgtk.TankError as e:
             logger.exception("Could not execute tank_from_path('%s')" % file_name)
             __create_tank_disabled_menu(e)
             return
 
         # try to get current ctx and inherit its values if possible
         curr_ctx = None
-        if tank.platform.current_engine():
-            curr_ctx = tank.platform.current_engine().context
+        curr_engine = sgtk.platform.current_engine()
+        if curr_engine:
+            curr_ctx = curr_engine.context
 
         # and now extract a new context based on the file
         new_ctx = tk.context_from_path(file_name, curr_ctx)
         logger.debug("New context computed to be: %r" % new_ctx)
 
         # now restart the engine with the new context
-        __engine_refresh(tk, new_ctx)
-    except Exception, e:
+        __engine_refresh(new_ctx)
+
+    except Exception:
         logger.exception("An exception was raised during addOnScriptSave callback.")
         __create_tank_error_menu()
 
 
-def tank_startup_node_callback():
+def __sgtk_on_load_callback():
     """
     Callback that fires every time a script is loaded.
 
@@ -163,76 +168,89 @@ def tank_startup_node_callback():
     """
     try:
         logger.debug("SGTK Callback: addOnScriptLoad")
-        if nuke.root().name() == "Root":
+        # If we have opened a file then we should check if automatic 
+        # context switching is enabled and change if possible
+        engine = sgtk.platform.current_engine()
+        file_name = nuke.root().name()
+        logger.debug("Currently running engine: %s" % (engine,))
+        logger.debug("File name to load: '%s'" % (file_name,))
 
-            # file->new
-            # base it on the context we 'inherited' from the prev session
-            # get the context from the previous session - this is helpful if user does file->new
-            logger.debug("File->New detected.")
-            project_root = os.environ.get("TANK_NUKE_ENGINE_INIT_PROJECT_ROOT")
-            logger.debug("Will spin up a new tk session based on "
-                         "previous session's config from '%s'" % project_root)
-            tk = tank.Tank(project_root)
-
-            ctx_str = os.environ.get("TANK_NUKE_ENGINE_INIT_CONTEXT")
-            if ctx_str:
-                try:
-                    new_ctx = tank.context.deserialize(ctx_str)
-                    logger.debug("Will use previous context '%r'" % new_ctx)
-                except:
-                    logger.debug("Could not extract previous context "
-                                 "from env var TANK_NUKE_ENGINE_INIT_CONTEXT. "
-                                 "New session will use empty context.")
-                    new_ctx = tk.context_empty()
-            else:
-                new_ctx = tk.context_empty()
-                logger.debug("No previous context found in TANK_NUKE_ENGINE_INIT_CONTEXT. "
-                             "New session will use empty context.")
-
-        else:
-            # file->open
-            file_name = nuke.root().name()
-            logger.debug("File->Open detected with file name '%s'" % file_name)
-
+        if file_name != "Root" and engine is not None and engine.get_setting("automatic_context_switch"):
+            # We have a current script, and we have an engine and the current environment 
+            # is set to automatic context switch, so we should attempt to change the 
+            # context to suit the file that is open.
+            logger.debug("Engine running, a script is loaded into nuke and auto-context switch is on.")
+            logger.debug("Will attempt to execute tank_from_path('%s')" % (file_name,))
             try:
-                tk = tank.tank_from_path(file_name)
-                logger.debug("Tk instance '%r' associated with path '%s'" % (tk, file_name))
-            except tank.TankError, e:
-                logger.exception("Could not execute tank_from_path('%s')" % file_name)
+                # todo: do we need to create a new tk object, instead should we just 
+                # check that the context gets created correctly?
+                tk = sgtk.sgtk_from_path(file_name)
+                logger.debug("Instance '%s'is associated with '%s'" % (tk, file_name))
+            except sgtk.TankError as e:
+                logger.debug("No tk instance associated with '%s': %s" % (file_name, e))
                 __create_tank_disabled_menu(e)
                 return
 
             # try to get current ctx and inherit its values if possible
             curr_ctx = None
-            if tank.platform.current_engine():
-                engine = tank.platform.current_engine()
-                logger.debug("Engine currently running: %s" % engine)
-                curr_ctx = engine.context
+            if sgtk.platform.current_engine():
+                curr_ctx = sgtk.platform.current_engine().context
 
+            logger.debug("")
             new_ctx = tk.context_from_path(file_name, curr_ctx)
-            logger.debug("New context computed to be: %r" % new_ctx)
+            logger.debug("Current context: %r" % (curr_ctx,))
+            logger.debug("New context: %r" % (new_ctx,))
+            # Now switch to the context appropriate for the file
+            __engine_refresh(new_ctx)
 
-        # now restart the engine with the new context
-        __engine_refresh(tk, new_ctx)
-    except Exception, e:
+        elif file_name != "Root" and engine is None:
+            # we have no engine, this maybe because the integration disabled itself, 
+            # due to a non Toolkit file being opened, prior to this new file. We must 
+            # create a sgtk instance from the script path.
+            logger.debug("Nuke file is already loaded but no tk engine running.")
+            logger.debug("Will attempt to execute tank_from_path('%s')" % (file_name,))
+            try:
+                tk = sgtk.sgtk_from_path(file_name)
+                logger.debug("Instance '%s'is associated with '%s'" % (tk, file_name))
+            except sgtk.TankError as e:
+                logger.debug("No tk instance associated with '%s': %s" % (file_name, e))
+                __create_tank_disabled_menu(e)
+                return
+
+            new_ctx = tk.context_from_path(file_name)
+            logger.debug("New context: %r" % (new_ctx,))
+            # Now switch to the context appropriate for the file
+            __engine_refresh(new_ctx)
+
+    except Exception:
         logger.exception("An exception was raised during addOnScriptLoad callback.")
         __create_tank_error_menu()
 
 g_tank_callbacks_registered = False
 
-def tank_ensure_callbacks_registered():
+
+def tank_ensure_callbacks_registered(engine=None):
     """
     Make sure that we have callbacks tracking context state changes.
+    The OnScriptLoad callback really only comes into play when you're opening a file or creating a new script, when
+    there is no current script open in your Nuke session. If there is a script currently open then this will spawn a
+    new Nuke instance and the callback won't be called.
     """
-
-    import sgtk
-    engine = sgtk.platform.current_engine()
 
     # Register only if we're missing an engine (to allow going from disabled to something else)
     # or if the engine specifically requests for it.
     if not engine or engine.get_setting("automatic_context_switch"):
         global g_tank_callbacks_registered
         if not g_tank_callbacks_registered:
-            nuke.addOnScriptLoad(tank_startup_node_callback)
-            nuke.addOnScriptSave(__tank_on_save_callback)
+            nuke.addOnScriptLoad(__sgtk_on_load_callback)
+            nuke.addOnScriptSave(__sgtk_on_save_callback)
             g_tank_callbacks_registered = True
+    elif engine and not engine.get_setting("automatic_context_switch"):
+        # we have an engine but the automatic context switching has been disabled, we should ensure the callbacks
+        # are removed.
+        global g_tank_callbacks_registered
+        if g_tank_callbacks_registered:
+            nuke.removeOnScriptLoad(__sgtk_on_load_callback)
+            nuke.removeOnScriptSave(__sgtk_on_save_callback)
+            g_tank_callbacks_registered = False
+
