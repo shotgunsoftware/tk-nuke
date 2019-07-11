@@ -96,7 +96,6 @@ def __engine_refresh(new_context):
     """
 
     engine_name = os.environ.get("TANK_NUKE_ENGINE_INIT_NAME")
-    logger.debug("Refreshing engine '%s'" % engine_name)
     
     curr_engine = sgtk.platform.current_engine()
     if curr_engine:
