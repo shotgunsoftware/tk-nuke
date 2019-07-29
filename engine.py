@@ -177,15 +177,6 @@ class NukeEngine(tank.platform.Engine):
             self.logger.error(msg)
             return
 
-        # Disable the importing of the web engine widgets submodule from PySide2
-        # if this is a Windows environment.
-        if nuke_version[0] > 10 and sys.platform.startswith("win"):
-            self.logger.debug(
-                "Nuke 11+ on Windows can deadlock if QtWebEngineWidgets "
-                "is imported. Setting SHOTGUN_SKIP_QTWEBENGINEWIDGETS_IMPORT=1..."
-            )
-            os.environ["SHOTGUN_SKIP_QTWEBENGINEWIDGETS_IMPORT"] = "1"
-
         # Versions > 10.5 have not yet been tested so show a message to that effect.
         if nuke_version[0] > 11 or (nuke_version[0] == 11 and nuke_version[1] > 3):
             # This is an untested version of Nuke.
@@ -878,6 +869,42 @@ class NukeEngine(tank.platform.Engine):
                 tank.platform.change_context(new_context)
         except Exception:
             self.logger.debug("Unable to determine context for file: %s", script_path)
+
+    def _define_qt_base(self):
+        """
+        This will be called at initialisation time and will allow
+        a user to control various aspects of how QT is being used
+        by Tank. The method should return a dictionary with a number
+        of specific keys, outlined below.
+
+        * qt_core - the QtCore module to use
+        * qt_gui - the QtGui module to use
+        * wrapper - the Qt wrapper root module, e.g. PySide
+        * dialog_base - base class for to use for Tank's dialog factory
+
+        We are overriding the base implementation so that we can set the "SHOTGUN_SKIP_QTWEBENGINEWIDGETS_IMPORT"
+        environment variable for versions of Nuke on Windows that use PySide2. Once this is done, we call the
+        base implementation
+
+        :return: dict
+        """
+
+        nuke_version = (
+            nuke.env.get("NukeVersionMajor"),
+            nuke.env.get("NukeVersionMinor"),
+            nuke.env.get("NukeVersionRelease")
+        )
+
+        # Disable the importing of the web engine widgets submodule from PySide2
+        # if this is a Windows environment. Failing to do so will cause Nuke to freeze on startup.
+        if nuke_version[0] > 10 and sys.platform.startswith("win"):
+            self.logger.debug(
+                "Nuke 11+ on Windows can deadlock if QtWebEngineWidgets "
+                "is imported. Setting SHOTGUN_SKIP_QTWEBENGINEWIDGETS_IMPORT=1..."
+            )
+            os.environ["SHOTGUN_SKIP_QTWEBENGINEWIDGETS_IMPORT"] = "1"
+
+        return super(NukeEngine, self)._define_qt_base()
 
     def __setup_favorite_dirs(self):
         """
