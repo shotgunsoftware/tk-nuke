@@ -241,7 +241,7 @@ def tank_ensure_callbacks_registered(engine=None):
     if not engine or engine.get_setting("automatic_context_switch"):
         global g_tank_callbacks_registered
         if not g_tank_callbacks_registered:
-            nuke.addOnScriptLoad(__sgtk_on_load_callback)
+            nuke.addOnScriptLoad(sgtk_on_load_callback)
             nuke.addOnScriptSave(__sgtk_on_save_callback)
             g_tank_callbacks_registered = True
     elif engine and not engine.get_setting("automatic_context_switch"):
@@ -249,7 +249,7 @@ def tank_ensure_callbacks_registered(engine=None):
         # are removed.
         global g_tank_callbacks_registered
         if g_tank_callbacks_registered:
-            nuke.removeOnScriptLoad(__sgtk_on_load_callback)
+            nuke.removeOnScriptLoad(sgtk_on_load_callback)
             nuke.removeOnScriptSave(__sgtk_on_save_callback)
             g_tank_callbacks_registered = False
 
