@@ -158,7 +158,7 @@ def __sgtk_on_save_callback():
         __create_tank_error_menu()
 
 
-def __sgtk_on_load_callback():
+def sgtk_on_load_callback():
     """
     Callback that fires every time a script is loaded.
 
