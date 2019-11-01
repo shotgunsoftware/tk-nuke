@@ -11,10 +11,14 @@
 import os
 import sys
 
-sys.path.append(os.path.dirname(__file__))
+startup_path = os.path.dirname(__file__)
+sys.path.append(startup_path)
 
 # This covers initialization of Toolkit in GUI sessions of Nuke.
 try:
     import sgtk_startup # noqa
 finally:
-    sys.path.pop()
+    # We can't just pop sys.path, because the sgtk_startup routine
+    # might have run some code during bootstrap that appended to
+    # sys.path.
+    sys.path = [p for p in sys.path if p != startup_path]
