@@ -152,9 +152,6 @@ class NukeEngine(tank.platform.Engine):
 
         self.logger.debug("%s: Initializing...", self)
 
-        local_python_path = os.path.abspath(os.path.join(self.disk_location, "python"))
-        # append the local path so that the tk_nuke and tk_nuke_qt packages can be imported
-        sys.path.append(local_python_path)
         import tk_nuke
         tk_nuke.tank_ensure_callbacks_registered(engine=self)
 

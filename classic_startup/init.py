@@ -21,9 +21,13 @@ if not os.environ.get("SHOTGUN_INIT_RUN"):
     os.environ["SHOTGUN_INIT_RUN"] = "1"
 
     if not nuke.GUI:
-        sys.path.append(os.path.dirname(__file__))
+        startup_path = os.path.dirname(__file__)
+        sys.path.append(startup_path)
         try:
             # importing sgtk_startup is enough to trigger the bootstrap process
             import sgtk_startup
         finally:
-            sys.path.pop()
+            # We can't just pop sys.path, because the sgtk_startup routine
+            # might have run some code during bootstrap that appended to
+            # sys.path.
+            sys.path = [p for p in sys.path if p != startup_path]
