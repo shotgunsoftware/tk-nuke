@@ -230,7 +230,7 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
             self._timer = QtCore.QTimer(self.toolkit_widget)
             self._timer.setSingleShot(True)
             self._timer.timeout.connect(_set_qss)
-            self._timer.start(1)
+            self._timer.start(0)
         else:
             # there is already a dialog. Re-parent it to this
             # object and move it across into this layout
