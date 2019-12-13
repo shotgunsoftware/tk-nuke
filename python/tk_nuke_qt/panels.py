@@ -212,8 +212,25 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
             bundle.logger.debug("Created new toolkit panel widget %s", self.toolkit_widget)
             
             # now let the core apply any external stylesheets
-            bundle.engine._apply_external_styleshet(bundle, self.toolkit_widget)
-            
+            #
+            # NOTE: To be honest, we're not entirely sure why this is required. In Nuke 12
+            # we started experiencing a crash when the shotgunpanel app was being launched
+            # in panel mode. On OSX that was cured with a tiny tweak to the qss itself, but
+            # the problem persisted on Windows and Linux. In those cases, it does not appear
+            # that anything in the qss itself was the problem, it was simply that there was
+            # qss being applied AT ALL right here.
+            #
+            # The solution here is to defer the application of the stylesheet by 1ms, which
+            # gives Qt time process other events before getting to this call. With that in
+            # mind, we did attempt to just make a call to processEvents here to try to get
+            # the same result without a timer, but that did not stop the crash problem.
+            def _set_qss():
+                bundle.engine._apply_external_styleshet(bundle, self.toolkit_widget)
+
+            self._timer = QtCore.QTimer(self.toolkit_widget)
+            self._timer.setSingleShot(True)
+            self._timer.timeout.connect(_set_qss)
+            self._timer.start(0)
         else:
             # there is already a dialog. Re-parent it to this
             # object and move it across into this layout
