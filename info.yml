@@ -130,7 +130,8 @@ configuration:
                      and each menu item is a dictionary with keys app_instance and name.
                      The app_instance parameter connects this entry to a particular
                      app instance defined in the environment configuration file. The name
-                     is a menu name to make a favourite."
+                     is a menu name to make a favourite. An optional hotkey parameter can
+                     be included for triggering the menu action (Nuke only)."
         allows_empty: True                     
         values:
             type: dict

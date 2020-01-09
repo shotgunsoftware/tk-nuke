@@ -144,11 +144,16 @@ class NukeEngine(tank.platform.Engine):
     #####################################################################################
     # Engine Initialization and Destruction
 
-    def init_engine(self):
+    def pre_app_init(self):
         """
-        Called at Engine startup.
+        Sets up the engine into an operational state. This method called before
+        any apps are loaded.
         """
+
         self.logger.debug("%s: Initializing...", self)
+
+        import tk_nuke
+        tk_nuke.tank_ensure_callbacks_registered(engine=self)
 
         # We need to check to make sure that we are using one of the
         # supported versions of Nuke. Right now that is anything between
@@ -169,17 +174,8 @@ class NukeEngine(tank.platform.Engine):
             self.logger.error(msg)
             return
 
-        # Disable the importing of the web engine widgets submodule from PySide2
-        # if this is a Windows environment.
-        if nuke_version[0] > 10 and sys.platform.startswith("win"):
-            self.logger.debug(
-                "Nuke 11+ on Windows can deadlock if QtWebEngineWidgets "
-                "is imported. Setting SHOTGUN_SKIP_QTWEBENGINEWIDGETS_IMPORT=1..."
-            )
-            os.environ["SHOTGUN_SKIP_QTWEBENGINEWIDGETS_IMPORT"] = "1"
-
         # Versions > 10.5 have not yet been tested so show a message to that effect.
-        if nuke_version[0] > 11 or (nuke_version[0] == 11 and nuke_version[1] > 2):
+        if nuke_version[0] > 12 or (nuke_version[0] == 12 and nuke_version[1] > 0):
             # This is an untested version of Nuke.
             msg = ("The Shotgun Pipeline Toolkit has not yet been fully tested with Nuke %d.%dv%d. "
                    "You can continue to use the Toolkit but you may experience bugs or "
@@ -218,48 +214,35 @@ class NukeEngine(tank.platform.Engine):
 
         # Do our mode-specific initializations.
         if self.hiero_enabled:
-            self.init_engine_hiero()
+            self.pre_app_init_hiero()
         elif self.studio_enabled:
-            self.init_engine_studio()
+            self.pre_app_init_studio()
         else:
-            self.init_engine_nuke()
+            self.pre_app_init_nuke()
 
-    def init_engine_studio(self):
+    def pre_app_init_studio(self):
         """
         The Nuke Studio specific portion of engine initialization.
         """
-        self.init_engine_hiero()
+        self.pre_app_init_hiero()
 
-    def init_engine_hiero(self):
+    def pre_app_init_hiero(self):
         """
         The Hiero-specific portion of engine initialization.
         """
         self._last_clicked_selection = []
         self._last_clicked_area = None
 
-    def init_engine_nuke(self):
+    def pre_app_init_nuke(self):
         """
         The Nuke-specific portion of engine initialization.
         """
         # Now prepare tank so that it will be picked up by any new processes
         # created by file->new or file->open.
-        # Store data needed for bootstrapping Tank in env vars. Used in startup/menu.py.
-        os.environ["TANK_NUKE_ENGINE_INIT_NAME"] = self.instance_name
-        os.environ["TANK_NUKE_ENGINE_INIT_CONTEXT"] = tank.context.serialize(self.context)
-
-        # If we're in Toolkit classic mode, we need to backup a few things in order to be able
-        # to restart the engine after a File->New|Open
-        if not self.in_plugin_mode:
-            os.environ["TANK_NUKE_ENGINE_INIT_PROJECT_ROOT"] = self.tank.project_path
-
-            # Add our startup path to the nuke init path
-            startup_path = os.path.abspath(os.path.join(self.disk_location, "classic_startup", "restart"))
-            tank.util.append_path_to_env_var("NUKE_PATH", startup_path)
-
-            # We also need to pass the path to the python folder down to the init script
-            # because nuke python does not have a __file__ attribute for that file.
-            local_python_path = os.path.abspath(os.path.join(self.disk_location, "python"))
-            os.environ["TANK_NUKE_ENGINE_MOD_PATH"] = local_python_path
+        # Store data needed for bootstrapping Tank in env vars.
+        # Used in classic_startup/sgtk_startup.py, and plugins/basic/Python/tk_nuke_basic/plugin_bootstrap.py
+        os.environ["TANK_ENGINE"] = self.instance_name
+        os.environ["TANK_CONTEXT"] = tank.context.serialize(self.context)
 
     def post_app_init(self):
         """
@@ -559,6 +542,15 @@ class NukeEngine(tank.platform.Engine):
         :param old_context: The sgtk.context.Context being switched away from.
         :param new_context: The sgtk.context.Context being switched to.
         """
+        # As we've changed contexts, we should update our environment variables so that if we spawn a new nuke instance
+        # it will start up in the same environment.
+        self.pre_app_init_nuke()
+
+        # Make sure the callbacks are updated based one the current environment settings.
+        # (for example they may be enabled or disabled in the new environment.)
+        import tk_nuke
+        tk_nuke.tank_ensure_callbacks_registered(engine=self)
+
         self.logger.debug("tk-nuke context changed to %s", str(new_context))
 
         # We also need to run the post init for Nuke, which will handle
@@ -826,7 +818,7 @@ class NukeEngine(tank.platform.Engine):
                             if env_name not in self._processed_environments:
                                 self._processed_environments.append(env_name)
                                 self._context_switcher.change_context(target_context)
-        except Exception, e:
+        except Exception as e:
             # If anything went wrong, we can just let the finally block
             # run, which will put things back to the way they were.
             self.logger.debug("Unable to pre-load environment: %s", str(e))
@@ -874,6 +866,42 @@ class NukeEngine(tank.platform.Engine):
                 tank.platform.change_context(new_context)
         except Exception:
             self.logger.debug("Unable to determine context for file: %s", script_path)
+
+    def _define_qt_base(self):
+        """
+        This will be called at initialisation time and will allow
+        a user to control various aspects of how QT is being used
+        by Tank. The method should return a dictionary with a number
+        of specific keys, outlined below.
+
+        * qt_core - the QtCore module to use
+        * qt_gui - the QtGui module to use
+        * wrapper - the Qt wrapper root module, e.g. PySide
+        * dialog_base - base class for to use for Tank's dialog factory
+
+        We are overriding the base implementation so that we can set the "SHOTGUN_SKIP_QTWEBENGINEWIDGETS_IMPORT"
+        environment variable for versions of Nuke on Windows that use PySide2. Once this is done, we call the
+        base implementation
+
+        :return: dict
+        """
+
+        nuke_version = (
+            nuke.env.get("NukeVersionMajor"),
+            nuke.env.get("NukeVersionMinor"),
+            nuke.env.get("NukeVersionRelease")
+        )
+
+        # Disable the importing of the web engine widgets submodule from PySide2
+        # if this is a Windows environment. Failing to do so will cause Nuke to freeze on startup.
+        if nuke_version[0] > 10 and sys.platform.startswith("win"):
+            self.logger.debug(
+                "Nuke 11+ on Windows can deadlock if QtWebEngineWidgets "
+                "is imported. Setting SHOTGUN_SKIP_QTWEBENGINEWIDGETS_IMPORT=1..."
+            )
+            os.environ["SHOTGUN_SKIP_QTWEBENGINEWIDGETS_IMPORT"] = "1"
+
+        return super(NukeEngine, self)._define_qt_base()
 
     def __setup_favorite_dirs(self):
         """
@@ -925,7 +953,7 @@ class NukeEngine(tank.platform.Engine):
                 template = self.get_template_by_name(favorite['template_directory'])
                 fields = self.context.as_template_fields(template)
                 path = template.apply_fields(fields)
-            except Exception, e:
+            except Exception as e:
                 msg = "Error processing template '%s' to add to favorite " \
                       "directories: %s" % (favorite['template_directory'], e)
                 self.logger.exception(msg)
