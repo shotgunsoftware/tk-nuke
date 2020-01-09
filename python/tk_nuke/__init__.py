@@ -151,7 +151,8 @@ def __sgtk_on_save_callback():
         logger.debug("New context computed to be: %r" % new_ctx)
 
         # now restart the engine with the new context
-        __engine_refresh(new_ctx)
+        if curr_ctx != new_ctx:
+            __engine_refresh(new_ctx)
 
     except Exception:
         logger.exception("An exception was raised during addOnScriptSave callback.")
@@ -200,7 +201,8 @@ def sgtk_on_load_callback():
             logger.debug("Current context: %r" % (curr_ctx,))
             logger.debug("New context: %r" % (new_ctx,))
             # Now switch to the context appropriate for the file
-            __engine_refresh(new_ctx)
+            if curr_ctx != new_ctx:
+                __engine_refresh(new_ctx)
 
         elif file_name != "Root" and engine is None:
             # we have no engine, this maybe because the integration disabled itself, 
