@@ -49,6 +49,7 @@ class NukeLauncher(SoftwareLauncher):
         "NukeAssist",
         "NukeStudio",
         "NukeX",
+        "Hiero",
     ]
 
     # This dictionary defines a list of executable template strings for each
