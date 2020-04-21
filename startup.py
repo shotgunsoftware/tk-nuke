@@ -123,6 +123,39 @@ class NukeLauncher(SoftwareLauncher):
 
         return softwares
 
+    def _scan_software_entities(self):
+        filters = [
+            ['sg_status_list', 'is', 'act'],
+            ['engine', 'in', ['tk-nuke', 'tk-hiero', 'tk-nukestudio']],
+            {
+                'filter_operator': 'any',
+                'filters': [
+                    ['sg_mac_template', 'is_not', None],
+                    ['sg_linux_template', 'is_not', None],
+                    ['sg_windows_template', 'is_not', None],
+                ]
+            }
+        ]
+        os_template = {'win32': 'sg_windows_template',
+                       'linux2': 'sg_linux_template',
+                       'darwin': 'sg_mac_template'}
+        fields = ['sg_mac_template',
+                  'sg_linux_template',
+                  'sg_windows_template']
+        results = self.shotgun.find("Software", filters, fields)
+
+        templ_list = []
+        for result in results:
+            try:
+                templ_list.extend(result.get(
+                    os_template[sys.platform]).split('\n'))
+            except AttributeError as e:
+                self.logger.error(
+                    'AttributeError on template \'{}\': {}'.format(result.get('code'), e))
+                pass
+
+        return templ_list
+
     def _find_software(self):
         """
         Finds all Nuke software on disk.
@@ -130,11 +163,15 @@ class NukeLauncher(SoftwareLauncher):
         :returns: Generator of :class:`SoftwareVersion`.
         """
         # Certain platforms have more than one location for installed software
-        for template in self.EXECUTABLE_MATCH_TEMPLATES[sys.platform]:
+        match_templates = self.EXECUTABLE_MATCH_TEMPLATES[sys.platform]
+        match_templates.extend(self._scan_software_entities())
+
+        for template in match_templates:
             self.logger.debug("Processing template %s.", template)
             # Extract all products from that executable.
             for executable, tokens in self._glob_and_match(template, self.COMPONENT_REGEX_LOOKUP):
-                self.logger.debug("Processing %s with tokens %s", executable, tokens)
+                self.logger.debug(
+                    "Processing %s with tokens %s", executable, tokens)
                 for sw in self._extract_products_from_path(executable, tokens):
                     yield sw
 
@@ -255,7 +292,8 @@ class NukeLauncher(SoftwareLauncher):
             # Make sure we are picking the right engine.
             required_env["SHOTGUN_ENGINE"] = self.engine_name
         else:
-            self.logger.debug("Preparing Nuke Launch via Toolkit Classic methodology ...")
+            self.logger.debug(
+                "Preparing Nuke Launch via Toolkit Classic methodology ...")
 
             # Get Nuke environment for Toolkit Classic launch.
             required_env, required_args = self._get_classic_startup_env(
@@ -266,7 +304,8 @@ class NukeLauncher(SoftwareLauncher):
             required_env["TANK_CONTEXT"] = sgtk.Context.serialize(self.context)
             required_env["TANK_ENGINE"] = self.engine_name
 
-        self.logger.debug("Launch environment: %s", pprint.pformat(required_env))
+        self.logger.debug("Launch environment: %s",
+                          pprint.pformat(required_env))
         self.logger.debug("Launch arguments: %s", required_args)
 
         return LaunchInformation(exec_path, required_args, required_env)
@@ -290,7 +329,8 @@ class NukeLauncher(SoftwareLauncher):
             to specify.
         """
         return cls._compute_environment(
-            app_path, app_args, [os.path.join(bundle_root, "classic_startup")], file_to_open
+            app_path, app_args, [os.path.join(
+                bundle_root, "classic_startup")], file_to_open
         )
 
     def _get_plugin_startup_env(self, plugin_names, app_path, app_args, file_to_open):
@@ -314,10 +354,12 @@ class NukeLauncher(SoftwareLauncher):
             )
 
             if os.path.exists(plugin_path):
-                self.logger.debug("Plugin '%s' found at '%s'", plugin_name, plugin_path)
+                self.logger.debug("Plugin '%s' found at '%s'",
+                                  plugin_name, plugin_path)
                 startup_paths.append(plugin_path)
             else:
-                self.logger.warning("Plugin '%s' missing at '%s'", plugin_name, plugin_path)
+                self.logger.warning(
+                    "Plugin '%s' missing at '%s'", plugin_name, plugin_path)
 
         return self._compute_environment(app_path, app_args, startup_paths, file_to_open)
 
@@ -333,7 +375,7 @@ class NukeLauncher(SoftwareLauncher):
         :return: str of the joined environment paths
         """
         # get any existing nuke path to custom gizmos, scripts etc.
-        existing_path_str = os.environ.get(env_key,"")
+        existing_path_str = os.environ.get(env_key, "")
         existing_path_list = existing_path_str.split(os.pathsep)
 
         # append the toolkit extensions in order to ensure the right integrations execute
@@ -360,11 +402,14 @@ class NukeLauncher(SoftwareLauncher):
         env = {}
 
         if "hiero" in app_path.lower() or "--hiero" in app_args:
-            env["HIERO_PLUGIN_PATH"] = cls._join_paths_with_existing_env_paths("HIERO_PLUGIN_PATH", startup_paths)
+            env["HIERO_PLUGIN_PATH"] = cls._join_paths_with_existing_env_paths(
+                "HIERO_PLUGIN_PATH", startup_paths)
         elif "nukestudio" in app_path.lower() or "--studio" in app_args:
-            env["HIERO_PLUGIN_PATH"] = cls._join_paths_with_existing_env_paths("HIERO_PLUGIN_PATH", startup_paths)
+            env["HIERO_PLUGIN_PATH"] = cls._join_paths_with_existing_env_paths(
+                "HIERO_PLUGIN_PATH", startup_paths)
         else:
-            env["NUKE_PATH"] = cls._join_paths_with_existing_env_paths("NUKE_PATH", startup_paths)
+            env["NUKE_PATH"] = cls._join_paths_with_existing_env_paths(
+                "NUKE_PATH", startup_paths)
 
             # A Nuke script can't be launched from the menu.py, so we
             # have to tack it onto the launch arguments instead.
