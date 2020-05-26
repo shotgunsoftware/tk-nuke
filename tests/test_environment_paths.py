@@ -9,6 +9,7 @@
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 from __future__ import with_statement
+from __future__ import print_function
 import os
 import sys
 
@@ -20,7 +21,7 @@ import tempfile
 
 
 repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-print "tk-nuke repository root found at %s." % repo_root
+print("tk-nuke repository root found at %s." % repo_root)
 
 # setUpModule()
 

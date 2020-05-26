@@ -8,6 +8,7 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
+from __future__ import print_function
 import os
 import sys
 import time
@@ -300,7 +301,7 @@ class NukeBootstraper(object):
         percentage = int(progress_value * 100)
         self._logger.debug("[%s] - %s", percentage, message)
         self._progress_task.report_progress(percentage, message)
-        print message
+        print(message)
 
     def _on_finish(self, failed=False):
         """
