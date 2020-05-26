@@ -1,11 +1,11 @@
 ﻿# Copyright (c) 2017 Shotgun Software Inc.
-# 
+#
 # CONFIDENTIAL AND PROPRIETARY
-# 
-# This work is provided "AS IS" and subject to the Shotgun Pipeline Toolkit 
+#
+# This work is provided "AS IS" and subject to the Shotgun Pipeline Toolkit
 # Source Code License included in this distribution package. See LICENSE.
-# By accessing, using, copying or modifying this work you indicate your 
-# agreement to the Shotgun Pipeline Toolkit Source Code License. All rights 
+# By accessing, using, copying or modifying this work you indicate your
+# agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 import os
@@ -56,10 +56,10 @@ class NukeSessionCollector(HookBaseClass):
                 "type": "template",
                 "default": None,
                 "description": "Template path for artist work files. Should "
-                               "correspond to a template defined in "
-                               "templates.yml. If configured, is made available"
-                               "to publish plugins via the collected item's "
-                               "properties. ",
+                "correspond to a template defined in "
+                "templates.yml. If configured, is made available"
+                "to publish plugins via the collected item's "
+                "properties. ",
             },
         }
 
@@ -80,8 +80,9 @@ class NukeSessionCollector(HookBaseClass):
         publisher = self.parent
         engine = publisher.engine
 
-        if ((hasattr(engine, "studio_enabled") and engine.studio_enabled) or
-            (hasattr(engine, "hiero_enabled") and engine.hiero_enabled)):
+        if (hasattr(engine, "studio_enabled") and engine.studio_enabled) or (
+            hasattr(engine, "hiero_enabled") and engine.hiero_enabled
+        ):
 
             # running nuke studio or hiero
             self.collect_current_nukestudio_session(settings, parent_item)
@@ -92,8 +93,7 @@ class NukeSessionCollector(HookBaseClass):
         else:
             # running nuke. ensure additional collected outputs are parented
             # under the session
-            project_item = self.collect_current_nuke_session(settings,
-                parent_item)
+            project_item = self.collect_current_nuke_session(settings, parent_item)
 
         # run node collection if not in hiero
         if hasattr(engine, "hiero_enabled") and not engine.hiero_enabled:
@@ -123,18 +123,11 @@ class NukeSessionCollector(HookBaseClass):
 
         # create the session item for the publish hierarchy
         session_item = parent_item.create_item(
-            "nuke.session",
-            "Nuke Script",
-            display_name
+            "nuke.session", "Nuke Script", display_name
         )
 
         # get the icon path to display for this item
-        icon_path = os.path.join(
-            self.disk_location,
-            os.pardir,
-            "icons",
-            "nuke.png"
-        )
+        icon_path = os.path.join(self.disk_location, os.pardir, "icons", "nuke.png")
         session_item.set_icon_from_path(icon_path)
 
         # if a work template is defined, add it to the item properties so
@@ -142,7 +135,8 @@ class NukeSessionCollector(HookBaseClass):
         work_template_setting = settings.get("Work Template")
         if work_template_setting:
             work_template = publisher.engine.get_template_by_name(
-                work_template_setting.value)
+                work_template_setting.value
+            )
 
             # store the template on the item for use by publish plugins. we
             # can't evaluate the fields here because there's no guarantee the
@@ -172,10 +166,7 @@ class NukeSessionCollector(HookBaseClass):
 
         # go ahead and build the path to the icon for use by any projects
         icon_path = os.path.join(
-            self.disk_location,
-            os.pardir,
-            "icons",
-            "nukestudio.png"
+            self.disk_location, os.pardir, "icons", "nukestudio.png"
         )
 
         if hiero.ui.activeSequence():
@@ -189,7 +180,8 @@ class NukeSessionCollector(HookBaseClass):
         work_template = None
         if work_template_setting:
             work_template = publisher.engine.get_template_by_name(
-                work_template_setting.value)
+                work_template_setting.value
+            )
 
         # FIXME: begin temporary workaround
         # we use different logic here only because we don't have proper support
@@ -202,17 +194,15 @@ class NukeSessionCollector(HookBaseClass):
             if not active_project:
                 return
             project_item = parent_item.create_item(
-                "nukestudio.project",
-                "NukeStudio Project",
-                active_project.name()
+                "nukestudio.project", "NukeStudio Project", active_project.name()
             )
             self.logger.info(
-                "Collected Nuke Studio project: %s" % (active_project.name(),))
+                "Collected Nuke Studio project: %s" % (active_project.name(),)
+            )
             project_item.set_icon_from_path(icon_path)
             project_item.properties["project"] = active_project
             project_item.properties["work_template"] = work_template
-            self.logger.debug(
-                "Work template defined for NukeStudio collection.")
+            self.logger.debug("Work template defined for NukeStudio collection.")
             return
         # FIXME: end temporary workaround
 
@@ -220,9 +210,7 @@ class NukeSessionCollector(HookBaseClass):
 
             # create the session item for the publish hierarchy
             project_item = parent_item.create_item(
-                "nukestudio.project",
-                "NukeStudio Project",
-                project.name()
+                "nukestudio.project", "NukeStudio Project", project.name()
             )
             project_item.set_icon_from_path(icon_path)
 
@@ -230,8 +218,7 @@ class NukeSessionCollector(HookBaseClass):
             # plugins know which open project to associate with this item
             project_item.properties["project"] = project
 
-            self.logger.info(
-                "Collected Nuke Studio project: %s" % (project.name(),))
+            self.logger.info("Collected Nuke Studio project: %s" % (project.name(),))
 
             # enable the active project and expand it. other projects are
             # collapsed and disabled.
@@ -251,8 +238,7 @@ class NukeSessionCollector(HookBaseClass):
             # execution time.
             if work_template:
                 project_item.properties["work_template"] = work_template
-                self.logger.debug(
-                    "Work template defined for NukeStudio collection.")
+                self.logger.debug("Work template defined for NukeStudio collection.")
 
     def collect_node_outputs(self, parent_item):
         """
@@ -266,8 +252,7 @@ class NukeSessionCollector(HookBaseClass):
         for node_type in _NUKE_OUTPUTS:
 
             # get all the instances of the node type
-            all_nodes_of_type = [n for n in nuke.allNodes()
-                if n.Class() == node_type]
+            all_nodes_of_type = [n for n in nuke.allNodes() if n.Class() == node_type]
 
             # iterate over each instance
             for node in all_nodes_of_type:
@@ -282,14 +267,11 @@ class NukeSessionCollector(HookBaseClass):
                     # no file or file does not exist, nothing to do
                     continue
 
-                self.logger.info(
-                    "Processing %s node: %s" % (node_type, node.name()))
+                self.logger.info("Processing %s node: %s" % (node_type, node.name()))
 
                 # file exists, let the basic collector handle it
                 item = super(NukeSessionCollector, self)._collect_file(
-                    parent_item,
-                    file_path,
-                    frame_sequence=True
+                    parent_item, file_path, frame_sequence=True
                 )
 
                 # the item has been created. update the display name to include
@@ -315,7 +297,7 @@ class NukeSessionCollector(HookBaseClass):
             )
             return
 
-        first_frame =  int(nuke.root()["first_frame"].value())
+        first_frame = int(nuke.root()["first_frame"].value())
         last_frame = int(nuke.root()["last_frame"].value())
 
         for node in sg_writenode_app.get_write_nodes():
@@ -365,8 +347,7 @@ class NukeSessionCollector(HookBaseClass):
             display_name = "%s (%s)" % (publish_name, node.name())
 
             # create and populate the item
-            item = parent_item.create_item(
-                item_type, type_display, display_name)
+            item = parent_item.create_item(item_type, type_display, display_name)
             item.set_icon_from_path(item_info["icon_path"])
 
             # if the supplied path is an image, use the path as # the thumbnail.
@@ -387,10 +368,12 @@ class NukeSessionCollector(HookBaseClass):
             # doesn't fall back to zero config path parsing
             item.properties["publish_name"] = publish_name
             item.properties["publish_version"] = version_number
-            item.properties["publish_template"] = \
-                sg_writenode_app.get_node_publish_template(node)
-            item.properties["work_template"] = \
-                sg_writenode_app.get_node_render_template(node)
+            item.properties[
+                "publish_template"
+            ] = sg_writenode_app.get_node_publish_template(node)
+            item.properties[
+                "work_template"
+            ] = sg_writenode_app.get_node_render_template(node)
             item.properties["color_space"] = self._get_node_colorspace(node)
             item.properties["first_frame"] = first_frame
             item.properties["last_frame"] = last_frame
@@ -416,12 +399,13 @@ class NukeSessionCollector(HookBaseClass):
         cs_knob = node.knob("colorspace")
         if not cs_knob:
             return
-    
+
         cs = cs_knob.value()
         # handle default value where cs would be something like: 'default (linear)'
         if cs.startswith("default (") and cs.endswith(")"):
             cs = cs[9:-1]
         return cs
+
 
 def _session_path():
     """

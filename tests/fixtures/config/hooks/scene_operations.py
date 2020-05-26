@@ -12,6 +12,7 @@ import os
 from tank import Hook
 import tank
 
+
 class BreakdownSceneOperations(Hook):
     """
     Breakdown operations test hook
@@ -39,12 +40,19 @@ class BreakdownSceneOperations(Hook):
         """
 
         nodes = []
-        
-        nodes.append( {"node": "outside_template_system", "type": "TestNode", "path": "/foo/bar"})
-        nodes.append( {"node": "maya_publish", "type": "TestNode", "path": os.environ["TEST_PATH_1"]})
-        
-        return nodes
 
+        nodes.append(
+            {"node": "outside_template_system", "type": "TestNode", "path": "/foo/bar"}
+        )
+        nodes.append(
+            {
+                "node": "maya_publish",
+                "type": "TestNode",
+                "path": os.environ["TEST_PATH_1"],
+            }
+        )
+
+        return nodes
 
     def update(self, items):
         """
@@ -58,4 +66,3 @@ class BreakdownSceneOperations(Hook):
         the that each node should be updated *to* rather than the current path.
         """
         tank._hook_items = items
-
