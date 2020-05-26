@@ -1,4 +1,4 @@
-[![Build Status](https://secure.travis-ci.org/shotgunsoftware/tk-nuke.png?branch=master)](http://travis-ci.org/shotgunsoftware/tk-nuke)
+[![Build Status](https://dev.azure.com/shotgun-ecosystem/Toolkit/_apis/build/status/Engines/tk-nuke?branchName=master)](https://dev.azure.com/shotgun-ecosystem/Toolkit/_build/latest?definitionId=83&branchName=master)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Linting](https://img.shields.io/badge/PEP8%20by-Hound%20CI-a873d1.svg)](https://houndci.com)
 
