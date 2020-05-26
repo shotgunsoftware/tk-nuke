@@ -1,4 +1,6 @@
 [![Build Status](https://secure.travis-ci.org/shotgunsoftware/tk-nuke.png?branch=master)](http://travis-ci.org/shotgunsoftware/tk-nuke)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Linting](https://img.shields.io/badge/PEP8%20by-Hound%20CI-a873d1.svg)](https://houndci.com)
 
 ## Documentation
 This repository is a part of the Shotgun Pipeline Toolkit.
