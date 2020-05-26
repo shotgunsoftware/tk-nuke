@@ -118,7 +118,7 @@ class NukeLauncher(SoftwareLauncher):
         """
 
         # Get all the executable templates for the current OS
-        executable_templates = self.EXECUTABLE_TEMPLATES.get(
+        executable_templates = self.EXECUTABLE_MATCH_TEMPLATES.get(
             "darwin"
             if sgtk.util.is_macos()
             else "win32"
