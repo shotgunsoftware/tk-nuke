@@ -37,15 +37,18 @@ def plugin_startup():
     # now that the path is there, we can import the plugin bootstrap logic
     try:
         from tk_nuke_basic import plugin_bootstrap
+
         plugin_bootstrap.bootstrap(plugin_root_path)
     except Exception as e:
         import traceback
+
         stack_trace = traceback.format_exc()
 
         message = "Shotgun Toolkit Error: %s" % (e,)
         details = "Error stack trace:\n\n%s" % (stack_trace)
 
         import nuke
+
         nuke.error(message)
         nuke.error(details)
 

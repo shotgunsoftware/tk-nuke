@@ -16,7 +16,7 @@ sys.path.append(startup_path)
 
 # This covers initialization of Toolkit in GUI sessions of Nuke.
 try:
-    import sgtk_startup # noqa
+    import sgtk_startup  # noqa
 finally:
     # We can't just pop sys.path, because the sgtk_startup routine
     # might have run some code during bootstrap that appended to
