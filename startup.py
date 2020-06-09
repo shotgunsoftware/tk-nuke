@@ -116,8 +116,20 @@ class NukeLauncher(SoftwareLauncher):
 
         :returns: Generator of :class:`SoftwareVersion`.
         """
+
+        # Get all the executable templates for the current OS
+        executable_templates = self.EXECUTABLE_MATCH_TEMPLATES.get(
+            "darwin"
+            if sgtk.util.is_macos()
+            else "win32"
+            if sgtk.util.is_windows()
+            else "linux2"
+            if sgtk.util.is_linux()
+            else []
+        )
+
         # Certain platforms have more than one location for installed software
-        for template in self.EXECUTABLE_MATCH_TEMPLATES[sys.platform]:
+        for template in executable_templates:
             self.logger.debug("Processing template %s.", template)
             # Extract all products from that executable.
             for executable, tokens in self._glob_and_match(
