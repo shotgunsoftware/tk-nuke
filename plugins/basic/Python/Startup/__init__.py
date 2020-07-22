@@ -27,7 +27,7 @@ def startup():
     try:
         module = imp.load_source(
             uuid.uuid4().hex,
-            os.path.normpath(os.path.join(startup_root_path, "..", "..", "menu.py"))
+            os.path.normpath(os.path.join(startup_root_path, "..", "..", "menu.py")),
         )
     finally:
         if module:

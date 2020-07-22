@@ -1,15 +1,16 @@
 # Copyright (c) 2016 Shotgun Software Inc.
-# 
+#
 # CONFIDENTIAL AND PROPRIETARY
-# 
-# This work is provided "AS IS" and subject to the Shotgun Pipeline Toolkit 
+#
+# This work is provided "AS IS" and subject to the Shotgun Pipeline Toolkit
 # Source Code License included in this distribution package. See LICENSE.
-# By accessing, using, copying or modifying this work you indicate your 
-# agreement to the Shotgun Pipeline Toolkit Source Code License. All rights 
+# By accessing, using, copying or modifying this work you indicate your
+# agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 import os
 import sys
+
 
 def bootstrap_sgtk():
     """
@@ -22,6 +23,7 @@ def bootstrap_sgtk():
     # Clean up temp env vars.
     _clean_env()
 
+
 def _clean_env():
     """
     Cleans up SGTK related environment variables.
@@ -30,6 +32,7 @@ def _clean_env():
     # and used if a new Nuke session is spawned from this one.
     if "TANK_FILE_TO_OPEN" in os.environ:
         del os.environ["TANK_FILE_TO_OPEN"]
+
 
 def _setup_sgtk(output_handle):
     """
@@ -61,5 +64,6 @@ def _setup_sgtk(output_handle):
     except Exception as e:
         output_handle("Shotgun: Could not start engine: %s" % str(e))
         return
+
 
 bootstrap_sgtk()

@@ -41,12 +41,7 @@ class UpdateFlameClipPlugin(HookBaseClass):
         """
 
         # look for icon one level up from this hook's folder in "icons" folder
-        return os.path.join(
-            self.disk_location,
-            os.pardir,
-            "icons",
-            "flame.png"
-        )
+        return os.path.join(self.disk_location, os.pardir, "icons", "flame.png")
 
     @property
     def name(self):
@@ -92,7 +87,7 @@ class UpdateFlameClipPlugin(HookBaseClass):
             "Flame Clip Template": {
                 "type": "template",
                 "default": None,
-                "description": "Template path for flame shot clip path."
+                "description": "Template path for flame shot clip path.",
             }
         }
 
@@ -182,7 +177,9 @@ class UpdateFlameClipPlugin(HookBaseClass):
             if os.path.exists(flame_clip_path):
                 item.properties["flame_clip_path"] = flame_clip_path
         elif item.context.entity:
-            self.logger.debug("Attempting to find OpenClip publish in %s..." % item.context)
+            self.logger.debug(
+                "Attempting to find OpenClip publish in %s..." % item.context
+            )
 
             # TODO: We have a problem. The publish2 plugin acceptance routines
             # are not re-run when the item's link changes. This means if the
@@ -208,13 +205,19 @@ class UpdateFlameClipPlugin(HookBaseClass):
             # the shot, but there might be cases where this heads off a problem.
             publish_entity_type = get_published_file_entity_type(publisher.sgtk)
 
-            self.logger.debug("Clip publish types to search for: %s" % CLIP_PUBLISH_TYPE)
+            self.logger.debug(
+                "Clip publish types to search for: %s" % CLIP_PUBLISH_TYPE
+            )
 
             clip_publishes = publisher.shotgun.find(
                 publish_entity_type,
                 [
                     ["entity", "is", item.context.entity],
-                    ["published_file_type.PublishedFileType.code", "is", CLIP_PUBLISH_TYPE],
+                    [
+                        "published_file_type.PublishedFileType.code",
+                        "is",
+                        CLIP_PUBLISH_TYPE,
+                    ],
                 ],
                 fields=(
                     "path",
@@ -497,9 +500,7 @@ class UpdateFlameClipPlugin(HookBaseClass):
 
             # get all paths for all frames and all eyes
             paths = self.parent.sgtk.paths_from_template(
-                publish_template,
-                render_path_fields,
-                skip_keys=["SEQ", "eye"]
+                publish_template, render_path_fields, skip_keys=["SEQ", "eye"]
             )
 
             # for each of them, extract the frame number. Track the min and the max.
@@ -533,7 +534,7 @@ class UpdateFlameClipPlugin(HookBaseClass):
             # now compose the format string, eg. [%04d-%04d]
             format_str = "[%%%sd-%%%sd]" % (
                 sequence_key.format_spec,
-                sequence_key.format_spec
+                sequence_key.format_spec,
             )
 
             # and lastly plug in the values
@@ -545,8 +546,7 @@ class UpdateFlameClipPlugin(HookBaseClass):
             # paths are written out on linux form regardless of the operating system
             # currently running.
             publish_path_flame = publish_template.apply_fields(
-                render_path_fields,
-                "linux2"
+                render_path_fields, "linux2"
             )
 
         # open up and update our xml file
@@ -573,7 +573,8 @@ class UpdateFlameClipPlugin(HookBaseClass):
 
         if first_video_track is None:
             raise Exception(
-                "Could not find the first video track in the published clip file!")
+                "Could not find the first video track in the published clip file!"
+            )
 
         clip_version = None
         for span in xml.getElementsByTagName("spans"):
@@ -626,9 +627,7 @@ class UpdateFlameClipPlugin(HookBaseClass):
         span_node.appendChild(path_node)
 
         # add new feed to first list of feeds inside of our track
-        first_video_track.getElementsByTagName("feeds")[0].appendChild(
-            feed_node
-        )
+        first_video_track.getElementsByTagName("feeds")[0].appendChild(feed_node)
 
         # now add same to the versions structure
         #
@@ -639,10 +638,7 @@ class UpdateFlameClipPlugin(HookBaseClass):
         #     </userData>
         # </version>
         date_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        formatted_name = _generate_flame_clip_name(
-            item,
-            render_path_fields,
-        )
+        formatted_name = _generate_flame_clip_name(item, render_path_fields,)
 
         # <version type="version" uid="%s">
         version_node = xml.createElement("version")
@@ -677,7 +673,7 @@ class UpdateFlameClipPlugin(HookBaseClass):
         # or running with different permissions.
         backup_path = "%s.bak_%s" % (
             flame_clip_path,
-            datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            datetime.datetime.now().strftime("%Y%m%d_%H%M%S"),
         )
 
         try:
@@ -779,10 +775,7 @@ def _get_flame_frame_spec_from_path(path):
     # We need to get all files that match the pattern from disk so that we
     # can determine what the min and max frame number is. We replace the
     # frame number or token with a * wildcard.
-    glob_path = "%s%s" % (
-        re.sub(match.group(2), "*", root),
-        ext,
-    )
+    glob_path = "%s%s" % (re.sub(match.group(2), "*", root), ext,)
     files = glob.glob(glob_path)
 
     # Our pattern from above matches against the file root, so we need
@@ -798,10 +791,7 @@ def _get_flame_frame_spec_from_path(path):
     max_frame = max(frames)
 
     # Turn that into something like "[%04d-%04d]"
-    format_str = "[%%0%sd-%%0%sd]" % (
-        frame_padding,
-        frame_padding
-    )
+    format_str = "[%%0%sd-%%0%sd]" % (frame_padding, frame_padding)
 
     # We end up with something like the following:
     #
@@ -887,9 +877,3 @@ def _generate_flame_clip_name(item, publish_fields):
     name += "v%03d" % version
 
     return name
-
-
-
-
-
-

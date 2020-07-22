@@ -1,11 +1,11 @@
 # Copyright (c) 2015 Shotgun Software Inc.
-# 
+#
 # CONFIDENTIAL AND PROPRIETARY
-# 
-# This work is provided "AS IS" and subject to the Shotgun Pipeline Toolkit 
+#
+# This work is provided "AS IS" and subject to the Shotgun Pipeline Toolkit
 # Source Code License included in this distribution package. See LICENSE.
-# By accessing, using, copying or modifying this work you indicate your 
-# agreement to the Shotgun Pipeline Toolkit Source Code License. All rights 
+# By accessing, using, copying or modifying this work you indicate your
+# agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 # Metadata defining the behaviour and requirements for this engine
@@ -103,7 +103,7 @@ configuration:
                     description: Template path for the shortcut in favourites section.
                 icon:
                     type: config_path
-                    description: "Path to icon for the favourite relative to the project config 
+                    description: "Path to icon for the favourite relative to the project config
                                  directory. You can use the default icon by specifying an
                                  empty string with two double quotes."
         default_value: []
@@ -112,13 +112,13 @@ configuration:
     project_favourite_name:
         type: str
         description: "Allows customizing the name of the favourite directory representing
-                     the current project root in the file chooser. eg. 'Shotgun Current Project'. 
-                     In multi-root configs, there will be an entry for each root eg. 'Shotgun 
-                     Current Project (secondary)'. Specifying an empty string will disable this 
+                     the current project root in the file chooser. eg. 'Shotgun Current Project'.
+                     In multi-root configs, there will be an entry for each root eg. 'Shotgun
+                     Current Project (secondary)'. Specifying an empty string will disable this
                      menu from being added to the favourites automatically."
         default_value: "Shotgun Current Project"
 
-    debug_logging: 
+    debug_logging:
         type: bool
         description: Controls whether debug messages should be emitted to the logger
         default_value: false
@@ -132,13 +132,13 @@ configuration:
                      app instance defined in the environment configuration file. The name
                      is a menu name to make a favourite. An optional hotkey parameter can
                      be included for triggering the menu action (Nuke only)."
-        allows_empty: True                     
+        allows_empty: True
         values:
             type: dict
             items:
                 name: { type: str }
                 app_instance: { type: str }
-                
+
     use_sgtk_as_menu_name:
         type: bool
         description: Optionally choose to use 'Sgtk' as the primary menu name instead of 'Shotgun'
@@ -151,16 +151,15 @@ configuration:
                         dialog for the version you are testing, it is recomended that you set this
                         value to the current major version + 1."
         default_value:  10
-    
+
 # the Shotgun fields that this engine needs in order to operate correctly
 requires_shotgun_fields:
 
 
-# More verbose description of this item 
+# More verbose description of this item
 display_name: "Shotgun Engine for Nuke"
 description: "Shotgun Integration in Nuke"
 
 # Required minimum versions for this item to run
 requires_shotgun_version:
-requires_core_version: "v0.18.45"
-
+requires_core_version: "v0.19.5"

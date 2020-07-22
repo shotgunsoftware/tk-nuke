@@ -9,6 +9,7 @@
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 from __future__ import with_statement
+from __future__ import print_function
 import os
 import sys
 
@@ -20,7 +21,7 @@ import tempfile
 
 
 repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-print "tk-nuke repository root found at %s." % repo_root
+print("tk-nuke repository root found at %s." % repo_root)
 
 # setUpModule()
 
@@ -47,8 +48,8 @@ class TestEnvironmentPaths(TankTestBase):
         self.setup_fixtures()
 
         # clear any pre existing nuke startup environment variables
-        os.environ.pop('NUKE_PATH',None)
-        os.environ.pop('HIERO_PLUGIN_PATH',None)
+        os.environ.pop("NUKE_PATH", None)
+        os.environ.pop("HIERO_PLUGIN_PATH", None)
 
     def test_nuke_path_append(self):
         """
@@ -62,36 +63,34 @@ class TestEnvironmentPaths(TankTestBase):
         plugin_path = os.path.join(repo_root, "plugins", "basic")
 
         # create a temp pre-existing NUKE_PATH to test preservation, when appending toolkit startup path
-        nuke_path_env = {"NUKE_PATH":os.pathsep.join([nuke_path_1, nuke_path_2])}
+        nuke_path_env = {"NUKE_PATH": os.pathsep.join([nuke_path_1, nuke_path_2])}
         with temp_env_var(**nuke_path_env):
 
             # create launcher
             nuke_launcher = sgtk.platform.create_engine_launcher(
-                self.tk,
-                sgtk.context.create_empty(self.tk),
-                "tk-nuke",
-                ["10.0v5"]
+                self.tk, sgtk.context.create_empty(self.tk), "tk-nuke", ["10.0v5"]
             )
 
             # generate launch env
-            launch_info = nuke_launcher.prepare_launch("/path/to/nuke", ["arg1", "arg2"], None)
+            launch_info = nuke_launcher.prepare_launch(
+                "/path/to/nuke", ["arg1", "arg2"], None
+            )
 
             # ensure that the nuke path was preserved and placed first in the path
             self.assertEqual(
                 launch_info.environment["NUKE_PATH"],
-                os.pathsep.join([nuke_path_1, nuke_path_2, plugin_path])
+                os.pathsep.join([nuke_path_1, nuke_path_2, plugin_path]),
             )
 
         # now test without stuff in the nuke path
 
         # generate launch env
-        launch_info = nuke_launcher.prepare_launch("/path/to/nuke", ["arg1", "arg2"], None)
+        launch_info = nuke_launcher.prepare_launch(
+            "/path/to/nuke", ["arg1", "arg2"], None
+        )
 
         # ensure that the nuke path was preserved and placed first in the path
-        self.assertEqual(
-            launch_info.environment["NUKE_PATH"],
-            plugin_path
-        )
+        self.assertEqual(launch_info.environment["NUKE_PATH"], plugin_path)
 
     def test_hiero_path_append(self):
         """
@@ -105,24 +104,25 @@ class TestEnvironmentPaths(TankTestBase):
         plugin_path = os.path.join(repo_root, "plugins", "basic")
 
         # create a temp pre-existing HIERO_PLUGIN_PATH to test preservation, when appending toolkit startup path
-        hiero_path_env = {"HIERO_PLUGIN_PATH": os.pathsep.join([hiero_path_1, hiero_path_2])}
+        hiero_path_env = {
+            "HIERO_PLUGIN_PATH": os.pathsep.join([hiero_path_1, hiero_path_2])
+        }
         with temp_env_var(**hiero_path_env):
 
             # create launcher
             nuke_launcher = sgtk.platform.create_engine_launcher(
-                self.tk,
-                sgtk.context.create_empty(self.tk),
-                "tk-nuke",
-                ["10.0v5"]
+                self.tk, sgtk.context.create_empty(self.tk), "tk-nuke", ["10.0v5"]
             )
 
             # generate launch env
-            launch_info = nuke_launcher.prepare_launch("/path/to/nuke", ["--hiero"], None)
+            launch_info = nuke_launcher.prepare_launch(
+                "/path/to/nuke", ["--hiero"], None
+            )
 
             # ensure that the hiero path was preserved and placed first in the path
             self.assertEqual(
                 launch_info.environment["HIERO_PLUGIN_PATH"],
-                os.pathsep.join([hiero_path_1, hiero_path_2, plugin_path])
+                os.pathsep.join([hiero_path_1, hiero_path_2, plugin_path]),
             )
 
         # now test without stuff in the Hiero path
@@ -131,10 +131,7 @@ class TestEnvironmentPaths(TankTestBase):
         launch_info = nuke_launcher.prepare_launch("/path/to/nuke", ["--hiero"], None)
 
         # ensure that the Hiero path was preserved and placed first in the path
-        self.assertEqual(
-            launch_info.environment["HIERO_PLUGIN_PATH"],
-            plugin_path
-        )
+        self.assertEqual(launch_info.environment["HIERO_PLUGIN_PATH"], plugin_path)
 
     def test_nuke_studio_path_append(self):
         """
@@ -148,26 +145,26 @@ class TestEnvironmentPaths(TankTestBase):
         plugin_path = os.path.join(repo_root, "plugins", "basic")
 
         # create a temp pre-existing HIERO_PLUGIN_PATH to test preservation, when appending toolkit startup path
-        hiero_path_env = {"HIERO_PLUGIN_PATH": os.pathsep.join([hiero_path_1, hiero_path_2])}
+        hiero_path_env = {
+            "HIERO_PLUGIN_PATH": os.pathsep.join([hiero_path_1, hiero_path_2])
+        }
         with temp_env_var(**hiero_path_env):
 
             # create launcher
             nuke_launcher = sgtk.platform.create_engine_launcher(
-                self.tk,
-                sgtk.context.create_empty(self.tk),
-                "tk-nuke",
-                ["10.0v5"]
+                self.tk, sgtk.context.create_empty(self.tk), "tk-nuke", ["10.0v5"]
             )
 
             # generate launch env
-            launch_info = nuke_launcher.prepare_launch("/path/to/nuke", ["--studio"], None)
+            launch_info = nuke_launcher.prepare_launch(
+                "/path/to/nuke", ["--studio"], None
+            )
 
             # ensure that the nuke studio path was preserved and placed first in the path
             self.assertEqual(
                 launch_info.environment["HIERO_PLUGIN_PATH"],
-                os.pathsep.join([hiero_path_1, hiero_path_2, plugin_path])
+                os.pathsep.join([hiero_path_1, hiero_path_2, plugin_path]),
             )
-
 
         # now test without stuff in the heiro path
 
@@ -175,7 +172,4 @@ class TestEnvironmentPaths(TankTestBase):
         launch_info = nuke_launcher.prepare_launch("/path/to/nuke", ["--studio"], None)
 
         # ensure that the nuke studio path was preserved and placed first in the path
-        self.assertEqual(
-            launch_info.environment["HIERO_PLUGIN_PATH"],
-            plugin_path
-        )
+        self.assertEqual(launch_info.environment["HIERO_PLUGIN_PATH"], plugin_path)

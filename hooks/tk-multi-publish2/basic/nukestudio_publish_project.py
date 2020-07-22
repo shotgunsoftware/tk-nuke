@@ -83,7 +83,9 @@ class NukeStudioProjectPublishPlugin(HookBaseClass):
         however only the most recent publish will be available to other users.
         Warnings will be provided during validation if there are previous
         publishes.
-        """ % (loader_url,)
+        """ % (
+            loader_url,
+        )
         # TODO: add link to workflow docs
 
     @property
@@ -107,8 +109,7 @@ class NukeStudioProjectPublishPlugin(HookBaseClass):
         """
 
         # inherit the settings from the base publish plugin
-        base_settings = \
-            super(NukeStudioProjectPublishPlugin, self).settings or {}
+        base_settings = super(NukeStudioProjectPublishPlugin, self).settings or {}
 
         # settings specific to this class
         nukestudio_publish_settings = {
@@ -116,8 +117,8 @@ class NukeStudioProjectPublishPlugin(HookBaseClass):
                 "type": "template",
                 "default": None,
                 "description": "Template path for published work files. Should"
-                               "correspond to a template defined in "
-                               "templates.yml.",
+                "correspond to a template defined in "
+                "templates.yml.",
             }
         }
 
@@ -181,19 +182,15 @@ class NukeStudioProjectPublishPlugin(HookBaseClass):
             # provide a save button. the session will need to be saved before
             # validation will succeed.
             self.logger.warn(
-                "The Nuke Studio project '%s' has not been saved." %
-                (project.name()),
-                extra=_get_save_as_action(project)
+                "The Nuke Studio project '%s' has not been saved." % (project.name()),
+                extra=_get_save_as_action(project),
             )
 
         self.logger.info(
-            "Nuke Studio '%s' plugin accepted project: %s." %
-            (self.name, project.name())
+            "Nuke Studio '%s' plugin accepted project: %s."
+            % (self.name, project.name())
         )
-        return {
-            "accepted": True,
-            "checked": True
-        }
+        return {"accepted": True, "checked": True}
 
     def validate(self, settings, item):
         """
@@ -216,12 +213,10 @@ class NukeStudioProjectPublishPlugin(HookBaseClass):
         if not path:
             # the session still requires saving. provide a save button.
             # validation fails.
-            error_msg = "The Nuke Studio project '%s' has not been saved." % \
-                        (project.name(),)
-            self.logger.error(
-                error_msg,
-                extra=_get_save_as_action(project)
+            error_msg = "The Nuke Studio project '%s' has not been saved." % (
+                project.name(),
             )
+            self.logger.error(error_msg, extra=_get_save_as_action(project))
             raise Exception(error_msg)
 
         # ---- check the session against any attached work template
@@ -244,15 +239,14 @@ class NukeStudioProjectPublishPlugin(HookBaseClass):
                         "action_button": {
                             "label": "Save File",
                             "tooltip": "Save the current Nuke Studio session "
-                                       "to a different file name",
+                            "to a different file name",
                             # will launch wf2 if configured
-                            "callback": _get_save_as_action(project)
+                            "callback": _get_save_as_action(project),
                         }
-                    }
+                    },
                 )
             else:
-                self.logger.debug(
-                    "Work template configured and matches session file.")
+                self.logger.debug("Work template configured and matches session file.")
         else:
             self.logger.debug("No work template configured.")
 
@@ -268,7 +262,8 @@ class NukeStudioProjectPublishPlugin(HookBaseClass):
             # the next one until we get one that doesn't exist.
             while os.path.exists(next_version_path):
                 (next_version_path, version) = self._get_next_version_info(
-                    next_version_path, item)
+                    next_version_path, item
+                )
 
             error_msg = "The next version of this file already exists on disk."
             self.logger.error(
@@ -277,10 +272,10 @@ class NukeStudioProjectPublishPlugin(HookBaseClass):
                     "action_button": {
                         "label": "Save to v%s" % (version,),
                         "tooltip": "Save to the next available version number, "
-                                   "v%s" % (version,),
-                        "callback": lambda: project.saveAs(next_version_path)
+                        "v%s" % (version,),
+                        "callback": lambda: project.saveAs(next_version_path),
                     }
-                }
+                },
             )
             raise Exception(error_msg)
 
@@ -289,7 +284,8 @@ class NukeStudioProjectPublishPlugin(HookBaseClass):
         # populate the publish template on the item if found
         publish_template_setting = settings.get("Publish Template")
         publish_template = publisher.engine.get_template_by_name(
-            publish_template_setting.value)
+            publish_template_setting.value
+        )
         if publish_template:
             item.properties["publish_template"] = publish_template
 
@@ -298,8 +294,7 @@ class NukeStudioProjectPublishPlugin(HookBaseClass):
         item.properties["path"] = path
 
         # run the base class validation
-        return super(NukeStudioProjectPublishPlugin, self).validate(
-            settings, item)
+        return super(NukeStudioProjectPublishPlugin, self).validate(settings, item)
 
     def publish(self, settings, item):
         """
@@ -344,7 +339,7 @@ class NukeStudioProjectPublishPlugin(HookBaseClass):
         project = item.properties["project"]
         path = item.properties["path"]
 
-        save_callback = lambda path: _save_session(path,project)
+        save_callback = lambda path: _save_session(path, project)
 
         # bump the session file to the next version
         self._save_to_next_version(path, item, save_callback)
@@ -370,9 +365,10 @@ def _get_save_as_action(project):
         "action_button": {
             "label": "Save As...",
             "tooltip": "Save the current session",
-            "callback": callback
+            "callback": callback,
         }
     }
+
 
 def _save_session(path, project):
     """
@@ -385,6 +381,7 @@ def _save_session(path, project):
     # Nuke Studio won't ensure that the folder is created when saving, so we must make sure it exists
     ensure_folder_exists(os.path.dirname(path))
     project.saveAs(path)
+
 
 def _project_save_as(project):
     """
@@ -404,7 +401,7 @@ def _project_save_as(project):
         parent=hiero.ui.mainWindow(),
         caption="Save As",
         directory=project.path(),
-        filter="Nuke Studio Files (*.hrox)"
+        filter="Nuke Studio Files (*.hrox)",
     )
     file_dialog.setLabelText(QtGui.QFileDialog.Accept, "Save")
     file_dialog.setLabelText(QtGui.QFileDialog.Reject, "Cancel")
@@ -414,4 +411,3 @@ def _project_save_as(project):
         return
     path = file_dialog.selectedFiles()[0]
     project.saveAs(path)
-
