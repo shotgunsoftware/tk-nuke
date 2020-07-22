@@ -8,6 +8,7 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
+from __future__ import print_function
 import os
 import sys
 import time
@@ -39,6 +40,7 @@ def bootstrap(plugin_root_path):
     # now see if we are running stand alone or in situ
     try:
         from sgtk_plugin_basic_nuke import manifest
+
         running_stand_alone = True
     except ImportError:
         manifest = None
@@ -250,8 +252,7 @@ class NukeBootstraper(object):
         # to start synchronously.
         if nuke.env.get("studio") and nuke.env.get("NukeVersionMajor") < 10:
             self._toolkit_mgr.bootstrap_engine(
-                os.environ.get("SHOTGUN_ENGINE", "tk-nuke"),
-                self._entity
+                os.environ.get("SHOTGUN_ENGINE", "tk-nuke"), self._entity
             )
         else:
             nuke.addOnCreate(self._bootstrap)
@@ -279,7 +280,9 @@ class NukeBootstraper(object):
         self._toolkit_mgr.progress_callback = self._report
         self._toolkit_mgr.bootstrap_engine_async(
             os.environ.get("SHOTGUN_ENGINE", "tk-nuke"),
-            self._entity, lambda engine: self._on_finish(), self._on_failure
+            self._entity,
+            lambda engine: self._on_finish(),
+            self._on_failure,
         )
         self._progress_task.start()
 
@@ -300,7 +303,7 @@ class NukeBootstraper(object):
         percentage = int(progress_value * 100)
         self._logger.debug("[%s] - %s", percentage, message)
         self._progress_task.report_progress(percentage, message)
-        print message
+        print(message)
 
     def _on_finish(self, failed=False):
         """
@@ -315,15 +318,18 @@ class NukeBootstraper(object):
         if not failed and self._previous_ctx_str:
             # We have a context set previously, this must mean that this Nuke instance has been spawned from
             # another which had TK context. We should switch to this context.
-            self._logger.debug("Context found from env var: \"TANK_CONTEXT\", context: %s", (self._previous_ctx_str))
+            self._logger.debug(
+                'Context found from env var: "TANK_CONTEXT", context: %s',
+                (self._previous_ctx_str),
+            )
 
             # As the bootstrap started successfully we should have an engine present that we can grab
             import sgtk
+
             engine = sgtk.platform.current_engine()
             context = sgtk.context.deserialize(self._previous_ctx_str)
 
-            self._logger.debug(
-                "Changing the engine context to: %s", (repr(context)))
+            self._logger.debug("Changing the engine context to: %s", (repr(context)))
             engine.change_context(context)
 
             # as we have a previous context, this means a new Nuke session has been spawned from the old one
@@ -331,6 +337,7 @@ class NukeBootstraper(object):
             # loading of the new script, we should call it manually. The method will also handle the situation where
             # new file is called and there is no path to gather context from.
             import tk_nuke
+
             tk_nuke.sgtk_on_load_callback()
 
     def _on_failure(self, phase, exception):

@@ -33,7 +33,7 @@ class NukeLauncher(SoftwareLauncher):
         # The Version is present twice on mac in the file path, so the second time
         # we simply reuse the value from the first match.
         "version_back": r"[\d.v]+",
-        "major_minor_version": r"[\d.]+"
+        "major_minor_version": r"[\d.]+",
     }
 
     # Templates for all the display names of the products supported by Nuke 7 and 8.
@@ -73,8 +73,8 @@ class NukeLauncher(SoftwareLauncher):
             # /usr/local/Nuke10.0v5/Nuke10.0
             "/usr/local/Nuke{version}/Nuke{major_minor_version}",
             # /home/<username>/Nuke10.0v5/Nuke10.0
-            os.path.expanduser("~/Nuke{version}/Nuke{major_minor_version}")
-        ]
+            os.path.expanduser("~/Nuke{version}/Nuke{major_minor_version}"),
+        ],
     }
 
     def _get_icon_from_product(self, product):
@@ -86,25 +86,13 @@ class NukeLauncher(SoftwareLauncher):
         :returns: Path to the product's icon.
         """
         if "studio" in product.lower():
-            return os.path.join(
-                self.disk_location,
-                "icon_nukestudio_256.png"
-            )
+            return os.path.join(self.disk_location, "icon_nukestudio_256.png")
         elif "hiero" in product.lower():
-            return os.path.join(
-                self.disk_location,
-                "icon_hiero_256.png"
-            )
+            return os.path.join(self.disk_location, "icon_hiero_256.png")
         elif "nukex" in product.lower():
-            return os.path.join(
-                self.disk_location,
-                "icon_x_256.png"
-            )
+            return os.path.join(self.disk_location, "icon_x_256.png")
         else:
-            return os.path.join(
-                self.disk_location,
-                "icon_256.png"
-            )
+            return os.path.join(self.disk_location, "icon_256.png")
 
     def scan_software(self):
         """
@@ -162,8 +150,20 @@ class NukeLauncher(SoftwareLauncher):
 
         :returns: Generator of :class:`SoftwareVersion`.
         """
+
+        # Get all the executable templates for the current OS
+        executable_templates = self.EXECUTABLE_MATCH_TEMPLATES.get(
+            "darwin"
+            if sgtk.util.is_macos()
+            else "win32"
+            if sgtk.util.is_windows()
+            else "linux2"
+            if sgtk.util.is_linux()
+            else []
+        )
+
         # Certain platforms have more than one location for installed software
-        match_templates = self.EXECUTABLE_MATCH_TEMPLATES[sys.platform]
+        match_templates = executable_templates
         match_templates.extend(self._scan_software_entities())
 
         for template in match_templates:
@@ -203,7 +203,7 @@ class NukeLauncher(SoftwareLauncher):
                 executable_version,
                 product,
                 executable_path,
-                self._get_icon_from_product(executable_product)
+                self._get_icon_from_product(executable_product),
             )
         else:
             for product in self._get_products_from_version(executable_version):
@@ -223,7 +223,7 @@ class NukeLauncher(SoftwareLauncher):
                     product,
                     executable_path,
                     self._get_icon_from_product(product),
-                    arguments
+                    arguments,
                 )
                 yield sw
 
@@ -293,12 +293,12 @@ class NukeLauncher(SoftwareLauncher):
             required_env["SHOTGUN_ENGINE"] = self.engine_name
         else:
             self.logger.debug(
-                "Preparing Nuke Launch via Toolkit Classic methodology ...")
+                "Preparing Nuke Launch via Toolkit Classic methodology ..."
+            )
 
             # Get Nuke environment for Toolkit Classic launch.
             required_env, required_args = self._get_classic_startup_env(
-                self.disk_location,
-                exec_path, args, file_to_open
+                self.disk_location, exec_path, args, file_to_open
             )
             # Add context information info to the env.
             required_env["TANK_CONTEXT"] = sgtk.Context.serialize(self.context)
@@ -329,8 +329,10 @@ class NukeLauncher(SoftwareLauncher):
             to specify.
         """
         return cls._compute_environment(
-            app_path, app_args, [os.path.join(
-                bundle_root, "classic_startup")], file_to_open
+            app_path,
+            app_args,
+            [os.path.join(bundle_root, "classic_startup")],
+            file_to_open,
         )
 
     def _get_plugin_startup_env(self, plugin_names, app_path, app_args, file_to_open):
@@ -349,9 +351,7 @@ class NukeLauncher(SoftwareLauncher):
         startup_paths = []
 
         for plugin_name in plugin_names:
-            plugin_path = os.path.join(
-                self.disk_location, "plugins", plugin_name
-            )
+            plugin_path = os.path.join(self.disk_location, "plugins", plugin_name)
 
             if os.path.exists(plugin_path):
                 self.logger.debug("Plugin '%s' found at '%s'",
@@ -359,9 +359,12 @@ class NukeLauncher(SoftwareLauncher):
                 startup_paths.append(plugin_path)
             else:
                 self.logger.warning(
-                    "Plugin '%s' missing at '%s'", plugin_name, plugin_path)
+                    "Plugin '%s' missing at '%s'", plugin_name, plugin_path
+                )
 
-        return self._compute_environment(app_path, app_args, startup_paths, file_to_open)
+        return self._compute_environment(
+            app_path, app_args, startup_paths, file_to_open
+        )
 
     @classmethod
     def _join_paths_with_existing_env_paths(cls, env_key, startup_paths):
@@ -403,13 +406,16 @@ class NukeLauncher(SoftwareLauncher):
 
         if "hiero" in app_path.lower() or "--hiero" in app_args:
             env["HIERO_PLUGIN_PATH"] = cls._join_paths_with_existing_env_paths(
-                "HIERO_PLUGIN_PATH", startup_paths)
+                "HIERO_PLUGIN_PATH", startup_paths
+            )
         elif "nukestudio" in app_path.lower() or "--studio" in app_args:
             env["HIERO_PLUGIN_PATH"] = cls._join_paths_with_existing_env_paths(
-                "HIERO_PLUGIN_PATH", startup_paths)
+                "HIERO_PLUGIN_PATH", startup_paths
+            )
         else:
             env["NUKE_PATH"] = cls._join_paths_with_existing_env_paths(
-                "NUKE_PATH", startup_paths)
+                "NUKE_PATH", startup_paths
+            )
 
             # A Nuke script can't be launched from the menu.py, so we
             # have to tack it onto the launch arguments instead.

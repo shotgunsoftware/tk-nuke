@@ -45,6 +45,7 @@ class ClassicStudioContextSwitcher(object):
     and is once again at the project level, tk-nuke's context will again
     be changed to match.
     """
+
     def __init__(self, engine):
         """
         Initializes a PluginStudioContextSwitcher object.
@@ -188,10 +189,7 @@ class ClassicStudioContextSwitcher(object):
         """
         tk = tank.tank_from_path(script)
 
-        context = tk.context_from_path(
-            script,
-            previous_context=self.engine.context,
-        )
+        context = tk.context_from_path(script, previous_context=self.engine.context,)
 
         if context.project is None:
             raise tank.TankError(
@@ -228,15 +226,14 @@ class ClassicStudioContextSwitcher(object):
                 # This file could be in another project altogether, so
                 # create a new Tank instance.
                 tk = tank.tank_from_path(file_name)
-            except tank.TankError, e:
+            except tank.TankError as e:
                 self.engine.menu_generator.create_sgtk_disabled_menu(e)
                 return
 
             # Extract a new context based on the file and change to that
             # context.
             new_context = tk.context_from_path(
-                file_name,
-                previous_context=self.context,
+                file_name, previous_context=self.context,
             )
 
             self.change_context(new_context)
@@ -268,13 +265,12 @@ class ClassicStudioContextSwitcher(object):
                 file_name = nuke.root().name()
                 try:
                     tk = tank.tank_from_path(file_name)
-                except tank.TankError, e:
+                except tank.TankError as e:
                     self.engine.menu_generator.create_sgtk_disabled_menu(e)
                     return
 
                 new_ctx = tk.context_from_path(
-                    file_name,
-                    previous_context=self.context,
+                    file_name, previous_context=self.context,
                 )
 
             # Now change the context for the engine and apps.
@@ -297,7 +293,7 @@ class ClassicStudioContextSwitcher(object):
 
         try:
             tank.platform.change_context(new_context)
-        except tank.TankEngineInitError, e:
+        except tank.TankEngineInitError as e:
             # Context was not sufficient!
             self.engine.menu_generator.create_sgtk_disabled_menu(e)
 
@@ -330,7 +326,7 @@ class ClassicStudioContextSwitcher(object):
                 raise tank.TankError(
                     "Toolkit could not determine the context associated with this script."
                 )
-        except Exception, e:
+        except Exception as e:
             self.engine.menu_generator.create_sgtk_disabled_menu(e)
             self.engine.logger.debug(e)
 
@@ -350,20 +346,19 @@ class ClassicStudioContextSwitcher(object):
 
         # Event for context switching from Hiero to Nuke.
         hiero.core.events.registerInterest(
-            hiero.core.events.EventType.kContextChanged,
-            self._eventHandler,
+            hiero.core.events.EventType.kContextChanged, self._eventHandler,
         )
 
         for func_desc in self._event_desc:
             # This is the variable that stores a dict of currently-registered
             # callbacks.
-            registrar = func_desc.get('registrar')
+            registrar = func_desc.get("registrar")
 
             # The function we wish to register.
-            function = func_desc.get('function')
+            function = func_desc.get("function")
 
             # The function used to register the callback.
-            add = func_desc.get('add')
+            add = func_desc.get("add")
 
             # Check if the callback is already registered.
             if self._check_if_registered(function, registrar):
@@ -386,20 +381,19 @@ class ClassicStudioContextSwitcher(object):
         import hiero.core
 
         hiero.core.events.unregisterInterest(
-            hiero.core.events.EventType.kContextChanged,
-            self._eventHandler,
+            hiero.core.events.EventType.kContextChanged, self._eventHandler,
         )
 
         func_descs = only or self._event_desc
 
         for func_desc in func_descs:
-            registrar = func_desc.get('registrar')
+            registrar = func_desc.get("registrar")
 
             # The function we wish to unregister.
-            function = func_desc.get('function')
+            function = func_desc.get("function")
 
             # The function used to unregister the callback.
-            remove = func_desc.get('remove')
+            remove = func_desc.get("remove")
 
             if self._check_if_registered(function, registrar):
                 remove(function)

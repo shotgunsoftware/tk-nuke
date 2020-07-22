@@ -27,11 +27,11 @@ def bootstrap(engine_name, context, app_path, app_args, extra_args):
         os.path.join(
             os.path.dirname(
                 os.path.abspath(sys.modules[bootstrap.__module__].__file__)
-            ), # tk-nuke/python/startup
-            "..", # tk-nuke/python
+            ),  # tk-nuke/python/startup
+            "..",  # tk-nuke/python
             "..",  # tk-nuke
-            "classic_startup"
-        ) # tk-nuke/classic_startup
+            "classic_startup",
+        )  # tk-nuke/classic_startup
     )
     app_args = app_args or ""
 

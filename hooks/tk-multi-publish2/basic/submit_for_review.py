@@ -28,12 +28,7 @@ class NukeSubmitForReviewPlugin(HookBaseClass):
         """
 
         # look for icon one level up from this hook's folder in "icons" folder
-        return os.path.join(
-            self.disk_location,
-            os.pardir,
-            "icons",
-            "review.png"
-        )
+        return os.path.join(self.disk_location, os.pardir, "icons", "review.png")
 
     @property
     def name(self):
@@ -56,7 +51,9 @@ class NukeSubmitForReviewPlugin(HookBaseClass):
         created in Shotgun which will include a reference to the movie file's current
         path on disk. Other users will be able to access the file via
         the <b><a href='%s'>review app</a></b> on the Shotgun website.</p>
-        """ % (review_url)
+        """ % (
+            review_url
+        )
 
     @property
     def settings(self):
@@ -113,7 +110,7 @@ class NukeSubmitForReviewPlugin(HookBaseClass):
             instances.
         :param item: Item to process
 
-        :returns: dictionary with boolean keys accepted, required and enabled. 
+        :returns: dictionary with boolean keys accepted, required and enabled.
             This plugin makes use of the tk-multi-reviewsubmission app; if this
             app is not available then the item will not be accepted, this method
             will return a dictionary with the accepted field that has a value of
@@ -129,53 +126,42 @@ class NukeSubmitForReviewPlugin(HookBaseClass):
         if review_submission_app is None:
             accepted = False
             self.logger.debug(
-                "Review submission app is not available. skipping item: %s" %
-                (item.properties["publish_name"],)
+                "Review submission app is not available. skipping item: %s"
+                % (item.properties["publish_name"],)
             )
         if item.properties.get("color_space") is None:
             accepted = False
             self.logger.debug(
                 "'color_space' property is not defined on the item. "
-                "Item will be skipped: %s." %
-                (item.properties["publish_name"],)
+                "Item will be skipped: %s." % (item.properties["publish_name"],)
             )
         if item.properties.get("first_frame") is None:
             accepted = False
             self.logger.debug(
                 "'first_frame' property is not defined on the item. "
-                "Item will be skipped: %s." %
-                (item.properties["publish_name"],)
+                "Item will be skipped: %s." % (item.properties["publish_name"],)
             )
         if item.properties.get("last_frame") is None:
             accepted = False
             self.logger.debug(
                 "'last_frame' property is not defined on the item. "
-                "Item will be skipped: %s." %
-                (item.properties["publish_name"],)
+                "Item will be skipped: %s." % (item.properties["publish_name"],)
             )
         path = item.properties.get("path")
         if path is None:
             accepted = False
             self.logger.debug(
                 "'path' property is not defined on the item. "
-                "Item will be skipped: %s." %
-                (item.properties["publish_name"],)
+                "Item will be skipped: %s." % (item.properties["publish_name"],)
             )
 
         if accepted:
             # log the accepted file and display a button to reveal it in the fs
             self.logger.info(
                 "Submit for review plugin accepted: %s" % (path,),
-                extra={
-                    "action_show_folder": {
-                        "path": path
-                    }
-                }
+                extra={"action_show_folder": {"path": path}},
             )
-        return {
-            "accepted": accepted,
-            "checked": True
-        }
+        return {"accepted": accepted, "checked": True}
 
     def validate(self, settings, item):
         """
@@ -196,10 +182,12 @@ class NukeSubmitForReviewPlugin(HookBaseClass):
         # full-res template. Or if they rendered in full res and then switched to
         # proxy mode later. In this case, this is likely user error, so we catch it.
         root_node = nuke.root()
-        proxy_mode_on = root_node['proxy'].value()
+        proxy_mode_on = root_node["proxy"].value()
         if proxy_mode_on:
-            error_msg = "You cannot publish to Screening Room while Nuke is in proxy " +\
-                        "mode. Please toggle proxy mode OFF and try again."
+            error_msg = (
+                "You cannot publish to Screening Room while Nuke is in proxy "
+                + "mode. Please toggle proxy mode OFF and try again."
+            )
             self.logger.error(error_msg)
             raise Exception(error_msg)
 
@@ -219,9 +207,11 @@ class NukeSubmitForReviewPlugin(HookBaseClass):
 
         sg_publish_data = item.properties.get("sg_publish_data")
         if sg_publish_data is None:
-            raise Exception("'sg_publish_data' was not found in the item's properties. "
-                            "Review Submission for '%s' failed. This property must "
-                            "be set by a publish plugin that has run before this one." % render_path)
+            raise Exception(
+                "'sg_publish_data' was not found in the item's properties. "
+                "Review Submission for '%s' failed. This property must "
+                "be set by a publish plugin that has run before this one." % render_path
+            )
         sg_task = self.parent.context.task
         comment = item.description
         thumbnail_path = item.get_thumbnail_as_path()
@@ -230,32 +220,38 @@ class NukeSubmitForReviewPlugin(HookBaseClass):
 
         render_template = item.properties.get("work_template")
         if render_template is None:
-            raise Exception("'work_template' property is missing from item's properties. "
-                            "Review submission for '%s' failed." % render_path)
+            raise Exception(
+                "'work_template' property is missing from item's properties. "
+                "Review submission for '%s' failed." % render_path
+            )
         publish_template = item.properties.get("publish_template")
         if publish_template is None:
-            raise Exception("'publish_template' property not found on item. "
-                            "Review submission for '%' failed." % render_path)
+            raise Exception(
+                "'publish_template' property not found on item. "
+                "Review submission for '%' failed." % render_path
+            )
         if not render_template.validate(render_path):
-            raise Exception("'%s' did not match the render template. "
-                            "Review submission failed." % render_path)
+            raise Exception(
+                "'%s' did not match the render template. "
+                "Review submission failed." % render_path
+            )
 
         render_path_fields = render_template.get_fields(render_path)
         first_frame = item.properties.get("first_frame")
         last_frame = item.properties.get("last_frame")
         colorspace = item.properties.get("color_space")
-        
+
         version = review_submission_app.render_and_submit_version(
-                publish_template,
-                render_path_fields,
-                first_frame,
-                last_frame,
-                [sg_publish_data],
-                sg_task,
-                comment,
-                thumbnail_path,
-                progress_cb,
-                colorspace
+            publish_template,
+            render_path_fields,
+            first_frame,
+            last_frame,
+            [sg_publish_data],
+            sg_task,
+            comment,
+            thumbnail_path,
+            progress_cb,
+            colorspace,
         )
         if version:
             self.logger.info(
@@ -264,13 +260,15 @@ class NukeSubmitForReviewPlugin(HookBaseClass):
                     "action_show_in_shotgun": {
                         "label": "Show Version",
                         "tooltip": "Reveal the version in Shotgun.",
-                        "entity": version
+                        "entity": version,
                     }
-                }
+                },
             )
         else:
-            raise Exception("Review submission failed. Could not render and "
-                            "submit the review associated sequence.")
+            raise Exception(
+                "Review submission failed. Could not render and "
+                "submit the review associated sequence."
+            )
 
     def finalize(self, settings, item):
         """
