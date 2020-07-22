@@ -9,11 +9,12 @@
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 from __future__ import with_statement
+from __future__ import print_function
 import os
 import sys
 
 from tank_test.tank_test_base import TankTestBase
-from tank_test.tank_test_base import setUpModule # noqa
+from tank_test.tank_test_base import setUpModule  # noqa
 
 import sgtk
 
@@ -22,7 +23,7 @@ import contextlib
 
 
 repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-print "tk-nuke repository root found at %s." % repo_root
+print("tk-nuke repository root found at %s." % repo_root)
 
 
 class TestStartup(TankTestBase):
@@ -42,7 +43,7 @@ class TestStartup(TankTestBase):
                 "NukeStudio10.0v5 Non-commercial.app",
                 "NukeStudio10.0v5.app",
                 "NukeX10.0v5 Non-commercial.app",
-                "NukeX10.0v5.app"
+                "NukeX10.0v5.app",
             ],
             "Nuke9.0v8": [
                 "Hiero9.0v8.app",
@@ -53,32 +54,32 @@ class TestStartup(TankTestBase):
                 "NukeStudio9.0v8 Non-commercial.app",
                 "NukeStudio9.0v8.app",
                 "NukeX9.0v8 Non-commercial.app",
-                "NukeX9.0v8.app"
+                "NukeX9.0v8.app",
             ],
             "Nuke8.0v4": [
                 "Nuke8.0v4 PLE.app",
                 "Nuke8.0v4.app",
                 "NukeAssist8.0v4.app",
-                "NukeX8.0v4.app"
+                "NukeX8.0v4.app",
             ],
             "Nuke7.0v10": [
                 "Nuke7.0v10 PLE.app",
                 "Nuke7.0v10.app",
                 "NukeAssist7.0v10.app",
-                "NukeX7.0v10.app"
+                "NukeX7.0v10.app",
             ],
             "Nuke7.0v9": [
                 "Nuke7.0v9 PLE.app",
                 "Nuke7.0v9.app",
                 "NukeAssist7.0v9.app",
-                "NukeX7.0v9.app"
+                "NukeX7.0v9.app",
             ],
             "Nuke6.3v6": [
                 "Nuke6.3v6 PLE",
                 "Nuke6.3v6.app",
                 "NukeAssist6.3v6.app",
-                "NukeX6.3v6.app"
-            ]
+                "NukeX6.3v6.app",
+            ],
         }
     }
 
@@ -90,7 +91,7 @@ class TestStartup(TankTestBase):
                 "Nuke9.0v8": ["Nuke9.0.exe"],
                 "Nuke8.0v4": ["Nuke8.0.exe"],
                 "Nuke7.0v10": ["Nuke7.0.exe"],
-                "Nuke6.3v6": ["Nuke6.3.exe"]
+                "Nuke6.3v6": ["Nuke6.3.exe"],
             }
         }
     }
@@ -103,7 +104,7 @@ class TestStartup(TankTestBase):
                 "Nuke9.0v8": ["Nuke9.0"],
                 "Nuke8.0v4": ["Nuke8.0"],
                 "Nuke7.0v10": ["Nuke7.0"],
-                "Nuke6.3v6": ["Nuke6.3"]
+                "Nuke6.3v6": ["Nuke6.3"],
             }
         }
     }
@@ -113,7 +114,7 @@ class TestStartup(TankTestBase):
     _os_neutral_hierarchy = {
         "win32": _windows_mock_hiearchy,
         "linux2": _linux_mock_hierarchy,
-        "darwin": _mac_mock_hierarchy
+        "darwin": _mac_mock_hierarchy,
     }
 
     def setUp(self):
@@ -142,8 +143,8 @@ class TestStartup(TankTestBase):
             current_folder.update(self._linux_mock_hierarchy["usr"]["local"])
 
         # clear any pre existing nuke startup environment variables
-        os.environ.pop('NUKE_PATH', None)
-        os.environ.pop('HIERO_PLUGIN_PATH', None)
+        os.environ.pop("NUKE_PATH", None)
+        os.environ.pop("HIERO_PLUGIN_PATH", None)
 
     def _recursive_split(self, path):
         """
@@ -181,10 +182,8 @@ class TestStartup(TankTestBase):
         Ensures we are returning the right variants for Nuke 10.
         """
         self._test_nuke(
-            [
-                "Nuke 10.0v5", "NukeX 10.0v5", "NukeStudio 10.0v5", "NukeAssist 10.0v5"
-            ],
-            "10.0v5"
+            ["Nuke 10.0v5", "NukeX 10.0v5", "NukeStudio 10.0v5", "NukeAssist 10.0v5"],
+            "10.0v5",
         )
 
     def test_nuke9(self):
@@ -192,42 +191,27 @@ class TestStartup(TankTestBase):
         Ensures we are returning the right variants for Nuke 9.
         """
         self._test_nuke(
-            [
-                "Nuke 9.0v8", "NukeX 9.0v8", "NukeStudio 9.0v8", "NukeAssist 9.0v8"
-            ],
-            "9.0v8"
+            ["Nuke 9.0v8", "NukeX 9.0v8", "NukeStudio 9.0v8", "NukeAssist 9.0v8"],
+            "9.0v8",
         )
 
     def test_nuke8(self):
         """
         Ensures we are returning the right variants for Nuke 8.
         """
-        self._test_nuke(
-            [
-                "Nuke 8.0v4", "NukeX 8.0v4", "NukeAssist 8.0v4"
-            ],
-            "8.0v4"
-        )
+        self._test_nuke(["Nuke 8.0v4", "NukeX 8.0v4", "NukeAssist 8.0v4"], "8.0v4")
 
     def test_nuke7(self):
         """
         Ensures we are returning the right variants for Nuke 7.
         """
-        self._test_nuke(
-            [
-                "Nuke 7.0v10", "NukeX 7.0v10", "NukeAssist 7.0v10"
-            ],
-            "7.0v10"
-        )
+        self._test_nuke(["Nuke 7.0v10", "NukeX 7.0v10", "NukeAssist 7.0v10"], "7.0v10")
 
     def test_nuke7_9(self):
         """
         Ensures we are returning the right variants for Nuke 7.
         """
-        self._test_nuke(
-            [],
-            "7.0v9"
-        )
+        self._test_nuke([], "7.0v9")
 
     def test_nuke6(self):
         """
@@ -249,7 +233,9 @@ class TestStartup(TankTestBase):
         else:
             yield
 
-    def _get_plugin_environment(self, dcc_path, ):
+    def _get_plugin_environment(
+        self, dcc_path,
+    ):
         """
         Returns the expected environment variables dictionary for a plugin.
         """
@@ -305,13 +291,19 @@ class TestStartup(TankTestBase):
         """
         for engine_instance, is_classic in self._get_engine_configurations():
             self._test_launch_information(
-                engine_instance, "NukeStudio.app", "", None,
-                self._get_hiero_environment(is_classic=is_classic)
+                engine_instance,
+                "NukeStudio.app",
+                "",
+                None,
+                self._get_hiero_environment(is_classic=is_classic),
             )
 
             self._test_launch_information(
-                engine_instance, "Nuke.exe", "--studio", None,
-                self._get_hiero_environment(is_classic=is_classic)
+                engine_instance,
+                "Nuke.exe",
+                "--studio",
+                None,
+                self._get_hiero_environment(is_classic=is_classic),
             )
 
     def test_nuke(self):
@@ -321,13 +313,19 @@ class TestStartup(TankTestBase):
         for engine_instance, is_classic in self._get_engine_configurations():
 
             self._test_launch_information(
-                engine_instance, "Nuke.app", "", "/file/to/open",
-                self._get_nuke_environment(is_classic=is_classic)
+                engine_instance,
+                "Nuke.app",
+                "",
+                "/file/to/open",
+                self._get_nuke_environment(is_classic=is_classic),
             )
 
             self._test_launch_information(
-                engine_instance, "Nuke.exe", "", "/file/to/open",
-                self._get_nuke_environment(is_classic=is_classic)
+                engine_instance,
+                "Nuke.exe",
+                "",
+                "/file/to/open",
+                self._get_nuke_environment(is_classic=is_classic),
             )
 
     def test_nukex(self):
@@ -337,13 +335,19 @@ class TestStartup(TankTestBase):
         for engine_instance, is_classic in self._get_engine_configurations():
 
             self._test_launch_information(
-                engine_instance, "NukeX.app", "", "/file/to/open",
-                self._get_nuke_environment(is_classic=is_classic)
+                engine_instance,
+                "NukeX.app",
+                "",
+                "/file/to/open",
+                self._get_nuke_environment(is_classic=is_classic),
             )
 
             self._test_launch_information(
-                engine_instance, "Nuke.exe", "--nukex", "/file/to/open",
-                self._get_nuke_environment(is_classic=is_classic)
+                engine_instance,
+                "Nuke.exe",
+                "--nukex",
+                "/file/to/open",
+                self._get_nuke_environment(is_classic=is_classic),
             )
 
     def test_nukeassist(self):
@@ -353,13 +357,19 @@ class TestStartup(TankTestBase):
         for engine_instance, is_classic in self._get_engine_configurations():
 
             self._test_launch_information(
-                engine_instance, "NukeAssist.app", "", "/file/to/open",
-                self._get_nuke_environment(is_classic=is_classic)
+                engine_instance,
+                "NukeAssist.app",
+                "",
+                "/file/to/open",
+                self._get_nuke_environment(is_classic=is_classic),
             )
 
             self._test_launch_information(
-                engine_instance, "Nuke.exe", "--nukeassist", "/file/to/open",
-                self._get_nuke_environment(is_classic=is_classic)
+                engine_instance,
+                "Nuke.exe",
+                "--nukeassist",
+                "/file/to/open",
+                self._get_nuke_environment(is_classic=is_classic),
             )
 
     def test_hiero(self):
@@ -367,16 +377,24 @@ class TestStartup(TankTestBase):
         Ensures Hiero LaunchInformation is correct.
         """
         self._test_launch_information(
-            "tk-nuke-classic", "Hiero.app", "", None,
-            self._get_hiero_environment(is_classic=True)
+            "tk-nuke-classic",
+            "Hiero.app",
+            "",
+            None,
+            self._get_hiero_environment(is_classic=True),
         )
 
         self._test_launch_information(
-            "tk-nuke-classic", "Nuke.exe", "--hiero", None,
-            self._get_hiero_environment(is_classic=True)
+            "tk-nuke-classic",
+            "Nuke.exe",
+            "--hiero",
+            None,
+            self._get_hiero_environment(is_classic=True),
         )
 
-    def _test_launch_information(self, engine_name, dcc_path, args, file_to_open, expected_env):
+    def _test_launch_information(
+        self, engine_name, dcc_path, args, file_to_open, expected_env
+    ):
         """
         Validates that a given DCC has the right LaunchInformation.
 
@@ -395,11 +413,13 @@ class TestStartup(TankTestBase):
             # Maybe there's no args, in which case we need to strip.
             # Also, maybe there's no file to open, so substitute for an empty string.
             ("%s %s" % (file_to_open or "", args)).strip(),
-            launch_info.args
+            launch_info.args,
         )
 
         # Ensure the environment variables from the LaunchInfo are the same as the expected ones.
-        self.assertListEqual(sorted(expected_env.keys()), sorted(launch_info.environment.keys()))
+        self.assertListEqual(
+            sorted(expected_env.keys()), sorted(launch_info.environment.keys())
+        )
 
         # Ensure each environment variable's value is the same as they expected ones.
         for key, value in expected_env.iteritems():
@@ -429,7 +449,9 @@ class TestStartup(TankTestBase):
         self.assertSetEqual(found_variations, expected_variations)
         # It is possible that due to a bug, the sets are the same, but the number of elements are not, so make sure
         # we built the set with the right number of arguments in the first place.
-        self.assertEqual(len(software_versions), len(expected_variations) * platform_multiplier)
+        self.assertEqual(
+            len(software_versions), len(expected_variations) * platform_multiplier
+        )
 
         # Ensure the icon is correct.
         for version in software_versions:

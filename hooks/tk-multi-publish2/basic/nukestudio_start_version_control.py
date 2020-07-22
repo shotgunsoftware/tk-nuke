@@ -28,12 +28,7 @@ class NukeStudioStartVersionControlPlugin(HookBaseClass):
         """
 
         # look for icon one level up from this hook's folder in "icons" folder
-        return os.path.join(
-            self.disk_location,
-            os.pardir,
-            "icons",
-            "version_up.png"
-        )
+        return os.path.join(self.disk_location, os.pardir, "icons", "version_up.png")
 
     @property
     def name(self):
@@ -133,11 +128,10 @@ class NukeStudioStartVersionControlPlugin(HookBaseClass):
             version_number = self._get_version_number(path, item)
             if version_number is not None:
                 self.logger.info(
-                    "Nuke Studio '%s' plugin rejected project: %s..." %
-                    (self.name, project.name())
+                    "Nuke Studio '%s' plugin rejected project: %s..."
+                    % (self.name, project.name())
                 )
-                self.logger.info(
-                    "  There is already a version number in the file...")
+                self.logger.info("  There is already a version number in the file...")
                 self.logger.info("  Project file path: %s" % (path,))
                 return {"accepted": False}
         else:
@@ -145,23 +139,19 @@ class NukeStudioStartVersionControlPlugin(HookBaseClass):
             # provide a save button. the session will need to be saved before
             # validation will succeed.
             self.logger.warn(
-                "Nuke Studio project '%s' has not been saved." %
-                (project.name()),
-                extra=_get_save_as_action(project)
+                "Nuke Studio project '%s' has not been saved." % (project.name()),
+                extra=_get_save_as_action(project),
             )
 
         self.logger.info(
-            "Nuke Studio '%s' plugin accepted the project %s." %
-            (self.name, project.name()),
-            extra=_get_version_docs_action()
+            "Nuke Studio '%s' plugin accepted the project %s."
+            % (self.name, project.name()),
+            extra=_get_version_docs_action(),
         )
 
         # accept the plugin, but don't force the user to add a version number
         # (leave it unchecked)
-        return {
-            "accepted": True,
-            "checked": False
-        }
+        return {"accepted": True, "checked": False}
 
     def validate(self, settings, item):
         """
@@ -184,12 +174,10 @@ class NukeStudioStartVersionControlPlugin(HookBaseClass):
         if not path:
             # the session still requires saving. provide a save button.
             # validation fails
-            error_msg = "The Nuke Studio project '%s' has not been saved." % \
-                        (project.name(),)
-            self.logger.error(
-                error_msg,
-                extra=_get_save_as_action(project)
+            error_msg = "The Nuke Studio project '%s' has not been saved." % (
+                project.name(),
             )
+            self.logger.error(error_msg, extra=_get_save_as_action(project))
             raise Exception(error_msg)
 
         # NOTE: If the plugin is attached to an item, that means no version
@@ -201,12 +189,11 @@ class NukeStudioStartVersionControlPlugin(HookBaseClass):
         # get the path to a versioned copy of the file.
         version_path = publisher.util.get_version_path(path, "v001")
         if os.path.exists(version_path):
-            error_msg = "A file already exists with a version number. Please " \
-                        "choose another name."
-            self.logger.error(
-                error_msg,
-                extra=_get_save_as_action(project)
+            error_msg = (
+                "A file already exists with a version number. Please "
+                "choose another name."
             )
+            self.logger.error(error_msg, extra=_get_save_as_action(project))
             raise Exception(error_msg)
 
         return True
@@ -238,7 +225,8 @@ class NukeStudioStartVersionControlPlugin(HookBaseClass):
         # save to the new version path
         project.saveAs(version_path)
         self.logger.info(
-            "A version number has been added to the Nuke Studio project...")
+            "A version number has been added to the Nuke Studio project..."
+        )
         self.logger.info("  Nuke Studio project path: %s" % (version_path,))
 
     def finalize(self, settings, item):
@@ -275,21 +263,17 @@ class NukeStudioStartVersionControlPlugin(HookBaseClass):
         work_template = item.properties.get("work_template")
         if work_template:
             if work_template.validate(path):
-                self.logger.debug(
-                    "Using work template to determine version number.")
+                self.logger.debug("Using work template to determine version number.")
                 work_fields = work_template.get_fields(path)
                 if "version" in work_fields:
                     version_number = work_fields.get("version")
             else:
-                self.logger.debug(
-                    "Work template did not match path")
+                self.logger.debug("Work template did not match path")
         else:
-            self.logger.debug(
-                "Work template unavailable for version extraction.")
+            self.logger.debug("Work template unavailable for version extraction.")
 
         if version_number is None:
-            self.logger.debug(
-                "Using path info hook to determine version number.")
+            self.logger.debug("Using path info hook to determine version number.")
             version_number = publisher.util.get_version_number(path)
 
         return version_number
@@ -315,7 +299,7 @@ def _get_save_as_action(project):
         "action_button": {
             "label": "Save As...",
             "tooltip": "Save the current session",
-            "callback": callback
+            "callback": callback,
         }
     }
 
@@ -328,7 +312,7 @@ def _get_version_docs_action():
         "action_open_url": {
             "label": "Version Docs",
             "tooltip": "Show docs for version formats",
-            "url": "https://support.shotgunsoftware.com/hc/en-us/articles/115000068574-User-Guide-WIP-#What%20happens%20when%20you%20publish"
+            "url": "https://support.shotgunsoftware.com/hc/en-us/articles/115000068574-User-Guide-WIP-#What%20happens%20when%20you%20publish",
         }
     }
 
@@ -349,7 +333,7 @@ def _project_save_as(project):
         parent=hiero.ui.mainWindow(),
         caption="Save As",
         directory=project.path(),
-        filter="Nuke Studio Files (*.hrox)"
+        filter="Nuke Studio Files (*.hrox)",
     )
     file_dialog.setLabelText(QtGui.QFileDialog.Accept, "Save")
     file_dialog.setLabelText(QtGui.QFileDialog.Reject, "Cancel")
@@ -359,4 +343,3 @@ def _project_save_as(project):
         return
     path = file_dialog.selectedFiles()[0]
     project.saveAs(path)
-

@@ -30,7 +30,7 @@ from .menu_generation import (
     NukeStudioMenuGenerator,
 )
 
-from .context import ClassicStudioContextSwitcher, PluginStudioContextSwitcher # noqa
+from .context import ClassicStudioContextSwitcher, PluginStudioContextSwitcher  # noqa
 
 logger = sgtk.LogManager.get_logger(__name__)
 
@@ -39,15 +39,17 @@ def __show_tank_disabled_message(details):
     """
     Message when user clicks the tank is disabled menu
     """
-    msg = ("Shotgun integration is currently disabled because the file you " 
-           "have opened is not recognized. Shotgun cannot "
-           "determine which Context the currently open file belongs to. "
-           "In order to enable the Shotgun functionality, try opening another "
-           "file. <br><br><i>Details:</i> %s" % details)
+    msg = (
+        "Shotgun integration is currently disabled because the file you "
+        "have opened is not recognized. Shotgun cannot "
+        "determine which Context the currently open file belongs to. "
+        "In order to enable the Shotgun functionality, try opening another "
+        "file. <br><br><i>Details:</i> %s" % details
+    )
     nuke.message(msg)
 
 
-def __create_tank_disabled_menu(details):    
+def __create_tank_disabled_menu(details):
     """
     Creates a std "disabled" shotgun menu
     """
@@ -62,8 +64,8 @@ def __create_tank_disabled_menu(details):
         logger.error(msg)
         nuke.error(msg)
 
-    
-def __create_tank_error_menu():    
+
+def __create_tank_error_menu():
     """
     Creates a std "error" tank menu and grabs the current context.
     Make sure that this is called from inside an except clause.
@@ -74,7 +76,7 @@ def __create_tank_error_menu():
     message += "Please contact support@shotgunsoftware.com\n\n"
     message += "Exception: %s - %s\n" % (exc_type, exc_value)
     message += "Traceback (most recent call last):\n"
-    message += "\n".join( traceback.format_tb(exc_traceback))
+    message += "\n".join(traceback.format_tb(exc_traceback))
 
     if nuke.env.get("gui"):
         nuke_menu = nuke.menu("Nuke")
@@ -91,12 +93,12 @@ def __create_tank_error_menu():
 def __engine_refresh(new_context):
     """
     Checks if the nuke engine should be created or just have the context changed.
-    If an engine is already started then we just need to change context, 
+    If an engine is already started then we just need to change context,
     else we need to start the engine.
     """
 
     engine_name = os.environ.get("TANK_NUKE_ENGINE_INIT_NAME")
-    
+
     curr_engine = sgtk.platform.current_engine()
     if curr_engine:
         # If we already have an engine, we can just tell it to change contexts
@@ -105,19 +107,16 @@ def __engine_refresh(new_context):
         # try to create new engine
         try:
             logger.debug(
-                "Starting new engine: %s, %s, %s" % (
-                    engine_name, 
-                    new_context.sgtk, 
-                    new_context
-                )
+                "Starting new engine: %s, %s, %s"
+                % (engine_name, new_context.sgtk, new_context)
             )
             sgtk.platform.start_engine(engine_name, new_context.sgtk, new_context)
         except sgtk.TankEngineInitError as e:
             # context was not sufficient! - disable tank!
             logger.exception("Engine could not be started.")
             __create_tank_disabled_menu(e)
-         
-    
+
+
 def __sgtk_on_save_callback():
     """
     Callback that fires every time a file is saved.
@@ -167,21 +166,27 @@ def sgtk_on_load_callback():
     """
     try:
         logger.debug("SGTK Callback: addOnScriptLoad")
-        # If we have opened a file then we should check if automatic 
+        # If we have opened a file then we should check if automatic
         # context switching is enabled and change if possible
         engine = sgtk.platform.current_engine()
         file_name = nuke.root().name()
         logger.debug("Currently running engine: %s" % (engine,))
         logger.debug("File name to load: '%s'" % (file_name,))
 
-        if file_name != "Root" and engine is not None and engine.get_setting("automatic_context_switch"):
-            # We have a current script, and we have an engine and the current environment 
-            # is set to automatic context switch, so we should attempt to change the 
+        if (
+            file_name != "Root"
+            and engine is not None
+            and engine.get_setting("automatic_context_switch")
+        ):
+            # We have a current script, and we have an engine and the current environment
+            # is set to automatic context switch, so we should attempt to change the
             # context to suit the file that is open.
-            logger.debug("Engine running, a script is loaded into nuke and auto-context switch is on.")
+            logger.debug(
+                "Engine running, a script is loaded into nuke and auto-context switch is on."
+            )
             logger.debug("Will attempt to execute tank_from_path('%s')" % (file_name,))
             try:
-                # todo: do we need to create a new tk object, instead should we just 
+                # todo: do we need to create a new tk object, instead should we just
                 # check that the context gets created correctly?
                 tk = sgtk.sgtk_from_path(file_name)
                 logger.debug("Instance '%s'is associated with '%s'" % (tk, file_name))
@@ -203,8 +208,8 @@ def sgtk_on_load_callback():
             __engine_refresh(new_ctx)
 
         elif file_name != "Root" and engine is None:
-            # we have no engine, this maybe because the integration disabled itself, 
-            # due to a non Toolkit file being opened, prior to this new file. We must 
+            # we have no engine, this maybe because the integration disabled itself,
+            # due to a non Toolkit file being opened, prior to this new file. We must
             # create a sgtk instance from the script path.
             logger.debug("Nuke file is already loaded but no tk engine running.")
             logger.debug("Will attempt to execute tank_from_path('%s')" % (file_name,))
@@ -224,6 +229,7 @@ def sgtk_on_load_callback():
     except Exception:
         logger.exception("An exception was raised during addOnScriptLoad callback.")
         __create_tank_error_menu()
+
 
 g_tank_callbacks_registered = False
 
@@ -252,4 +258,3 @@ def tank_ensure_callbacks_registered(engine=None):
             nuke.removeOnScriptLoad(sgtk_on_load_callback)
             nuke.removeOnScriptSave(__sgtk_on_save_callback)
             g_tank_callbacks_registered = False
-
