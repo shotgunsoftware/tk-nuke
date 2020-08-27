@@ -10,7 +10,7 @@
 
 """Menu handling for Nuke and Hiero."""
 
-import tank
+import sgtk
 import sys
 import nuke
 import os
@@ -118,7 +118,7 @@ class BaseMenuGenerator(object):
         """
         Jump from a context to Shotgun.
         """
-        from tank.platform.qt import QtCore, QtGui
+        from sgtk.platform.qt import QtCore, QtGui
 
         url = self.engine.context.shotgun_url
         QtGui.QDesktopServices.openUrl(QtCore.QUrl(url))
@@ -129,15 +129,14 @@ class BaseMenuGenerator(object):
         """
         paths = self.engine.context.filesystem_locations
         for disk_location in paths:
-            system = sys.platform
-            if system == "linux2":
+            if sgtk.util.is_linux():
                 cmd = 'xdg-open "%s"' % disk_location
-            elif system == "darwin":
+            elif sgtk.util.is_macos():
                 cmd = 'open "%s"' % disk_location
-            elif system == "win32":
+            elif sgtk.util.is_windows():
                 cmd = 'cmd.exe /C start "Folder" "%s"' % disk_location
             else:
-                raise OSError("Platform '%s' is not supported." % system)
+                raise OSError("Platform '%s' is not supported." % sys.platform)
 
             exit_code = os.system(cmd)
             if exit_code != 0:
@@ -227,7 +226,7 @@ class HieroMenuGenerator(BaseMenuGenerator):
         }
 
         remove = set()
-        for (key, apps) in self._context_menus_to_apps.iteritems():
+        for (key, apps) in self._context_menus_to_apps.items():
             items = self.engine.get_setting(key)
             for item in items:
                 app_instance_name = item["app_instance"]
@@ -973,12 +972,12 @@ class NukeAppCommand(BaseAppCommand):
         # system, it's hard to obtain a reference to the engine object
         # right here - this is why we set a flag on the main tank
         # object like this.
-        setattr(tank, "_callback_from_non_pane_menu", True)
+        setattr(sgtk, "_callback_from_non_pane_menu", True)
         try:
             self._original_callback()
         finally:
             try:
-                delattr(tank, "_callback_from_non_pane_menu")
+                delattr(sgtk, "_callback_from_non_pane_menu")
             except AttributeError:
                 pass
 

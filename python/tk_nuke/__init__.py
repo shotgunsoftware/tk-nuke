@@ -241,11 +241,11 @@ def tank_ensure_callbacks_registered(engine=None):
     there is no current script open in your Nuke session. If there is a script currently open then this will spawn a
     new Nuke instance and the callback won't be called.
     """
+    global g_tank_callbacks_registered
 
     # Register only if we're missing an engine (to allow going from disabled to something else)
     # or if the engine specifically requests for it.
     if not engine or engine.get_setting("automatic_context_switch"):
-        global g_tank_callbacks_registered
         if not g_tank_callbacks_registered:
             nuke.addOnScriptLoad(sgtk_on_load_callback)
             nuke.addOnScriptSave(__sgtk_on_save_callback)
@@ -253,7 +253,6 @@ def tank_ensure_callbacks_registered(engine=None):
     elif engine and not engine.get_setting("automatic_context_switch"):
         # we have an engine but the automatic context switching has been disabled, we should ensure the callbacks
         # are removed.
-        global g_tank_callbacks_registered
         if g_tank_callbacks_registered:
             nuke.removeOnScriptLoad(sgtk_on_load_callback)
             nuke.removeOnScriptSave(__sgtk_on_save_callback)
