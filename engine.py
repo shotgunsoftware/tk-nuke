@@ -767,7 +767,7 @@ class NukeEngine(tank.platform.Engine):
         # Since some Hiero projectRoot methods are deprecated in Nuke 12, we use the wrapper methods
         # below to call the appropriate Hiero methods according to the Nuke version being used.
         # Cf. https://learn.foundry.com/hiero/developers/12.0/hieropythondevguide/api/api_core.html
-        
+
         # Project.projectRoot() will be removed in Nuke 12
         def project_root_wrapper(p):
             if nuke.env.get("NukeVersionMajor") < 12:
