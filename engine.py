@@ -779,7 +779,10 @@ class NukeEngine(tank.platform.Engine):
             if nuke.env.get("NukeVersionMajor") < 12:
                 p.setProjectRoot(tank_project_path)
             else:
-                p.setProjectDirectory(tank_project_path)
+                if p.useCustomExportDirectory():
+                    p.setCustomExportDirectory(tank_project_path)
+                else:
+                    p.setProjectDirectory(tank_project_path)
 
         for p in hiero.core.projects():
             if not project_root_wrapper(p):
