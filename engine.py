@@ -619,7 +619,7 @@ class NukeEngine(tank.platform.Engine):
                 nuke.warning("Shotgun Warning: %s" % msg)
 
         # Sends the message to the script editor.
-        print(msg)
+        self.async_execute_in_main_thread(print, msg)
 
     #####################################################################################
     # Panel Support
