@@ -10,6 +10,22 @@
 
 import os
 import sys
+import nuke
+
+# Disable the importing of the web engine widgets submodule from PySide2
+# if this is a Windows environment. Failing to do so will cause Nuke to freeze on startup.
+nuke_version = (
+    nuke.env.get("NukeVersionMajor"),
+    nuke.env.get("NukeVersionMinor"),
+    nuke.env.get("NukeVersionRelease"),
+)
+
+if nuke_version[0] > 10 and sys.platform.startswith("win"):
+    print(
+        "Nuke 11+ on Windows can deadlock if QtWebEngineWidgets "
+        "is imported. Setting SHOTGUN_SKIP_QTWEBENGINEWIDGETS_IMPORT=1..."
+    )
+    os.environ["SHOTGUN_SKIP_QTWEBENGINEWIDGETS_IMPORT"] = "1"
 
 startup_path = os.path.dirname(__file__)
 sys.path.append(startup_path)
