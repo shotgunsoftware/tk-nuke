@@ -619,7 +619,12 @@ class NukeEngine(tank.platform.Engine):
                 nuke.warning("Shotgun Warning: %s" % msg)
 
         # Sends the message to the script editor.
-        self.async_execute_in_main_thread(print, msg)
+        # Originally, this line passed print and msg in directly.
+        # and it locked up Nuke v11.3 when it happened. There's probably
+        # some weird issue when passing a CPython function instead of
+        # a pure Python method to a Qt signal, so wrap the call into a
+        # lambda to make the issue go away.
+        self.async_execute_in_main_thread(lambda: print(msg))
 
     #####################################################################################
     # Panel Support
