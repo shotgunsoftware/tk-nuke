@@ -521,13 +521,23 @@ class NukeEngine(tank.platform.Engine):
         # Set the _callback_from_non_pane_menu hint so that the show_panel method knows this
         # was invoked not from the pane menu.
 
-        # FIXME: This pattern is horrible.
-        setattr(tank, "_callback_from_non_pane_menu", True)
-        try:
-            for command in commands_to_run:
-                command()
-        finally:
-            delattr(tank, "_callback_from_non_pane_menu")
+        def run_at_startup():
+            # FIXME: This pattern is horrible.
+            setattr(tank, "_callback_from_non_pane_menu", True)
+            try:
+                for command in commands_to_run:
+                    print(command)
+                    command()
+            finally:
+                delattr(tank, "_callback_from_non_pane_menu")
+
+        # We used to call this loop above directly here, but in Nuke 11
+        # it is causing a deadlock whenever an app calls
+        # engine.async_execute_in_main_thread from a background thread.
+        # The theory is that the main thread is locked up by Nuke in a
+        # way that prevents Toolkit to queue new events. For whatever reason
+        # using a QTimer will work here.
+        tank.platform.qt.QtCore.QTimer.singleShot(0, run_at_startup)
 
     def destroy_engine(self):
         """
@@ -619,12 +629,7 @@ class NukeEngine(tank.platform.Engine):
                 nuke.warning("Shotgun Warning: %s" % msg)
 
         # Sends the message to the script editor.
-        # Originally, this line passed print and msg in directly.
-        # and it locked up Nuke v11.3 when it happened. There's probably
-        # some weird issue when passing a CPython function instead of
-        # a pure Python method to a Qt signal, so wrap the call into a
-        # lambda to make the issue go away.
-        self.async_execute_in_main_thread(lambda: print(msg))
+        self.async_execute_in_main_thread(print, msg)
 
     #####################################################################################
     # Panel Support
