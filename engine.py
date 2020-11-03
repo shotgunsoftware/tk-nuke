@@ -523,7 +523,7 @@ class NukeEngine(tank.platform.Engine):
 
         def run_at_startup():
             # FIXME: This pattern is horrible.
-            setattr(tank, "_callback_from_non_pane_menu", True)
+            tank._callback_from_non_pane_menu = True
             try:
                 for command in commands_to_run:
                     print(command)
