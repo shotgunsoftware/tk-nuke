@@ -521,13 +521,23 @@ class NukeEngine(tank.platform.Engine):
         # Set the _callback_from_non_pane_menu hint so that the show_panel method knows this
         # was invoked not from the pane menu.
 
-        # FIXME: This pattern is horrible.
-        setattr(tank, "_callback_from_non_pane_menu", True)
-        try:
-            for command in commands_to_run:
-                command()
-        finally:
-            delattr(tank, "_callback_from_non_pane_menu")
+        def run_at_startup():
+            # FIXME: This pattern is horrible.
+            tank._callback_from_non_pane_menu = True
+            try:
+                for command in commands_to_run:
+                    command()
+            finally:
+                delattr(tank, "_callback_from_non_pane_menu")
+
+        # We used to call this loop above directly here, but in Nuke 11
+        # it is causing a deadlock whenever an app calls
+        # engine.async_execute_in_main_thread from a background thread.
+        # The theory is that the main thread is locked up by Nuke in a
+        # way that prevents Toolkit to queue new events. Instead, we'll queue
+        # the launch of the apps until the main thread has finished executing
+        # current events.
+        tank.platform.qt.QtCore.QTimer.singleShot(0, run_at_startup)
 
     def destroy_engine(self):
         """
