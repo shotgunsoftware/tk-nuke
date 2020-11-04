@@ -526,7 +526,6 @@ class NukeEngine(tank.platform.Engine):
             tank._callback_from_non_pane_menu = True
             try:
                 for command in commands_to_run:
-                    print(command)
                     command()
             finally:
                 delattr(tank, "_callback_from_non_pane_menu")
