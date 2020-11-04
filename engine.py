@@ -534,8 +534,9 @@ class NukeEngine(tank.platform.Engine):
         # it is causing a deadlock whenever an app calls
         # engine.async_execute_in_main_thread from a background thread.
         # The theory is that the main thread is locked up by Nuke in a
-        # way that prevents Toolkit to queue new events. For whatever reason
-        # using a QTimer will work here.
+        # way that prevents Toolkit to queue new events. Instead, we'll queue
+        # the launch of the apps until the main thread has finished executing
+        # current events.
         tank.platform.qt.QtCore.QTimer.singleShot(0, run_at_startup)
 
     def destroy_engine(self):
