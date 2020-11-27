@@ -177,7 +177,7 @@ class NukeEngine(sgtk.platform.Engine):
             return
 
         # Versions > 10.5 have not yet been tested so show a message to that effect.
-        if nuke_version[0] > 12 or (nuke_version[0] == 12 and nuke_version[1] > 1):
+        if nuke_version[0] > 12 or (nuke_version[0] == 12 and nuke_version[1] > 2):
             # This is an untested version of Nuke.
             msg = (
                 "The Shotgun Pipeline Toolkit has not yet been fully tested with Nuke %d.%dv%d. "
@@ -244,9 +244,9 @@ class NukeEngine(sgtk.platform.Engine):
         """
         The Nuke-specific portion of engine initialization.
         """
-        # Now prepare tank so that it will be picked up by any new processes
+        # Now prepare sgtk so that it will be picked up by any new processes
         # created by file->new or file->open.
-        # Store data needed for bootstrapping Tank in env vars.
+        # Store data needed for bootstrapping Sgtk in env vars.
         # Used in classic_startup/sgtk_startup.py, and plugins/basic/Python/tk_nuke_basic/plugin_bootstrap.py
         os.environ["TANK_ENGINE"] = self.instance_name
         os.environ["TANK_CONTEXT"] = sgtk.context.serialize(self.context)
@@ -521,13 +521,23 @@ class NukeEngine(sgtk.platform.Engine):
         # Set the _callback_from_non_pane_menu hint so that the show_panel method knows this
         # was invoked not from the pane menu.
 
-        # FIXME: This pattern is horrible.
-        setattr(sgtk, "_callback_from_non_pane_menu", True)
-        try:
-            for command in commands_to_run:
-                command()
-        finally:
-            delattr(sgtk, "_callback_from_non_pane_menu")
+        def run_at_startup():
+            # FIXME: This pattern is horrible.
+            sgtk._callback_from_non_pane_menu = True
+            try:
+                for command in commands_to_run:
+                    command()
+            finally:
+                delattr(sgtk, "_callback_from_non_pane_menu")
+
+        # We used to call this loop above directly here, but in Nuke 11
+        # it is causing a deadlock whenever an app calls
+        # engine.async_execute_in_main_thread from a background thread.
+        # The theory is that the main thread is locked up by Nuke in a
+        # way that prevents Toolkit to queue new events. Instead, we'll queue
+        # the launch of the apps until the main thread has finished executing
+        # current events.
+        sgtk.platform.qt.QtCore.QTimer.singleShot(0, run_at_startup)
 
     def destroy_engine(self):
         """
@@ -619,7 +629,7 @@ class NukeEngine(sgtk.platform.Engine):
                 nuke.warning("Shotgun Warning: %s" % msg)
 
         # Sends the message to the script editor.
-        print(msg)
+        self.async_execute_in_main_thread(print, msg)
 
     #####################################################################################
     # Panel Support
@@ -888,13 +898,13 @@ class NukeEngine(sgtk.platform.Engine):
         """
         This will be called at initialisation time and will allow
         a user to control various aspects of how QT is being used
-        by Tank. The method should return a dictionary with a number
+        by Sgtk. The method should return a dictionary with a number
         of specific keys, outlined below.
 
         * qt_core - the QtCore module to use
         * qt_gui - the QtGui module to use
         * wrapper - the Qt wrapper root module, e.g. PySide
-        * dialog_base - base class for to use for Tank's dialog factory
+        * dialog_base - base class for to use for Sgtk's dialog factory
 
         We are overriding the base implementation so that we can set the "SHOTGUN_SKIP_QTWEBENGINEWIDGETS_IMPORT"
         environment variable for versions of Nuke on Windows that use PySide2. Once this is done, we call the

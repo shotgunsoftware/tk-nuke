@@ -16,6 +16,7 @@ import nuke
 import os
 import unicodedata
 import traceback
+import six
 import nukescripts.openurl
 import nukescripts
 
@@ -32,7 +33,7 @@ class BaseMenuGenerator(object):
         Initializes a new menu generator.
 
         :param engine: The currently-running engine.
-        :type engine: :class:`tank.platform.Engine`
+        :type engine: :class:`sgtk.platform.Engine`
         :param menu_name: The name of the menu to be created.
         """
         self._engine = engine
@@ -156,7 +157,7 @@ class HieroMenuGenerator(BaseMenuGenerator):
         Initializes a new menu generator.
 
         :param engine: The currently-running engine.
-        :type engine: :class:`tank.platform.Engine`
+        :type engine: :class:`sgtk.platform.Engine`
         :param menu_name: The name of the menu to be created.
         """
         super(HieroMenuGenerator, self).__init__(engine, menu_name)
@@ -467,7 +468,7 @@ class NukeStudioMenuGenerator(HieroMenuGenerator):
         for (cmd_name, cmd_details) in node_commands.items():
             cmd = NukeAppCommand(self.engine, cmd_name, cmd_details)
 
-            # Get icon if specified - default to tank icon if not specified.
+            # Get icon if specified - default to sgtk icon if not specified.
             icon = cmd.properties.get("icon", self._shotgun_logo)
             command_context = cmd.properties.get("context")
 
@@ -509,7 +510,7 @@ class NukeMenuGenerator(BaseMenuGenerator):
         Initializes a new menu generator.
 
         :param engine: The currently-running engine.
-        :type engine: :class:`tank.platform.Engine`
+        :type engine: :class:`sgtk.platform.Engine`
         :param menu_name: The name of the menu to be created.
         """
         super(NukeMenuGenerator, self).__init__(engine, menu_name)
@@ -574,7 +575,7 @@ class NukeMenuGenerator(BaseMenuGenerator):
 
         for cmd in menu_items:
             if cmd.type == "node":
-                # Get icon if specified - default to tank icon if not specified.
+                # Get icon if specified - default to sgtk icon if not specified.
                 icon = cmd.properties.get("icon", self._shotgun_logo)
                 command_context = cmd.properties.get("context")
 
@@ -713,7 +714,7 @@ class BaseAppCommand(object):
         Initializes a new BaseAppCommand.
 
         :param engine: The currently-running engine.
-        :type engine: :class:`tank.platform.Engine`
+        :type engine: :class:`sgtk.platform.Engine`
         :param name: The name of the command.
         :param command_dict: The properties dictionary of the command.
         """
@@ -804,9 +805,9 @@ class BaseAppCommand(object):
         if self.app:
             doc_url = self.app.documentation_url
             # Deal with nuke's inability to handle unicode.
-            if doc_url.__class__ == unicode:
-                doc_url = unicodedata.normalize("NFKD", doc_url).encode(
-                    "ascii", "ignore"
+            if type(doc_url) == six.text_type:
+                doc_url = six.ensure_str(
+                    unicodedata.normalize("NFKD", doc_url), "ascii", "ignore"
                 )
             return doc_url
         return None
@@ -970,7 +971,7 @@ class NukeAppCommand(BaseAppCommand):
         #
         # Note that because of nuke not using the import_module()
         # system, it's hard to obtain a reference to the engine object
-        # right here - this is why we set a flag on the main tank
+        # right here - this is why we set a flag on the main sgtk
         # object like this.
         setattr(sgtk, "_callback_from_non_pane_menu", True)
         try:

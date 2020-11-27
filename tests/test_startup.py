@@ -11,6 +11,7 @@
 from __future__ import with_statement
 from __future__ import print_function
 import os
+import six
 import sys
 
 from tank_test.tank_test_base import TankTestBase
@@ -109,14 +110,6 @@ class TestStartup(TankTestBase):
         }
     }
 
-    # This will be used to feed our mocked os.listdir so that we can unit tests the launcher
-    # even if DCCs are not installed locally.
-    _os_neutral_hierarchy = {
-        "win32": _windows_mock_hiearchy,
-        "linux2": _linux_mock_hierarchy,
-        "darwin": _mac_mock_hierarchy,
-    }
-
     def setUp(self):
         """
         Prepares the environment for unit tests.
@@ -134,7 +127,7 @@ class TestStartup(TankTestBase):
         self.setup_fixtures()
 
         # Update the mocked hierarchy to contain the user folder on Linux.
-        if sys.platform == "linux2":
+        if sgtk.util.is_linux():
             full_path = os.path.expanduser("~")
             current_folder = self._linux_mock_hierarchy
             for t in self._recursive_split(full_path):
@@ -159,13 +152,14 @@ class TestStartup(TankTestBase):
             directory, basename = os.path.split(path)
             return self._recursive_split(directory) + [basename]
 
-    def _os_listdir_wrapper(self, directory):
+    def _glob_wrapper(self, directory, dironly):
         """
-        Mocked implementation of list dir. It fakes a folder hierarchy.
+        This is a mocked implementation of glob._iterdir.
+        This method fakes a folder hierarchy.
         """
         tokens = self._recursive_split(directory)
         # Start at the root of the mocked file system
-        current_depth = self._os_neutral_hierarchy[sys.platform]
+        current_depth = self._get_os_neutral_hierarchy()
         for t in tokens:
             # Unit test should not be asking for folders outside of the DCC hierarchy.
             self.assertIn(t, current_depth)
@@ -173,9 +167,18 @@ class TestStartup(TankTestBase):
             current_depth = current_depth[t]
 
         # We've reached the folder we wanted, build a list.
-        # We're using dicts for intemediary folders and lists for leaf folders so iterate
+        # We're using dicts for intermediary folders and lists for leaf folders so iterate
         # on the items to get all the names.
-        return list(iter(current_depth))
+        return iter(current_depth)
+
+    def _os_listdir_wrapper(self, directory):
+        """
+        This is a mocked implementation of os.listdir.
+        This method fakes a folder hierarchy.
+        """
+        # The output from glob_wrapper for the purposes of this test
+        # is the same as os.listdir
+        return list(self._glob_wrapper(directory, False))
 
     def test_nuke10(self):
         """
@@ -228,10 +231,30 @@ class TestStartup(TankTestBase):
         # When this environment variable is set, do not mock folders and rely on the real
         # filesystem data. This is useful when adding support for a new version of Nuke.
         if "TK_NO_FOLDER_MOCKING" not in os.environ:
-            with mock.patch("os.listdir", wraps=self._os_listdir_wrapper):
-                yield
+            # In Python 3 glob doesn't use os.listdir to help iterate over the folders
+            # It uses it's own _iterdir method, which still produces the same output.
+            if six.PY3:
+                with mock.patch("glob._iterdir", wraps=self._glob_wrapper):
+                    yield
+            else:
+                with mock.patch("os.listdir", wraps=self._os_listdir_wrapper):
+                    yield
         else:
             yield
+
+    @classmethod
+    def _get_os_neutral_hierarchy(cls):
+        """
+        Returns the correct hierarchy associated with the currently running OS.
+        """
+        # This will be used to feed our mocked os.listdir so that we can unit tests the launcher
+        # even if DCCs are not installed locally.
+        if sgtk.util.is_windows():
+            return cls._windows_mock_hiearchy
+        elif sgtk.util.is_linux():
+            return cls._linux_mock_hierarchy
+        elif sgtk.util.is_macos():
+            return cls._mac_mock_hierarchy
 
     def _get_plugin_environment(
         self, dcc_path,
@@ -422,7 +445,7 @@ class TestStartup(TankTestBase):
         )
 
         # Ensure each environment variable's value is the same as they expected ones.
-        for key, value in expected_env.iteritems():
+        for key, value in expected_env.items():
             self.assertIn(key, launch_info.environment)
             self.assertEqual(launch_info.environment[key], value)
 
@@ -438,7 +461,7 @@ class TestStartup(TankTestBase):
 
         # On linux, we are expecting twice as many hits since Nuke can be installed by default
         # at two different location, so expect twice as many results.
-        platform_multiplier = 2 if sys.platform == "linux2" else 1
+        platform_multiplier = 2 if sgtk.util.is_linux() else 1
 
         with self._mock_folder_listing():
             # Ensure we are getting back the right variations.
@@ -466,7 +489,7 @@ class TestStartup(TankTestBase):
             else:
                 self.assertEqual(file_name, "icon_256.png")
 
-        if sys.platform != "darwin":
+        if not sgtk.util.is_macos():
             # Ensures that not only the expect arguments are present, but that there are no more of them.
             for version in software_versions:
                 expected_arguments = []
