@@ -182,8 +182,8 @@ class NukeEngine(tank.platform.Engine):
             msg = (
                 "The Shotgun Pipeline Toolkit has not yet been fully tested with Nuke %d.%dv%d. "
                 "You can continue to use the Toolkit but you may experience bugs or "
-                "instability.  Please report any issues you see to support@shotgunsoftware.com"
-                % (nuke_version[0], nuke_version[1], nuke_version[2])
+                "instability.  Please report any issues to our <a href='%s'>support team</a>"
+                % (nuke_version[0], nuke_version[1], nuke_version[2], tank.support_url)
             )
 
             # Show nuke message if in UI mode, this is the first time the engine has been started
@@ -196,7 +196,19 @@ class NukeEngine(tank.platform.Engine):
                 >= self.get_setting("compatibility_dialog_min_version", 11)
                 and not self.hiero_enabled
             ):
-                nuke.message("Warning - Shotgun Pipeline Toolkit!\n\n%s" % msg)
+                # On MacOS the warning window will pop up under the splash screen and the splash screen will not
+                # exit until the Okay button is pressed. This creates a deadlock so we wait a few seconds before
+                # showing the warning
+                from tank.platform.qt.message_box import TKMessageBox
+                from tank.platform.qt import QtCore
+
+                def warn():
+                    TKMessageBox.warning(
+                        "Version not Tested",
+                        "Warning - Shotgun Pipeline Toolkit!\n\n%s" % msg,
+                    )
+
+                QtCore.QTimer.singleShot(3000, warn)
 
             # Log the warning.
             self.logger.warning(msg)
