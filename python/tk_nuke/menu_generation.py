@@ -16,7 +16,7 @@ import nuke
 import os
 import unicodedata
 import traceback
-import six
+from tank_vendor import six
 import nukescripts.openurl
 import nukescripts
 
