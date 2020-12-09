@@ -196,15 +196,7 @@ class NukeEngine(tank.platform.Engine):
                 >= self.get_setting("compatibility_dialog_min_version", 11)
                 and not self.hiero_enabled
             ):
-                # On MacOS the warning window will pop up under the splash screen and the splash screen will not
-                # exit until the Okay button is pressed. This creates a deadlock so we wait a few seconds before
-                # showing the warning
-                from tank.platform.qt import QtCore
-
-                def warn():
-                    nuke.message("Warning - Shotgun Pipeline Toolkit!\n\n%s" % msg)
-
-                QtCore.QTimer.singleShot(3000, warn)
+                nuke.message("Warning - Shotgun Pipeline Toolkit!\n\n%s" % msg)
 
             # Log the warning.
             self.logger.warning(msg)
