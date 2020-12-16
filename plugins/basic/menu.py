@@ -17,6 +17,8 @@ It launches the plugin's bootstrap process.
 import os
 import sys
 
+import nuke
+
 
 def plugin_startup():
     """
@@ -55,3 +57,10 @@ def plugin_startup():
 
 # Invoked on startup while Nuke is walking NUKE_PATH.
 plugin_startup()
+
+
+# Register callback for script save and node create to handle the swapping of variable root env vars
+from tk_nuke_basic.variable_roots import script_save_callback, node_create_callback
+
+nuke.addOnScriptSave(script_save_callback)
+nuke.addOnCreate(node_create_callback)
