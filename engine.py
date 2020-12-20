@@ -177,13 +177,13 @@ class NukeEngine(tank.platform.Engine):
             return
 
         # Versions > 10.5 have not yet been tested so show a message to that effect.
-        if nuke_version[0] > 12 or (nuke_version[0] == 12 and nuke_version[1] > 1):
+        if nuke_version[0] > 12 or (nuke_version[0] == 12 and nuke_version[1] > 2):
             # This is an untested version of Nuke.
             msg = (
                 "The Shotgun Pipeline Toolkit has not yet been fully tested with Nuke %d.%dv%d. "
                 "You can continue to use the Toolkit but you may experience bugs or "
-                "instability.  Please report any issues you see to support@shotgunsoftware.com"
-                % (nuke_version[0], nuke_version[1], nuke_version[2])
+                "instability.  Please report any issues to our support team via %s"
+                % (nuke_version[0], nuke_version[1], nuke_version[2], tank.support_url)
             )
 
             # Show nuke message if in UI mode, this is the first time the engine has been started
@@ -521,13 +521,23 @@ class NukeEngine(tank.platform.Engine):
         # Set the _callback_from_non_pane_menu hint so that the show_panel method knows this
         # was invoked not from the pane menu.
 
-        # FIXME: This pattern is horrible.
-        setattr(tank, "_callback_from_non_pane_menu", True)
-        try:
-            for command in commands_to_run:
-                command()
-        finally:
-            delattr(tank, "_callback_from_non_pane_menu")
+        def run_at_startup():
+            # FIXME: This pattern is horrible.
+            tank._callback_from_non_pane_menu = True
+            try:
+                for command in commands_to_run:
+                    command()
+            finally:
+                delattr(tank, "_callback_from_non_pane_menu")
+
+        # We used to call this loop above directly here, but in Nuke 11
+        # it is causing a deadlock whenever an app calls
+        # engine.async_execute_in_main_thread from a background thread.
+        # The theory is that the main thread is locked up by Nuke in a
+        # way that prevents Toolkit to queue new events. Instead, we'll queue
+        # the launch of the apps until the main thread has finished executing
+        # current events.
+        tank.platform.qt.QtCore.QTimer.singleShot(0, run_at_startup)
 
     def destroy_engine(self):
         """
@@ -619,7 +629,7 @@ class NukeEngine(tank.platform.Engine):
                 nuke.warning("Shotgun Warning: %s" % msg)
 
         # Sends the message to the script editor.
-        print(msg)
+        self.async_execute_in_main_thread(print, msg)
 
     #####################################################################################
     # Panel Support

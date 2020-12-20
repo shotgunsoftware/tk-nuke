@@ -72,8 +72,8 @@ def __create_tank_error_menu():
     """
     (exc_type, exc_value, exc_traceback) = sys.exc_info()
     message = ""
-    message += "Message: Shotgun encountered a problem starting the Engine.\n"
-    message += "Please contact support@shotgunsoftware.com\n\n"
+    message += "Shotgun encountered a problem starting the Engine. "
+    message += "Please contact us via %s\n\n" % sgtk.support_url
     message += "Exception: %s - %s\n" % (exc_type, exc_value)
     message += "Traceback (most recent call last):\n"
     message += "\n".join(traceback.format_tb(exc_traceback))
@@ -82,7 +82,10 @@ def __create_tank_error_menu():
         nuke_menu = nuke.menu("Nuke")
         sg_menu = nuke_menu.addMenu("Shotgun")
         sg_menu.clearMenu()
-        cmd = lambda m=message: nuke.message(m)
+
+        def cmd(m=message):
+            nuke.message(m)
+
         sg_menu.addCommand("[Shotgun Error - Click for details]", cmd)
     else:
         msg = "The Shotgun Pipeline Toolkit caught an error: %s" % message
