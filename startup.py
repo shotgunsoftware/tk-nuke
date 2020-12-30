@@ -167,13 +167,14 @@ class NukeLauncher(SoftwareLauncher):
         match_templates.extend(self._scan_software_entities())
 
         for template in match_templates:
-            self.logger.debug("Processing template %s.", template)
-            # Extract all products from that executable.
-            for executable, tokens in self._glob_and_match(template, self.COMPONENT_REGEX_LOOKUP):
-                self.logger.debug(
-                    "Processing %s with tokens %s", executable, tokens)
-                for sw in self._extract_products_from_path(executable, tokens):
-                    yield sw
+            if template is not None:
+                self.logger.debug("Processing template %s.", template)
+                # Extract all products from that executable.
+                for executable, tokens in self._glob_and_match(template, self.COMPONENT_REGEX_LOOKUP):
+                    self.logger.debug(
+                        "Processing %s with tokens %s", executable, tokens)
+                    for sw in self._extract_products_from_path(executable, tokens):
+                        yield sw
 
     def _extract_products_from_path(self, executable_path, match):
         """
