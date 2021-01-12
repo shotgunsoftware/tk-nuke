@@ -134,13 +134,14 @@ class NukeLauncher(SoftwareLauncher):
 
         templ_list = []
         for result in results:
-            try:
-                templ_list.extend(result.get(
-                    os_template[sys.platform]).split('\n'))
-            except AttributeError as e:
-                self.logger.error(
-                    'AttributeError on template \'{}\': {}'.format(result.get('code'), e))
-                pass
+            if result.get(os_template[sys.platform]):
+                try:
+                    templ_list.extend(result.get(
+                        os_template[sys.platform]).split('\n'))
+                except AttributeError as e:
+                    self.logger.error(
+                        'AttributeError on template \'{}\': {}'.format(result.get('code'), e))
+                    pass
 
         return templ_list
 
