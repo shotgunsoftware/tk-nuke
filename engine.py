@@ -182,8 +182,8 @@ class NukeEngine(sgtk.platform.Engine):
             msg = (
                 "The Shotgun Pipeline Toolkit has not yet been fully tested with Nuke %d.%dv%d. "
                 "You can continue to use the Toolkit but you may experience bugs or "
-                "instability.  Please report any issues you see to support@shotgunsoftware.com"
-                % (nuke_version[0], nuke_version[1], nuke_version[2])
+                "instability.  Please report any issues to our support team via %s"
+                % (nuke_version[0], nuke_version[1], nuke_version[2], tank.support_url)
             )
 
             # Show nuke message if in UI mode, this is the first time the engine has been started
