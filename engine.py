@@ -187,7 +187,7 @@ class NukeEngine(sgtk.platform.Engine):
             )
 
             # Show nuke message if in UI mode, this is the first time the engine has been started
-            # and the warning dialog isn't overriden by the config. Note that nuke.message isn't
+            # and the warning dialog isn't overridden by the config. Note that nuke.message isn't
             # available in Hiero, so we have to skip this there.
             if (
                 self.has_ui
