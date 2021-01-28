@@ -775,11 +775,11 @@ class NukeEngine(sgtk.platform.Engine):
         import hiero
 
         for p in hiero.core.projects():
-            if not p.projectRoot():
+            if not p.exportRootDirectory():
                 self.logger.debug(
                     "Setting projectRoot on %s to: %s", p.name(), self.sgtk.project_path
                 )
-                p.setProjectRoot(self.sgtk.project_path)
+                p.setProjectDirectory(self.sgtk.project_path)
 
     def _get_dialog_parent(self):
         """
