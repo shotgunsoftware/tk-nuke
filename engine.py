@@ -781,7 +781,9 @@ class NukeEngine(sgtk.platform.Engine):
             # Project.setProjectDirectory.
             if nuke.env.get("NukeVersionMajor") >= 11 and not p.exportRootDirectory():
                 self.logger.debug(
-                    "Setting projectRoot on %s to: %s", p.name(), self.sgtk.project_path
+                    "Setting exportRootDirectory on %s to: %s",
+                    p.name(),
+                    self.sgtk.project_path,
                 )
                 p.setProjectDirectory(self.sgtk.project_path)
             elif nuke.env.get("NukeVersionMajor") <= 10 and not p.projectRoot():
