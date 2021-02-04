@@ -610,7 +610,8 @@ class NukeEngine(tank.platform.Engine):
         # Sends the message to error console of the DCC
         if self.hiero_enabled:
             import hiero
-
+            existing_log_level = hiero.core.log.logLevel()
+            
             if record.levelno >= logging.ERROR:
                 hiero.core.log.error(msg)
             elif record.levelno >= logging.WARNING:
@@ -620,6 +621,7 @@ class NukeEngine(tank.platform.Engine):
             else:
                 hiero.core.log.setLogLevel(hiero.core.log.kDebug)
                 hiero.core.log.debug(msg)
+                hiero.core.log.setLogLevel(existing_log_level)
         else:
             if record.levelno >= logging.CRITICAL:
                 nuke.critical("Shotgun Critical: %s" % msg)
