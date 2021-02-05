@@ -774,12 +774,32 @@ class NukeEngine(tank.platform.Engine):
         """
         import hiero
 
+        # Since some Hiero projectRoot methods are deprecated in Nuke 12, we use the wrapper methods
+        # below to call the appropriate Hiero methods according to the Nuke version being used.
+        # Cf. https://learn.foundry.com/hiero/developers/12.0/hieropythondevguide/api/api_core.html
+
+        # Project.projectRoot() will be removed in Nuke 12
+        def project_root_wrapper(p):
+            if nuke.env.get("NukeVersionMajor") < 12:
+                return p.projectRoot()
+            return p.exportRootDirectory()
+
+        # Project.setProjectRoot() will be removed in Nuke 12
+        def set_project_root_wrapper(p, tank_project_path):
+            if nuke.env.get("NukeVersionMajor") < 12:
+                p.setProjectRoot(tank_project_path)
+            else:
+                if p.useCustomExportDirectory():
+                    p.setCustomExportDirectory(tank_project_path)
+                else:
+                    p.setProjectDirectory(tank_project_path)
+
         for p in hiero.core.projects():
-            if not p.projectRoot():
+            if not project_root_wrapper(p):
                 self.logger.debug(
                     "Setting projectRoot on %s to: %s", p.name(), self.tank.project_path
                 )
-                p.setProjectRoot(self.tank.project_path)
+                set_project_root_wrapper(p, self.tank.project_path)
 
     def _get_dialog_parent(self):
         """
