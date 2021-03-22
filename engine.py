@@ -775,7 +775,18 @@ class NukeEngine(sgtk.platform.Engine):
         import hiero
 
         for p in hiero.core.projects():
-            if not p.projectRoot():
+
+            # In Nuke 11 and greater the Project.projectRoot and Project.setProjectRoot methods
+            # have been deprecated in favour of Project.exportRootDirectory and
+            # Project.setProjectDirectory.
+            if nuke.env.get("NukeVersionMajor") >= 11 and not p.exportRootDirectory():
+                self.logger.debug(
+                    "Setting exportRootDirectory on %s to: %s",
+                    p.name(),
+                    self.sgtk.project_path,
+                )
+                p.setProjectDirectory(self.sgtk.project_path)
+            elif nuke.env.get("NukeVersionMajor") <= 10 and not p.projectRoot():
                 self.logger.debug(
                     "Setting projectRoot on %s to: %s", p.name(), self.sgtk.project_path
                 )
