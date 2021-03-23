@@ -10,12 +10,13 @@
 
 """Menu handling for Nuke and Hiero."""
 
-import tank
+import sgtk
 import sys
 import nuke
 import os
 import unicodedata
 import traceback
+from tank_vendor import six
 import nukescripts.openurl
 import nukescripts
 
@@ -32,7 +33,7 @@ class BaseMenuGenerator(object):
         Initializes a new menu generator.
 
         :param engine: The currently-running engine.
-        :type engine: :class:`tank.platform.Engine`
+        :type engine: :class:`sgtk.platform.Engine`
         :param menu_name: The name of the menu to be created.
         """
         self._engine = engine
@@ -118,7 +119,7 @@ class BaseMenuGenerator(object):
         """
         Jump from a context to Shotgun.
         """
-        from tank.platform.qt import QtCore, QtGui
+        from sgtk.platform.qt import QtCore, QtGui
 
         url = self.engine.context.shotgun_url
         QtGui.QDesktopServices.openUrl(QtCore.QUrl(url))
@@ -129,15 +130,14 @@ class BaseMenuGenerator(object):
         """
         paths = self.engine.context.filesystem_locations
         for disk_location in paths:
-            system = sys.platform
-            if system == "linux2":
+            if sgtk.util.is_linux():
                 cmd = 'xdg-open "%s"' % disk_location
-            elif system == "darwin":
+            elif sgtk.util.is_macos():
                 cmd = 'open "%s"' % disk_location
-            elif system == "win32":
+            elif sgtk.util.is_windows():
                 cmd = 'cmd.exe /C start "Folder" "%s"' % disk_location
             else:
-                raise OSError("Platform '%s' is not supported." % system)
+                raise OSError("Platform '%s' is not supported." % sys.platform)
 
             exit_code = os.system(cmd)
             if exit_code != 0:
@@ -157,7 +157,7 @@ class HieroMenuGenerator(BaseMenuGenerator):
         Initializes a new menu generator.
 
         :param engine: The currently-running engine.
-        :type engine: :class:`tank.platform.Engine`
+        :type engine: :class:`sgtk.platform.Engine`
         :param menu_name: The name of the menu to be created.
         """
         super(HieroMenuGenerator, self).__init__(engine, menu_name)
@@ -227,7 +227,7 @@ class HieroMenuGenerator(BaseMenuGenerator):
         }
 
         remove = set()
-        for (key, apps) in self._context_menus_to_apps.iteritems():
+        for (key, apps) in self._context_menus_to_apps.items():
             items = self.engine.get_setting(key)
             for item in items:
                 app_instance_name = item["app_instance"]
@@ -468,7 +468,7 @@ class NukeStudioMenuGenerator(HieroMenuGenerator):
         for (cmd_name, cmd_details) in node_commands.items():
             cmd = NukeAppCommand(self.engine, cmd_name, cmd_details)
 
-            # Get icon if specified - default to tank icon if not specified.
+            # Get icon if specified - default to sgtk icon if not specified.
             icon = cmd.properties.get("icon", self._shotgun_logo)
             command_context = cmd.properties.get("context")
 
@@ -510,7 +510,7 @@ class NukeMenuGenerator(BaseMenuGenerator):
         Initializes a new menu generator.
 
         :param engine: The currently-running engine.
-        :type engine: :class:`tank.platform.Engine`
+        :type engine: :class:`sgtk.platform.Engine`
         :param menu_name: The name of the menu to be created.
         """
         super(NukeMenuGenerator, self).__init__(engine, menu_name)
@@ -575,7 +575,7 @@ class NukeMenuGenerator(BaseMenuGenerator):
 
         for cmd in menu_items:
             if cmd.type == "node":
-                # Get icon if specified - default to tank icon if not specified.
+                # Get icon if specified - default to sgtk icon if not specified.
                 icon = cmd.properties.get("icon", self._shotgun_logo)
                 command_context = cmd.properties.get("context")
 
@@ -714,7 +714,7 @@ class BaseAppCommand(object):
         Initializes a new BaseAppCommand.
 
         :param engine: The currently-running engine.
-        :type engine: :class:`tank.platform.Engine`
+        :type engine: :class:`sgtk.platform.Engine`
         :param name: The name of the command.
         :param command_dict: The properties dictionary of the command.
         """
@@ -805,9 +805,9 @@ class BaseAppCommand(object):
         if self.app:
             doc_url = self.app.documentation_url
             # Deal with nuke's inability to handle unicode.
-            if doc_url.__class__ == unicode:
-                doc_url = unicodedata.normalize("NFKD", doc_url).encode(
-                    "ascii", "ignore"
+            if type(doc_url) == six.text_type:
+                doc_url = six.ensure_str(
+                    unicodedata.normalize("NFKD", doc_url), "ascii", "ignore"
                 )
             return doc_url
         return None
@@ -971,14 +971,14 @@ class NukeAppCommand(BaseAppCommand):
         #
         # Note that because of nuke not using the import_module()
         # system, it's hard to obtain a reference to the engine object
-        # right here - this is why we set a flag on the main tank
+        # right here - this is why we set a flag on the main sgtk
         # object like this.
-        setattr(tank, "_callback_from_non_pane_menu", True)
+        setattr(sgtk, "_callback_from_non_pane_menu", True)
         try:
             self._original_callback()
         finally:
             try:
-                delattr(tank, "_callback_from_non_pane_menu")
+                delattr(sgtk, "_callback_from_non_pane_menu")
             except AttributeError:
                 pass
 

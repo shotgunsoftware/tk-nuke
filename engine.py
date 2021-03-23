@@ -9,7 +9,7 @@
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 from __future__ import print_function
-import tank
+import sgtk
 import nuke
 import sys
 import os
@@ -17,7 +17,7 @@ import nukescripts
 import logging
 
 
-class NukeEngine(tank.platform.Engine):
+class NukeEngine(sgtk.platform.Engine):
     """
     An engine that supports Nuke 6.3v5+, Hiero 9.0+, and Nuke Studio 9.0+
 
@@ -183,11 +183,11 @@ class NukeEngine(tank.platform.Engine):
                 "The Shotgun Pipeline Toolkit has not yet been fully tested with Nuke %d.%dv%d. "
                 "You can continue to use the Toolkit but you may experience bugs or "
                 "instability.  Please report any issues to our support team via %s"
-                % (nuke_version[0], nuke_version[1], nuke_version[2], tank.support_url)
+                % (nuke_version[0], nuke_version[1], nuke_version[2], sgtk.support_url)
             )
 
             # Show nuke message if in UI mode, this is the first time the engine has been started
-            # and the warning dialog isn't overriden by the config. Note that nuke.message isn't
+            # and the warning dialog isn't overridden by the config. Note that nuke.message isn't
             # available in Hiero, so we have to skip this there.
             if (
                 self.has_ui
@@ -213,7 +213,7 @@ class NukeEngine(tank.platform.Engine):
         # does not require this check since it can operate at the site level.
         if not self.in_plugin_mode and self.context.project is None:
             # Must have at least a project in the context to even start!
-            raise tank.TankError(
+            raise sgtk.TankError(
                 "The nuke engine needs at least a project "
                 "in the context in order to start! Your "
                 "context: %s" % self.context
@@ -244,12 +244,12 @@ class NukeEngine(tank.platform.Engine):
         """
         The Nuke-specific portion of engine initialization.
         """
-        # Now prepare tank so that it will be picked up by any new processes
+        # Now prepare sgtk so that it will be picked up by any new processes
         # created by file->new or file->open.
-        # Store data needed for bootstrapping Tank in env vars.
+        # Store data needed for bootstrapping Sgtk in env vars.
         # Used in classic_startup/sgtk_startup.py, and plugins/basic/Python/tk_nuke_basic/plugin_bootstrap.py
         os.environ["TANK_ENGINE"] = self.instance_name
-        os.environ["TANK_CONTEXT"] = tank.context.serialize(self.context)
+        os.environ["TANK_CONTEXT"] = sgtk.context.serialize(self.context)
 
     def post_app_init(self):
         """
@@ -375,7 +375,7 @@ class NukeEngine(tank.platform.Engine):
             # part of saved layouts, nuke will look through
             # a global list of registered panels, try to locate
             # the one it needs and then run the callback.
-            for (panel_id, panel_dict) in self.panels.iteritems():
+            for (panel_id, panel_dict) in self.panels.items():
                 nukescripts.panels.registerPanel(
                     panel_id, panel_dict["callback"],
                 )
@@ -395,7 +395,7 @@ class NukeEngine(tank.platform.Engine):
                 # And also add it to the plugin path - this is so that any
                 # new processes spawned from this one will have access too.
                 # (for example if you do file->open or file->new)
-                tank.util.append_path_to_env_var("NUKE_PATH", app_gizmo_folder)
+                sgtk.util.append_path_to_env_var("NUKE_PATH", app_gizmo_folder)
 
         # Nuke Studio 9 really doesn't like us running commands at startup, so don't.
         if not (nuke.env.get("NukeVersionMajor") == 9 and nuke.env.get("studio")):
@@ -455,7 +455,7 @@ class NukeEngine(tank.platform.Engine):
     def _run_commands_at_startup(self):
         # Build a dictionary mapping app instance names to dictionaries of commands they registered with the engine.
         app_instance_commands = {}
-        for (command_name, value) in self.commands.iteritems():
+        for (command_name, value) in self.commands.items():
             app_instance = value["properties"].get("app")
             if app_instance:
                 # Add entry 'command name: command function' to the command dictionary of this app instance.
@@ -484,7 +484,7 @@ class NukeEngine(tank.platform.Engine):
             else:
                 if not setting_command_name:
                     # Run all commands of the given app instance.
-                    for (command_name, command_function) in command_dict.iteritems():
+                    for (command_name, command_function) in command_dict.items():
                         self.logger.debug(
                             "%s startup running app '%s' command '%s'.",
                             self.name,
@@ -523,12 +523,12 @@ class NukeEngine(tank.platform.Engine):
 
         def run_at_startup():
             # FIXME: This pattern is horrible.
-            tank._callback_from_non_pane_menu = True
+            sgtk._callback_from_non_pane_menu = True
             try:
                 for command in commands_to_run:
                     command()
             finally:
-                delattr(tank, "_callback_from_non_pane_menu")
+                delattr(sgtk, "_callback_from_non_pane_menu")
 
         # We used to call this loop above directly here, but in Nuke 11
         # it is causing a deadlock whenever an app calls
@@ -537,7 +537,7 @@ class NukeEngine(tank.platform.Engine):
         # way that prevents Toolkit to queue new events. Instead, we'll queue
         # the launch of the apps until the main thread has finished executing
         # current events.
-        tank.platform.qt.QtCore.QTimer.singleShot(0, run_at_startup)
+        sgtk.platform.qt.QtCore.QTimer.singleShot(0, run_at_startup)
 
     def destroy_engine(self):
         """
@@ -669,7 +669,7 @@ class NukeEngine(tank.platform.Engine):
 
         self.logger.debug("Showing pane %s - %s from %s", panel_id, title, bundle.name)
 
-        if hasattr(tank, "_callback_from_non_pane_menu"):
+        if hasattr(sgtk, "_callback_from_non_pane_menu"):
             self.logger.debug("Looking for a pane.")
 
             # This global flag is set by the menu callback system
@@ -775,11 +775,22 @@ class NukeEngine(tank.platform.Engine):
         import hiero
 
         for p in hiero.core.projects():
-            if not p.projectRoot():
+
+            # In Nuke 11 and greater the Project.projectRoot and Project.setProjectRoot methods
+            # have been deprecated in favour of Project.exportRootDirectory and
+            # Project.setProjectDirectory.
+            if nuke.env.get("NukeVersionMajor") >= 11 and not p.exportRootDirectory():
                 self.logger.debug(
-                    "Setting projectRoot on %s to: %s", p.name(), self.tank.project_path
+                    "Setting exportRootDirectory on %s to: %s",
+                    p.name(),
+                    self.sgtk.project_path,
                 )
-                p.setProjectRoot(self.tank.project_path)
+                p.setProjectDirectory(self.sgtk.project_path)
+            elif nuke.env.get("NukeVersionMajor") <= 10 and not p.projectRoot():
+                self.logger.debug(
+                    "Setting projectRoot on %s to: %s", p.name(), self.sgtk.project_path
+                )
+                p.setProjectRoot(self.sgtk.project_path)
 
     def _get_dialog_parent(self):
         """
@@ -838,8 +849,8 @@ class NukeEngine(tank.platform.Engine):
                             # we don't need to do anything. There's only one "shot_step"
                             # environment out there, regardless of what .nk file was
                             # selected.
-                            env_name = target_context.tank.execute_core_hook(
-                                tank.constants.PICK_ENVIRONMENT_CORE_HOOK_NAME,
+                            env_name = target_context.sgtk.execute_core_hook(
+                                sgtk.constants.PICK_ENVIRONMENT_CORE_HOOK_NAME,
                                 context=target_context,
                             )
 
@@ -881,7 +892,7 @@ class NukeEngine(tank.platform.Engine):
         # user purposefully opened, and we don't want to hose the
         # toolkit context with that.
         try:
-            tk = tank.tank_from_path(script_path)
+            tk = sgtk.tank_from_path(script_path)
 
             # Extract a new context based on the file and change to that
             # context.
@@ -890,7 +901,7 @@ class NukeEngine(tank.platform.Engine):
             )
 
             if new_context != self.context:
-                tank.platform.change_context(new_context)
+                sgtk.platform.change_context(new_context)
         except Exception:
             self.logger.debug("Unable to determine context for file: %s", script_path)
 
@@ -898,13 +909,13 @@ class NukeEngine(tank.platform.Engine):
         """
         This will be called at initialisation time and will allow
         a user to control various aspects of how QT is being used
-        by Tank. The method should return a dictionary with a number
+        by Sgtk. The method should return a dictionary with a number
         of specific keys, outlined below.
 
         * qt_core - the QtCore module to use
         * qt_gui - the QtGui module to use
         * wrapper - the Qt wrapper root module, e.g. PySide
-        * dialog_base - base class for to use for Tank's dialog factory
+        * dialog_base - base class for to use for Sgtk's dialog factory
 
         We are overriding the base implementation so that we can set the "SHOTGUN_SKIP_QTWEBENGINEWIDGETS_IMPORT"
         environment variable for versions of Nuke on Windows that use PySide2. Once this is done, we call the
@@ -921,7 +932,7 @@ class NukeEngine(tank.platform.Engine):
 
         # Disable the importing of the web engine widgets submodule from PySide2
         # if this is a Windows environment. Failing to do so will cause Nuke to freeze on startup.
-        if nuke_version[0] > 10 and sys.platform.startswith("win"):
+        if nuke_version[0] > 10 and sgtk.util.is_windows():
             self.logger.debug(
                 "Nuke 11+ on Windows can deadlock if QtWebEngineWidgets "
                 "is imported. Setting SHOTGUN_SKIP_QTWEBENGINEWIDGETS_IMPORT=1..."
@@ -958,7 +969,7 @@ class NukeEngine(tank.platform.Engine):
         # Only add these current project entries if we have a value from settings.
         # Otherwise, they have opted to not show them.
         if proj and current_proj_fav:
-            proj_roots = self.tank.roots
+            proj_roots = self.sgtk.roots
             for root_name, root_path in proj_roots.items():
                 dir_name = current_proj_fav
                 if len(proj_roots) > 1:

@@ -9,7 +9,6 @@
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 import os
-import sys
 import sgtk
 import pprint
 
@@ -151,7 +150,7 @@ class NukeLauncher(SoftwareLauncher):
             executable.
         """
         executable_version = match.get("version")
-        if sys.platform == "darwin":
+        if sgtk.util.is_macos():
             # Extract the product from the file path, as each product of the product has an actual
             # executable associated to it.
 

@@ -40,5 +40,3 @@ variables:
 # Launch into the build pipeline.
 jobs:
 - template: build-pipeline.yml@templates
-  parameters:
-    skip_tests: true
