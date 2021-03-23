@@ -176,8 +176,8 @@ class NukeEngine(tank.platform.Engine):
             self.logger.error(msg)
             return
 
-        # Versions > 10.5 have not yet been tested so show a message to that effect.
-        if nuke_version[0] > 12 or (nuke_version[0] == 12 and nuke_version[1] > 2):
+        # Versions > 13.0 have not yet been tested so show a message to that effect.
+        if nuke_version[0] > 13 or (nuke_version[0] == 13 and nuke_version[1] > 0):
             # This is an untested version of Nuke.
             msg = (
                 "The Shotgun Pipeline Toolkit has not yet been fully tested with Nuke %d.%dv%d. "
