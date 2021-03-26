@@ -60,7 +60,7 @@ def _setup_sgtk():
     except Exception as e:
         hiero.core.log.error(
             "Shotgun: Could not create context! "
-            "Shotgun Toolkit will be disabled. Details: %s" % str(e)
+            "SG Toolkit will be disabled. Details: %s" % str(e)
         )
         return
 
