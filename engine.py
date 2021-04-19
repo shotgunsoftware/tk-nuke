@@ -180,7 +180,7 @@ class NukeEngine(sgtk.platform.Engine):
         if nuke_version[0] > 13 or (nuke_version[0] == 13 and nuke_version[1] > 0):
             # This is an untested version of Nuke.
             msg = (
-                "The Shotgun Pipeline Toolkit has not yet been fully tested with Nuke %d.%dv%d. "
+                "The SG Pipeline Toolkit has not yet been fully tested with Nuke %d.%dv%d. "
                 "You can continue to use the Toolkit but you may experience bugs or "
                 "instability.  Please report any issues to our support team via %s"
                 % (nuke_version[0], nuke_version[1], nuke_version[2], sgtk.support_url)
@@ -196,7 +196,7 @@ class NukeEngine(sgtk.platform.Engine):
                 >= self.get_setting("compatibility_dialog_min_version", 11)
                 and not self.hiero_enabled
             ):
-                nuke.message("Warning - Shotgun Pipeline Toolkit!\n\n%s" % msg)
+                nuke.message("Warning - SG Pipeline Toolkit!\n\n%s" % msg)
 
             # Log the warning.
             self.logger.warning(msg)
@@ -622,11 +622,11 @@ class NukeEngine(sgtk.platform.Engine):
                 hiero.core.log.debug(msg)
         else:
             if record.levelno >= logging.CRITICAL:
-                nuke.critical("Shotgun Critical: %s" % msg)
+                nuke.critical("SG Critical: %s" % msg)
             elif record.levelno >= logging.ERROR:
-                nuke.error("Shotgun Error: %s" % msg)
+                nuke.error("SG Error: %s" % msg)
             elif record.levelno >= logging.WARNING:
-                nuke.warning("Shotgun Warning: %s" % msg)
+                nuke.warning("SG Warning: %s" % msg)
 
         # Sends the message to the script editor.
         self.async_execute_in_main_thread(print, msg)
@@ -960,8 +960,8 @@ class NukeEngine(sgtk.platform.Engine):
         for x in supported_entity_types:
             nuke.removeFavoriteDir("Tank Current %s" % x)
         nuke.removeFavoriteDir("Tank Current Work")
-        nuke.removeFavoriteDir("Shotgun Current Project")
-        nuke.removeFavoriteDir("Shotgun Current Work")
+        nuke.removeFavoriteDir("SG Current Project")
+        nuke.removeFavoriteDir("SG Current Work")
 
         # Add favorties for current project root(s).
         proj = self.context.project

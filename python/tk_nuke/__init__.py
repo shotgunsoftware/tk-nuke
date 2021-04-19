@@ -40,10 +40,10 @@ def __show_tank_disabled_message(details):
     Message when user clicks the tank is disabled menu
     """
     msg = (
-        "Shotgun integration is currently disabled because the file you "
-        "have opened is not recognized. Shotgun cannot "
+        "SG integration is currently disabled because the file you "
+        "have opened is not recognized. SG cannot "
         "determine which Context the currently open file belongs to. "
-        "In order to enable the Shotgun functionality, try opening another "
+        "In order to enable the SG functionality, try opening another "
         "file. <br><br><i>Details:</i> %s" % details
     )
     nuke.message(msg)
@@ -60,7 +60,7 @@ def __create_tank_disabled_menu(details):
         cmd = lambda d=details: __show_tank_disabled_message(d)
         sg_menu.addCommand("Toolkit is disabled.", cmd)
     else:
-        msg = "The Shotgun Pipeline Toolkit is disabled: %s" % details
+        msg = "The SG Pipeline Toolkit is disabled: %s" % details
         logger.error(msg)
         nuke.error(msg)
 
@@ -72,7 +72,7 @@ def __create_tank_error_menu():
     """
     (exc_type, exc_value, exc_traceback) = sys.exc_info()
     message = ""
-    message += "Shotgun encountered a problem starting the Engine. "
+    message += "SG encountered a problem starting the Engine. "
     message += "Please contact us via %s\n\n" % sgtk.support_url
     message += "Exception: %s - %s\n" % (exc_type, exc_value)
     message += "Traceback (most recent call last):\n"
@@ -86,9 +86,9 @@ def __create_tank_error_menu():
         def cmd(m=message):
             nuke.message(m)
 
-        sg_menu.addCommand("[Shotgun Error - Click for details]", cmd)
+        sg_menu.addCommand("[SG Error - Click for details]", cmd)
     else:
-        msg = "The Shotgun Pipeline Toolkit caught an error: %s" % message
+        msg = "The SG Pipeline Toolkit caught an error: %s" % message
         logger.error(msg)
         nuke.error(msg)
 

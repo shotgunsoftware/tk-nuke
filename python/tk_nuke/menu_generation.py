@@ -67,7 +67,7 @@ class BaseMenuGenerator(object):
         """
         (exc_type, exc_value, exc_traceback) = sys.exc_info()
         msg = (
-            "Message: Shotgun encountered a problem starting the Engine.\n"
+            "Message: SG encountered a problem starting the Engine.\n"
             "Exception: %s - %s\n"
             "Traceback (most recent call last): %s"
             % (exc_type, exc_value, "\n".join(traceback.format_tb(exc_traceback)))
@@ -83,8 +83,8 @@ class BaseMenuGenerator(object):
                         disabled.
         """
         msg = (
-            "Shotgun integration is currently disabled because the file you "
-            "have opened is not recognized. Shotgun cannot "
+            "SG integration is currently disabled because the file you "
+            "have opened is not recognized. SG cannot "
             "determine which Context the currently-open file belongs to. "
             "In order to enable Toolkit integration, try opening another "
             "file. <br><br><i>Details:</i> %s" % details

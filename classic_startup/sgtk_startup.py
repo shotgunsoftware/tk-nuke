@@ -55,7 +55,7 @@ def _setup_sgtk(output_handle):
     except Exception as e:
         output_handle(
             "Shotgun: Could not create context! "
-            "Shotgun Toolkit will be disabled. Details: %s" % str(e)
+            "SG Toolkit will be disabled. Details: %s" % str(e)
         )
         return
 
