@@ -259,7 +259,7 @@ class NukeSubmitForReviewPlugin(HookBaseClass):
                 extra={
                     "action_show_in_shotgun": {
                         "label": "Show Version",
-                        "tooltip": "Reveal the version in Shotgun.",
+                        "tooltip": "Reveal the version in ShotGrid.",
                         "entity": version,
                     }
                 },

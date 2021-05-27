@@ -55,7 +55,7 @@ def __create_tank_disabled_menu(details):
     """
     if nuke.env.get("gui"):
         nuke_menu = nuke.menu("Nuke")
-        sg_menu = nuke_menu.addMenu("Shotgun")
+        sg_menu = nuke_menu.addMenu("ShotGrid")
         sg_menu.clearMenu()
         cmd = lambda d=details: __show_tank_disabled_message(d)
         sg_menu.addCommand("Toolkit is disabled.", cmd)
@@ -80,7 +80,7 @@ def __create_tank_error_menu():
 
     if nuke.env.get("gui"):
         nuke_menu = nuke.menu("Nuke")
-        sg_menu = nuke_menu.addMenu("Shotgun")
+        sg_menu = nuke_menu.addMenu("ShotGrid")
         sg_menu.clearMenu()
 
         def cmd(m=message):
