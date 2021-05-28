@@ -166,7 +166,7 @@ class HieroMenuGenerator(BaseMenuGenerator):
 
     def _create_hiero_menu(self, add_commands=True, commands=None):
         """
-        Creates the "Shotgun" menu in Hiero.
+        Creates the "ShotGrid" menu in Hiero.
 
         :param bool add_commands: If True, menu commands will be added to the
             newly-created menu. If False, the menu will be created, but no
@@ -183,7 +183,7 @@ class HieroMenuGenerator(BaseMenuGenerator):
 
         from sgtk.platform.qt import QtGui
 
-        self._menu_handle = QtGui.QMenu("Shotgun")
+        self._menu_handle = QtGui.QMenu("ShotGrid")
         help = hiero.ui.findMenuAction("Cache")
         menuBar = hiero.ui.menuBar()
         menuBar.insertMenu(help, self._menu_handle)
@@ -285,7 +285,7 @@ class HieroMenuGenerator(BaseMenuGenerator):
 
     def create_menu(self, add_commands=True):
         """
-        Creates the "Shotgun" menu in Hiero.
+        Creates the "ShotGrid" menu in Hiero.
 
         :param add_commands:    If True, menu commands will be added to
                                 the newly-created menu. If False, the menu
@@ -298,7 +298,7 @@ class HieroMenuGenerator(BaseMenuGenerator):
 
     def destroy_menu(self):
         """
-        Destroys the "Shotgun" menu.
+        Destroys the "ShotGrid" menu.
         """
         import hiero
 
@@ -340,7 +340,7 @@ class HieroMenuGenerator(BaseMenuGenerator):
             return
 
         event.menu.addSeparator()
-        menu = event.menu.addAction("Shotgun")
+        menu = event.menu.addAction("ShotGrid")
         menu.setEnabled(False)
 
         for cmd in cmds:
@@ -379,7 +379,7 @@ class HieroMenuGenerator(BaseMenuGenerator):
 
         # create the menu object
         ctx_menu = self._menu_handle.addMenu(ctx_name)
-        action = ctx_menu.addAction("Jump to Shotgun")
+        action = ctx_menu.addAction("Jump to ShotGrid")
         action.triggered.connect(self._jump_to_sg)
 
         if ctx.filesystem_locations:
@@ -518,7 +518,7 @@ class NukeMenuGenerator(BaseMenuGenerator):
 
     def create_menu(self, add_commands=True):
         """
-        Creates the "Shotgun" menu in Nuke.
+        Creates the "ShotGrid" menu in Nuke.
 
         :param add_commands:    If True, menu commands will be added to
                                 the newly-created menu. If False, the menu
@@ -601,7 +601,7 @@ class NukeMenuGenerator(BaseMenuGenerator):
             if cmd.type == "panel":
                 # First make sure the Shotgun pane menu exists.
                 pane_menu = nuke.menu("Pane").addMenu(
-                    "Shotgun", icon=self._shotgun_logo,
+                    "ShotGrid", icon=self._shotgun_logo,
                 )
                 # Now set up the callback.
                 cmd.add_command_to_pane_menu(pane_menu)
@@ -662,7 +662,7 @@ class NukeMenuGenerator(BaseMenuGenerator):
 
         # Create the menu object.
         ctx_menu = menu_handle.addMenu(ctx_name, icon=self._shotgun_logo_blue)
-        ctx_menu.addCommand("Jump to Shotgun", self._jump_to_sg)
+        ctx_menu.addCommand("Jump to ShotGrid", self._jump_to_sg)
         if ctx.filesystem_locations:
             ctx_menu.addCommand("Jump to File System", self._jump_to_fs)
         ctx_menu.addSeparator()

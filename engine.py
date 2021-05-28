@@ -256,7 +256,7 @@ class NukeEngine(sgtk.platform.Engine):
         Called when all apps have initialized.
         """
         # Figure out what our menu will be named.
-        menu_name = "Shotgun"
+        menu_name = "ShotGrid"
         if self.get_setting("use_sgtk_as_menu_name", False):
             menu_name = "Sgtk"
 
@@ -275,7 +275,7 @@ class NukeEngine(sgtk.platform.Engine):
         else:
             self.post_app_init_nuke(menu_name)
 
-    def post_app_init_studio(self, menu_name="Shotgun"):
+    def post_app_init_studio(self, menu_name="ShotGrid"):
         """
         The Nuke Studio specific portion of the engine's post-init process.
 
@@ -319,7 +319,7 @@ class NukeEngine(sgtk.platform.Engine):
         """
         pass
 
-    def post_app_init_hiero(self, menu_name="Shotgun"):
+    def post_app_init_hiero(self, menu_name="ShotGrid"):
         """
         The Hiero-specific portion of the engine's post-init process.
 
@@ -344,7 +344,7 @@ class NukeEngine(sgtk.platform.Engine):
                 "kAfterProjectLoad", self._on_project_load_callback,
             )
 
-    def post_app_init_nuke(self, menu_name="Shotgun"):
+    def post_app_init_nuke(self, menu_name="ShotGrid"):
         """
         The Nuke-specific portion of the engine's post-init process.
 

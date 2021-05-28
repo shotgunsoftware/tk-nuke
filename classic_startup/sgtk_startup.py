@@ -42,11 +42,11 @@ def _setup_sgtk(output_handle):
     try:
         import sgtk
     except Exception as e:
-        output_handle("Shotgun: Could not import sgtk! Disabling: %s" % str(e))
+        output_handle("ShotGrid: Could not import sgtk! Disabling: %s" % str(e))
         return
 
     if not "TANK_ENGINE" in os.environ:
-        output_handle("Shotgun: Unable to determine engine to start!")
+        output_handle("ShotGrid: Unable to determine engine to start!")
         return
 
     engine_name = os.environ.get("TANK_ENGINE")
@@ -54,7 +54,7 @@ def _setup_sgtk(output_handle):
         context = sgtk.context.deserialize(os.environ.get("TANK_CONTEXT"))
     except Exception as e:
         output_handle(
-            "Shotgun: Could not create context! "
+            "ShotGrid: Could not create context! "
             "SG Toolkit will be disabled. Details: %s" % str(e)
         )
         return
@@ -62,7 +62,7 @@ def _setup_sgtk(output_handle):
     try:
         sgtk.platform.start_engine(engine_name, context.sgtk, context)
     except Exception as e:
-        output_handle("Shotgun: Could not start engine: %s" % str(e))
+        output_handle("ShotGrid: Could not start engine: %s" % str(e))
         return
 
 

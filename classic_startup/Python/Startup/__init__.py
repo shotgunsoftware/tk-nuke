@@ -47,11 +47,11 @@ def _setup_sgtk():
     try:
         import tank
     except Exception as e:
-        hiero.core.log.error("Shotgun: Could not import sgtk! Disabling: %s" % str(e))
+        hiero.core.log.error("ShotGrid: Could not import sgtk! Disabling: %s" % str(e))
         return
 
     if not "TANK_ENGINE" in os.environ:
-        hiero.core.log.error("Shotgun: Unable to determine engine to start!")
+        hiero.core.log.error("ShotGrid: Unable to determine engine to start!")
         return
 
     engine_name = os.environ.get("TANK_ENGINE")
@@ -59,7 +59,7 @@ def _setup_sgtk():
         context = tank.context.deserialize(os.environ.get("TANK_CONTEXT"))
     except Exception as e:
         hiero.core.log.error(
-            "Shotgun: Could not create context! "
+            "ShotGrid: Could not create context! "
             "SG Toolkit will be disabled. Details: %s" % str(e)
         )
         return
@@ -67,7 +67,7 @@ def _setup_sgtk():
     try:
         engine = tank.platform.start_engine(engine_name, context.tank, context)
     except Exception as e:
-        hiero.core.log.error("Shotgun: Could not start engine: %s" % str(e))
+        hiero.core.log.error("ShotGrid: Could not start engine: %s" % str(e))
         return
 
 
