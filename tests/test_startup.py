@@ -258,11 +258,11 @@ class TestStartup(TankTestBase):
             # In Python 3 glob doesn't use os.listdir to help iterate over the folders
             # It uses it's own _iterdir method, which still produces the same output.
 
-            if sys.version_info[0:2] >= (3, 9):  # six.PY3:
+            if sys.version_info[0:2] >= (3, 9):
                 with mock.patch("glob._iterdir", wraps=self._glob_wrapper39):
                     yield
 
-            elif sys.version_info[0:2] >= (3, 7):
+            elif six.PY3:
                 with mock.patch("glob._iterdir", wraps=self._glob_wrapper):
                     yield
 
