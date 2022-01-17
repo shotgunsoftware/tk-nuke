@@ -11,6 +11,8 @@
 from __future__ import with_statement
 from __future__ import print_function
 import os
+import sys
+import six
 
 from tank_test.tank_test_base import TankTestBase
 from tank_test.tank_test_base import setUpModule  # noqa
@@ -151,9 +153,9 @@ class TestStartup(TankTestBase):
             directory, basename = os.path.split(path)
             return self._recursive_split(directory) + [basename]
 
-    def _glob_wrapper(self, directory, dironly):
+    def _glob_wrapper39(self, directory, dironly):
         """
-        This is a mocked implementation of glob._iterdir.
+        This is a mocked implementation of glob._iterdir for Python >= 3.9.
         This method fakes a folder hierarchy.
         """
         tokens = self._recursive_split(directory)
@@ -164,11 +166,36 @@ class TestStartup(TankTestBase):
             self.assertIn(t, current_depth)
             # Remember where we are in the current hierarchy.
             current_depth = current_depth[t]
+        current_depth_gen = (file for file in current_depth)
+
+        # We've reached the folder we wanted, build a list.
+        # We're using dicts for intermediary folders and lists for leaf folders so iterate
+        # on the items to get all the names.
+        return current_depth_gen
+
+
+    def _glob_wrapper(self, directory, dironly):
+        """
+        This is a mocked implementation of glob._iterdir.
+        This method fakes a folder hierarchy.
+        """
+                
+        tokens = self._recursive_split(directory)
+        # Start at the root of the mocked file system
+        current_depth = self._get_os_neutral_hierarchy()
+        # Ensure we are getting back the right variations.
+
+        for t in tokens:
+            # Unit test should not be asking for folders outside of the DCC hierarchy.
+            self.assertIn(t, current_depth)
+            # Remember where we are in the current hierarchy.
+            current_depth = current_depth[t]
 
         # We've reached the folder we wanted, build a list.
         # We're using dicts for intermediary folders and lists for leaf folders so iterate
         # on the items to get all the names.
         return iter(current_depth)
+
 
     def _os_listdir_wrapper(self, directory):
         """
@@ -232,8 +259,13 @@ class TestStartup(TankTestBase):
         if "TK_NO_FOLDER_MOCKING" not in os.environ:
             # In Python 3 glob doesn't use os.listdir to help iterate over the folders
             # It uses it's own _iterdir method, which still produces the same output.
-            if six.PY3:
+
+            if sys.version_info[0:2] == (3, 7):
                 with mock.patch("glob._iterdir", wraps=self._glob_wrapper):
+                    yield
+
+            if sys.version_info[0:2] >= (3, 9):#six.PY3:
+                with mock.patch("glob._iterdir", wraps=self._glob_wrapper39):
                     yield
             else:
                 with mock.patch("os.listdir", wraps=self._os_listdir_wrapper):
@@ -464,6 +496,12 @@ class TestStartup(TankTestBase):
 
         with self._mock_folder_listing():
             # Ensure we are getting back the right variations.
+            # import sys
+            # sys.path.append(
+            #     r"/Applications/PyCharm.app/Contents/debug-eggs/pydevd-pycharm.egg")
+            # import pydevd
+            # pydevd.settrace('localhost', port=5490, stdoutToServer=True,
+            #                 stderrToServer=True)
             software_versions = self._nuke_launcher.scan_software()
 
         expected_variations = set(expected_variations)
