@@ -173,13 +173,12 @@ class TestStartup(TankTestBase):
         # on the items to get all the names.
         return current_depth_gen
 
-
     def _glob_wrapper(self, directory, dironly):
         """
         This is a mocked implementation of glob._iterdir.
         This method fakes a folder hierarchy.
         """
-                
+
         tokens = self._recursive_split(directory)
         # Start at the root of the mocked file system
         current_depth = self._get_os_neutral_hierarchy()
@@ -195,7 +194,6 @@ class TestStartup(TankTestBase):
         # We're using dicts for intermediary folders and lists for leaf folders so iterate
         # on the items to get all the names.
         return iter(current_depth)
-
 
     def _os_listdir_wrapper(self, directory):
         """
@@ -264,7 +262,7 @@ class TestStartup(TankTestBase):
                 with mock.patch("glob._iterdir", wraps=self._glob_wrapper):
                     yield
 
-            if sys.version_info[0:2] >= (3, 9):#six.PY3:
+            if sys.version_info[0:2] >= (3, 9):  # six.PY3:
                 with mock.patch("glob._iterdir", wraps=self._glob_wrapper39):
                     yield
             else:
@@ -496,12 +494,6 @@ class TestStartup(TankTestBase):
 
         with self._mock_folder_listing():
             # Ensure we are getting back the right variations.
-            # import sys
-            # sys.path.append(
-            #     r"/Applications/PyCharm.app/Contents/debug-eggs/pydevd-pycharm.egg")
-            # import pydevd
-            # pydevd.settrace('localhost', port=5490, stdoutToServer=True,
-            #                 stderrToServer=True)
             software_versions = self._nuke_launcher.scan_software()
 
         expected_variations = set(expected_variations)
