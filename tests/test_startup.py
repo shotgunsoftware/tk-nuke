@@ -262,7 +262,7 @@ class TestStartup(TankTestBase):
                 with mock.patch("glob._iterdir", wraps=self._glob_wrapper):
                     yield
 
-            if sys.version_info[0:2] >= (3, 9):  # six.PY3:
+            elif sys.version_info[0:2] >= (3, 9):  # six.PY3:
                 with mock.patch("glob._iterdir", wraps=self._glob_wrapper39):
                     yield
             else:
