@@ -12,7 +12,6 @@ from __future__ import with_statement
 from __future__ import print_function
 import os
 import sys
-import six
 
 from tank_test.tank_test_base import TankTestBase
 from tank_test.tank_test_base import setUpModule  # noqa
