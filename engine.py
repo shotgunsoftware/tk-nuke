@@ -176,8 +176,8 @@ class NukeEngine(sgtk.platform.Engine):
             self.logger.error(msg)
             return
 
-        # Versions > 13.0 have not yet been tested so show a message to that effect.
-        if nuke_version[0] > 13 or (nuke_version[0] == 13 and nuke_version[1] > 0):
+        # Versions > 13.1 have not yet been tested so show a message to that effect.
+        if nuke_version[0] > 13 or (nuke_version[0] == 13 and nuke_version[1] > 1):
             # This is an untested version of Nuke.
             msg = (
                 "The SG Pipeline Toolkit has not yet been fully tested with Nuke %d.%dv%d. "
