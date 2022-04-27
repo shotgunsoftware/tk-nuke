@@ -297,11 +297,13 @@ class NukeEngine(sgtk.platform.Engine):
                 self._context_switcher = tk_nuke.PluginStudioContextSwitcher(self)
             else:
                 hiero.core.events.registerInterest(
-                    "kAfterNewProjectCreated", self.set_project_root,
+                    "kAfterNewProjectCreated",
+                    self.set_project_root,
                 )
 
                 hiero.core.events.registerInterest(
-                    "kAfterProjectLoad", self._on_project_load_callback,
+                    "kAfterProjectLoad",
+                    self._on_project_load_callback,
                 )
 
                 self._context_switcher = tk_nuke.ClassicStudioContextSwitcher(self)
@@ -310,7 +312,8 @@ class NukeEngine(sgtk.platform.Engine):
                 # processed. This ensure that all Nuke gizmos for the target environment
                 # will be available.
                 hiero.core.events.registerInterest(
-                    "kSelectionChanged", self._handle_studio_selection_change,
+                    "kSelectionChanged",
+                    self._handle_studio_selection_change,
                 )
 
     def log_user_attribute_metric(self, name, value):
@@ -337,11 +340,13 @@ class NukeEngine(sgtk.platform.Engine):
             self._menu_generator.create_menu()
 
             hiero.core.events.registerInterest(
-                "kAfterNewProjectCreated", self.set_project_root,
+                "kAfterNewProjectCreated",
+                self.set_project_root,
             )
 
             hiero.core.events.registerInterest(
-                "kAfterProjectLoad", self._on_project_load_callback,
+                "kAfterProjectLoad",
+                self._on_project_load_callback,
             )
 
     def post_app_init_nuke(self, menu_name="ShotGrid"):
@@ -377,7 +382,8 @@ class NukeEngine(sgtk.platform.Engine):
             # the one it needs and then run the callback.
             for (panel_id, panel_dict) in self.panels.items():
                 nukescripts.panels.registerPanel(
-                    panel_id, panel_dict["callback"],
+                    panel_id,
+                    panel_dict["callback"],
                 )
 
         # Iterate over all apps, if there is a gizmo folder, add it to nuke path.
@@ -555,15 +561,18 @@ class NukeEngine(sgtk.platform.Engine):
             import hiero.core
 
             hiero.core.events.unregisterInterest(
-                "kAfterNewProjectCreated", self.set_project_root,
+                "kAfterNewProjectCreated",
+                self.set_project_root,
             )
             hiero.core.events.unregisterInterest(
-                "kAfterProjectLoad", self._on_project_load_callback,
+                "kAfterProjectLoad",
+                self._on_project_load_callback,
             )
 
             if self.studio_enabled:
                 hiero.core.events.unregisterInterest(
-                    "kSelectionChanged", self._handle_studio_selection_change,
+                    "kSelectionChanged",
+                    self._handle_studio_selection_change,
                 )
 
     def post_context_change(self, old_context, new_context):
@@ -897,7 +906,8 @@ class NukeEngine(sgtk.platform.Engine):
             # Extract a new context based on the file and change to that
             # context.
             new_context = tk.context_from_path(
-                script_path, previous_context=self.context,
+                script_path,
+                previous_context=self.context,
             )
 
             if new_context != self.context:
