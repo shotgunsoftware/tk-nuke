@@ -638,7 +638,10 @@ class UpdateFlameClipPlugin(HookBaseClass):
         #     </userData>
         # </version>
         date_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        formatted_name = _generate_flame_clip_name(item, render_path_fields,)
+        formatted_name = _generate_flame_clip_name(
+            item,
+            render_path_fields,
+        )
 
         # <version type="version" uid="%s">
         version_node = xml.createElement("version")
@@ -775,7 +778,10 @@ def _get_flame_frame_spec_from_path(path):
     # We need to get all files that match the pattern from disk so that we
     # can determine what the min and max frame number is. We replace the
     # frame number or token with a * wildcard.
-    glob_path = "%s%s" % (re.sub(match.group(2), "*", root), ext,)
+    glob_path = "%s%s" % (
+        re.sub(match.group(2), "*", root),
+        ext,
+    )
     files = glob.glob(glob_path)
 
     # Our pattern from above matches against the file root, so we need
@@ -850,7 +856,10 @@ def _generate_flame_clip_name(item, publish_fields):
     # foo1234  -> foo
     # foo_1234 -> foo
     default_name = re.sub(r"[._]*\d+$", "", default_name)
-    rp_name = publish_fields.get("name", default_name,)
+    rp_name = publish_fields.get(
+        "name",
+        default_name,
+    )
     rp_channel = publish_fields.get("channel")
 
     if rp_name and rp_channel:

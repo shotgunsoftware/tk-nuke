@@ -51,7 +51,12 @@ class NukePanelWidget(nukescripts.panels.PythonPanel):
         # we cannot pass parameters to the constructor of our wrapper class
         # directly, so instead pass them via a special class method
         ToolkitWidgetWrapper.set_init_parameters(
-            widget_class, panel_id, bundle, self, args, kwargs,
+            widget_class,
+            panel_id,
+            bundle,
+            self,
+            args,
+            kwargs,
         )
 
         # Run parent constructor

@@ -286,7 +286,8 @@ class TestStartup(TankTestBase):
             return cls._mac_mock_hierarchy
 
     def _get_plugin_environment(
-        self, dcc_path,
+        self,
+        dcc_path,
     ):
         """
         Returns the expected environment variables dictionary for a plugin.
