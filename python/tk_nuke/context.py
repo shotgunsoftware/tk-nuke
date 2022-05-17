@@ -189,7 +189,10 @@ class ClassicStudioContextSwitcher(object):
         """
         tk = tank.tank_from_path(script)
 
-        context = tk.context_from_path(script, previous_context=self.engine.context,)
+        context = tk.context_from_path(
+            script,
+            previous_context=self.engine.context,
+        )
 
         if context.project is None:
             raise tank.TankError(
@@ -233,7 +236,8 @@ class ClassicStudioContextSwitcher(object):
             # Extract a new context based on the file and change to that
             # context.
             new_context = tk.context_from_path(
-                file_name, previous_context=self.context,
+                file_name,
+                previous_context=self.context,
             )
 
             self.change_context(new_context)
@@ -270,7 +274,8 @@ class ClassicStudioContextSwitcher(object):
                     return
 
                 new_ctx = tk.context_from_path(
-                    file_name, previous_context=self.context,
+                    file_name,
+                    previous_context=self.context,
                 )
 
             # Now change the context for the engine and apps.
@@ -346,7 +351,8 @@ class ClassicStudioContextSwitcher(object):
 
         # Event for context switching from Hiero to Nuke.
         hiero.core.events.registerInterest(
-            hiero.core.events.EventType.kContextChanged, self._eventHandler,
+            hiero.core.events.EventType.kContextChanged,
+            self._eventHandler,
         )
 
         for func_desc in self._event_desc:
@@ -381,7 +387,8 @@ class ClassicStudioContextSwitcher(object):
         import hiero.core
 
         hiero.core.events.unregisterInterest(
-            hiero.core.events.EventType.kContextChanged, self._eventHandler,
+            hiero.core.events.EventType.kContextChanged,
+            self._eventHandler,
         )
 
         func_descs = only or self._event_desc
