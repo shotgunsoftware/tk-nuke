@@ -254,11 +254,13 @@ class NukeEngine(sgtk.platform.Engine):
         """
         https://jira.autodesk.com/browse/SG-25374
         Weblogin does not show up in Nuke 11 and makes Nuke 12 and 13 to crash
-        
+
         To avoid Nuke crash, a monkeypatch of on_dialog_closed is required,
-        here the user is warned about restarted nuke is needed to continue. 
+        here the user is warned about restarted nuke is needed to continue.
         """
-        sgtk.authentication.sso_saml2.core.sso_saml2_core.SsoSaml2Core.on_dialog_closed = self._sso_on_dialog_closed_monkeypatch  # noqa
+        sgtk.authentication.sso_saml2.core.sso_saml2_core.SsoSaml2Core.on_dialog_closed = (
+            self._sso_on_dialog_closed_monkeypatch
+        )  # noqa
 
     @staticmethod
     def _on_dialog_closed_monkeypatch(self, result):
@@ -287,19 +289,18 @@ class NukeEngine(sgtk.platform.Engine):
                 )
                 """
                 https://jira.autodesk.com/browse/SG-25374
-                Weblogin does not show up in Nuke 11 and makes Nuke 12 and 
+                Weblogin does not show up in Nuke 11 and makes Nuke 12 and
                 13 to crash
                 """
                 self._QtGui.QMessageBox.critical(
                     self._dialog,
                     "Warning",
                     "ShotGrid session expired, you will need to restart Nuke.",
-                    self._QtGui.QMessageBox.Ok)
+                    self._QtGui.QMessageBox.Ok,
+                )
 
                 status = QtGui.QDialog.Rejected
-                self._logger.warn(
-                    "Skipping web login dialog for Nuke DCC."
-                )
+                self._logger.warn("Skipping web login dialog for Nuke DCC.")
                 self._login_status = self._login_status or status
             else:
                 self.resolve_event()
