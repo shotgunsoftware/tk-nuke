@@ -295,7 +295,8 @@ class NukeEngine(sgtk.platform.Engine):
                 self._QtGui.QMessageBox.critical(
                     self._dialog,
                     "Warning",
-                    "ShotGrid session expired, you will need to restart Nuke.",
+                    "The ShotGrid session has expired, to continue using "
+                    "ShotGrid in Nuke, please restart Nuke.",
                     self._QtGui.QMessageBox.Ok,
                 )
 
