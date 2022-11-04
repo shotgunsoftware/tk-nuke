@@ -151,7 +151,16 @@ class NukeEngine(sgtk.platform.Engine):
         any apps are loaded.
         """
 
-        self.logger.debug("%s: Initializing...", self)
+        self.logger.debug("%s: HOLA ARIEL Initializing...", self)
+
+        # import sys
+        # sys.path.append(
+        #     r"/Users/ariel.calzada/Library/Application Support/JetBrains"
+        #     r"/Toolbox/apps/PyCharm-P/ch-0/222.4345.23/PyCharm.app/Contents"
+        #     r"/debug-eggs/pydevd-pycharm.egg")
+        # import pydevd
+        # pydevd.settrace('localhost', port=5490, stdoutToServer=True,
+        #                 stderrToServer=True)
 
         import tk_nuke
 
@@ -258,9 +267,9 @@ class NukeEngine(sgtk.platform.Engine):
         To avoid Nuke crash, a monkeypatch of on_dialog_closed is required,
         here the user is warned about restarted nuke is needed to continue.
         """
-        sgtk.authentication.sso_saml2.core.sso_saml2_core.SsoSaml2Core.on_dialog_closed = (
-            self._sso_on_dialog_closed_monkeypatch
-        )  # noqa
+        # sgtk.authentication.sso_saml2.core.sso_saml2_core.SsoSaml2Core.on_dialog_closed = (
+        #     self._sso_on_dialog_closed_monkeypatch
+        # )  # noqa
 
     @staticmethod
     def _on_dialog_closed_monkeypatch(self, result):
