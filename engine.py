@@ -293,16 +293,12 @@ class NukeEngine(sgtk.platform.Engine):
                 """
                 base_dir = os.path.dirname(os.path.abspath(__file__))
 
-                msgbox_icon = os.path.join(
-                    base_dir,
-                    "resources",
-                    "alert_icon.png"
-                )
+                msgbox_icon = os.path.join(base_dir, "resources", "alert_icon.png")
                 msgbox_parent = self._dialog
                 msgbox_title = "Nuke"
                 msgbox_text = [
                     "The ShotGrid user session has expired.",
-                    "To continue using ShotGrid in Nuke, please restart Nuke."
+                    "To continue using ShotGrid in Nuke, please restart Nuke.",
                 ]
                 msgbox_buttons = self._QtGui.QMessageBox.Ok
 
