@@ -151,16 +151,7 @@ class NukeEngine(sgtk.platform.Engine):
         any apps are loaded.
         """
 
-        self.logger.debug("%s: HOLA ARIEL Initializing...", self)
-
-        # import sys
-        # sys.path.append(
-        #     r"/Users/ariel.calzada/Library/Application Support/JetBrains"
-        #     r"/Toolbox/apps/PyCharm-P/ch-0/222.4345.23/PyCharm.app/Contents"
-        #     r"/debug-eggs/pydevd-pycharm.egg")
-        # import pydevd
-        # pydevd.settrace('localhost', port=5490, stdoutToServer=True,
-        #                 stderrToServer=True)
+        self.logger.debug("%s: Initializing...", self)
 
         import tk_nuke
 
@@ -267,9 +258,15 @@ class NukeEngine(sgtk.platform.Engine):
         To avoid Nuke crash, a monkeypatch of on_dialog_closed is required,
         here the user is warned about restarted nuke is needed to continue.
         """
-        # sgtk.authentication.sso_saml2.core.sso_saml2_core.SsoSaml2Core.on_dialog_closed = (
-        #     self._sso_on_dialog_closed_monkeypatch
-        # )  # noqa
+        # import sys
+        # sys.path.append(r"/Users/ariel.calzada/pydev")
+        # import pydevd
+        # pydevd.settrace('localhost', port=5490, stdoutToServer=True,
+        #                 stderrToServer=True)
+
+        sgtk.authentication.sso_saml2.core.sso_saml2_core.SsoSaml2Core.on_dialog_closed = (
+            self._on_dialog_closed_monkeypatch
+        )
 
     @staticmethod
     def _on_dialog_closed_monkeypatch(self, result):
@@ -301,13 +298,14 @@ class NukeEngine(sgtk.platform.Engine):
                 Weblogin does not show up in Nuke 11 and makes Nuke 12 and
                 13 to crash
                 """
-                self._QtGui.QMessageBox.critical(
-                    self._dialog,
-                    "Your ShotGrid session has expired",
-                    "The ShotGrid session has expired, to continue using "
-                    "ShotGrid in Nuke, please restart Nuke.",
-                    self._QtGui.QMessageBox.Ok,
-                )
+                # self._QtGui.QMessageBox.critical(
+                #     self._dialog,
+                #     "Your ShotGrid session has expired",
+                #     "The ShotGrid session has expired, to continue using "
+                #     "ShotGrid in Nuke, please restart Nuke.",
+                #     self._QtGui.QMessageBox.Ok,
+                # )
+                nuke.message("Hola mundo")
 
                 status = QtGui.QDialog.Rejected
                 self._logger.warn("Skipping web login dialog for Nuke DCC.")
