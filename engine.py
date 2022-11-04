@@ -11,7 +11,6 @@
 from __future__ import print_function
 import sgtk
 import nuke
-import sys
 import os
 import nukescripts
 import logging
@@ -258,12 +257,6 @@ class NukeEngine(sgtk.platform.Engine):
         To avoid Nuke crash, a monkeypatch of on_dialog_closed is required,
         here the user is warned about restarted nuke is needed to continue.
         """
-        # import sys
-        # sys.path.append(r"/Users/ariel.calzada/pydev")
-        # import pydevd
-        # pydevd.settrace('localhost', port=5490, stdoutToServer=True,
-        #                 stderrToServer=True)
-
         sgtk.authentication.sso_saml2.core.sso_saml2_core.SsoSaml2Core.on_dialog_closed = (
             self._on_dialog_closed_monkeypatch
         )
@@ -298,14 +291,29 @@ class NukeEngine(sgtk.platform.Engine):
                 Weblogin does not show up in Nuke 11 and makes Nuke 12 and
                 13 to crash
                 """
-                # self._QtGui.QMessageBox.critical(
-                #     self._dialog,
-                #     "Your ShotGrid session has expired",
-                #     "The ShotGrid session has expired, to continue using "
-                #     "ShotGrid in Nuke, please restart Nuke.",
-                #     self._QtGui.QMessageBox.Ok,
-                # )
-                nuke.message("Hola mundo")
+                base_dir = os.path.dirname(os.path.abspath(__file__))
+
+                msgbox_icon = os.path.join(
+                    base_dir,
+                    "resources",
+                    "alert_icon.png"
+                )
+                msgbox_parent = self._dialog
+                msgbox_title = "Nuke"
+                msgbox_text = [
+                    "The ShotGrid user session has expired.",
+                    "To continue using ShotGrid in Nuke, please restart Nuke."
+                ]
+                msgbox_buttons = self._QtGui.QMessageBox.Ok
+
+                msgbox = self._QtGui.QMessageBox(msgbox_parent)
+                msgbox.setWindowTitle(msgbox_title)
+                msgbox.setText("\n\n".join(msgbox_text))
+                msgbox.setStandardButtons(msgbox_buttons)
+                msgbox.setIconPixmap(self._QtGui.QPixmap(msgbox_icon))
+                msgbox.activateWindow()  # for Windows
+                msgbox.raise_()  # for MacOS
+                msgbox.exec_()
 
                 status = QtGui.QDialog.Rejected
                 self._logger.warn("Skipping web login dialog for Nuke DCC.")
