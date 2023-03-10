@@ -15,7 +15,6 @@ import os
 import nukescripts
 import logging
 
-
 class NukeEngine(sgtk.platform.Engine):
     """
     An engine that supports Nuke 6.3v5+, Hiero 9.0+, and Nuke Studio 9.0+
@@ -175,8 +174,8 @@ class NukeEngine(sgtk.platform.Engine):
             self.logger.error(msg)
             return
 
-        # Versions > 13.1 have not yet been tested so show a message to that effect.
-        if nuke_version[0] > 13 or (nuke_version[0] == 13 and nuke_version[1] > 1):
+        # Versions > 14.0 have not yet been tested so show a message to that effect.
+        if nuke_version[0] > 14 or (nuke_version[0] == 14 and nuke_version[1] > 0):
             # This is an untested version of Nuke.
             msg = (
                 "The SG Pipeline Toolkit has not yet been fully tested with Nuke %d.%dv%d. "
