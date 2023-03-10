@@ -15,6 +15,7 @@ import os
 import nukescripts
 import logging
 
+
 class NukeEngine(sgtk.platform.Engine):
     """
     An engine that supports Nuke 6.3v5+, Hiero 9.0+, and Nuke Studio 9.0+
