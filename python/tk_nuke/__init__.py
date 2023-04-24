@@ -195,6 +195,14 @@ def sgtk_on_load_callback():
                 logger.debug("Instance '%s'is associated with '%s'" % (tk, file_name))
             except sgtk.TankError as e:
                 logger.debug("No tk instance associated with '%s': %s" % (file_name, e))
+                if engine.get_setting("allow_keep_context_from_project"):
+                    cur_project = engine.context.project
+                    if cur_project:
+                        logger.debug("Trying to create context from Project '%s'" % (cur_project["name"]))
+                        tk = sgtk.sgtk_from_entity("Project", cur_project["id"])
+                        proj_ctx = tk.context_from_entity("Project", cur_project["id"])
+                        __engine_refresh(proj_ctx)
+                        return
                 __create_tank_disabled_menu(e)
                 return
 
