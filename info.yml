@@ -19,6 +19,12 @@ configuration:
                      context every time the currently loaded file changes. Defaults to True."
         default_value: True
 
+    allow_keep_context_from_project:
+        type: bool
+        description: "Controls whether Toolkit should try to keep project context when it
+                     fails to switch context automatically based on file location. Defaults to False."
+        default_value: False
+
     launch_builtin_plugins:
         type: list
         description: Comma-separated list of tk-nuke plugins to load when launching Nuke. Use
