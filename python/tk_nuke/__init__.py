@@ -201,7 +201,10 @@ def sgtk_on_load_callback():
                 if engine.get_setting("allow_keep_context_from_project"):
                     cur_project = engine.context.project
                     if cur_project:
-                        logger.debug("Trying to create context from Project '%s'" % (cur_project["name"]))
+                        logger.debug(
+                            "Trying to create context from Project '%s'"
+                            % (cur_project["name"])
+                        )
                         tk = sgtk.sgtk_from_entity("Project", cur_project["id"])
                         proj_ctx = tk.context_from_entity("Project", cur_project["id"])
                         __engine_refresh(proj_ctx)
