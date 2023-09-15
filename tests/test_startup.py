@@ -154,7 +154,7 @@ class TestStartup(TankTestBase):
 
     def _glob_wrapper39(self, directory, dironly):
         """
-        This is a mocked implementation of glob._iterdir for Python >= 3.9.
+        This is a mocked implementation of glob._iterdir for Python 3.9.
         This method fakes a folder hierarchy.
         """
         tokens = self._recursive_split(directory)
@@ -171,6 +171,13 @@ class TestStartup(TankTestBase):
         # We're using dicts for intermediary folders and lists for leaf folders so iterate
         # on the items to get all the names.
         return current_depth_gen
+    
+    def _glob_wrapper310(self, directory, dir_fd, dironly):
+        """
+        This is a mocked implementation of glob._iterdir for Python >= 3.10.
+        https://docs.python.org/3/whatsnew/3.10.html#glob
+        """
+        return self._glob_wrapper39(directory, dironly)
 
     def _glob_wrapper(self, directory, dironly):
         """
@@ -257,7 +264,11 @@ class TestStartup(TankTestBase):
             # In Python 3 glob doesn't use os.listdir to help iterate over the folders
             # It uses it's own _iterdir method, which still produces the same output.
 
-            if sys.version_info[0:2] >= (3, 9):
+            if sys.version_info[0:2] >= (3, 10):
+                with mock.patch("glob._iterdir", wraps=self._glob_wrapper310):
+                    yield
+
+            elif sys.version_info[0:2] >= (3, 9):
                 with mock.patch("glob._iterdir", wraps=self._glob_wrapper39):
                     yield
 
