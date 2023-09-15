@@ -171,7 +171,7 @@ class TestStartup(TankTestBase):
         # We're using dicts for intermediary folders and lists for leaf folders so iterate
         # on the items to get all the names.
         return current_depth_gen
-    
+
     def _glob_wrapper310(self, directory, dir_fd, dironly):
         """
         This is a mocked implementation of glob._iterdir for Python >= 3.10.
@@ -375,7 +375,6 @@ class TestStartup(TankTestBase):
         Ensures Nuke LaunchInformation is correct.
         """
         for engine_instance, is_classic in self._get_engine_configurations():
-
             self._test_launch_information(
                 engine_instance,
                 "Nuke.app",
@@ -397,7 +396,6 @@ class TestStartup(TankTestBase):
         Ensures NukeX LaunchInformation is correct.
         """
         for engine_instance, is_classic in self._get_engine_configurations():
-
             self._test_launch_information(
                 engine_instance,
                 "NukeX.app",
@@ -419,7 +417,6 @@ class TestStartup(TankTestBase):
         Ensures Nuke Assist LaunchInformation is correct.
         """
         for engine_instance, is_classic in self._get_engine_configurations():
-
             self._test_launch_information(
                 engine_instance,
                 "NukeAssist.app",
