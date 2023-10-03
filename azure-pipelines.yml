@@ -14,8 +14,7 @@ resources:
     - repository: templates
       type: github
       name: shotgunsoftware/tk-ci-tools
-      ref: python-310-311  # To revert to master before merge
-      # ref: refs/heads/master
+      ref: refs/heads/master
       endpoint: shotgunsoftware
 
 # We want builds to trigger for 3 reasons:
