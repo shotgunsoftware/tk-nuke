@@ -215,7 +215,13 @@ class TestStartup(TankTestBase):
         Ensures we are returning the right variants for Nuke 10.
         """
         self._test_nuke(
-            ["Nuke 10.0v5", "NukeX 10.0v5", "NukeStudio 10.0v5", "NukeAssist 10.0v5"],
+            [
+                "Nuke 10.0v5",
+                "NukeX 10.0v5",
+                "NukeStudio 10.0v5",
+                "NukeAssist 10.0v5",
+                "Hiero 10.0v5",
+            ],
             "10.0v5",
         )
 
@@ -224,7 +230,13 @@ class TestStartup(TankTestBase):
         Ensures we are returning the right variants for Nuke 9.
         """
         self._test_nuke(
-            ["Nuke 9.0v8", "NukeX 9.0v8", "NukeStudio 9.0v8", "NukeAssist 9.0v8"],
+            [
+                "Nuke 9.0v8",
+                "NukeX 9.0v8",
+                "NukeStudio 9.0v8",
+                "NukeAssist 9.0v8",
+                "Hiero 9.0v8",
+            ],
             "9.0v8",
         )
 
