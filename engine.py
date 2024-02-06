@@ -60,7 +60,7 @@ class NukeEngine(sgtk.platform.Engine):
         module is loaded, which executes its own `bootstrap_sgtk()` function.
 
     Step 4:
-        The `bootstrap_sgtk()` function handles initializing SGTK and starting up
+        The `bootstrap_sgtk()` function handles initializing PTR and starting up
         the tk-nuke engine.
 
     .. NOTE:: There is also an addition made to the `NUKE_PATH` environment variable
@@ -179,9 +179,10 @@ class NukeEngine(sgtk.platform.Engine):
         if nuke_version[0] > 14 or (nuke_version[0] == 14 and nuke_version[1] > 1):
             # This is an untested version of Nuke.
             msg = (
-                "The SG Pipeline Toolkit has not yet been fully tested with Nuke %d.%dv%d. "
-                "You can continue to use the Toolkit but you may experience bugs or "
-                "instability.  Please report any issues to our support team via %s"
+                "The Flow Production Tracking Toolkit has not yet been fully tested "
+                "with Nuke %d.%dv%d. You can continue to use the Toolkit but you may "
+                "experience bugs or instability. Please report any issues to our support "
+                "team via %s"
                 % (nuke_version[0], nuke_version[1], nuke_version[2], sgtk.support_url)
             )
 
@@ -195,7 +196,7 @@ class NukeEngine(sgtk.platform.Engine):
                 >= self.get_setting("compatibility_dialog_min_version", 11)
                 and not self.hiero_enabled
             ):
-                nuke.message("Warning - SG Pipeline Toolkit!\n\n%s" % msg)
+                nuke.message("Warning - Flow Production Tracking Toolkit!\n\n%s" % msg)
 
             # Log the warning.
             self.logger.warning(msg)
@@ -297,8 +298,9 @@ class NukeEngine(sgtk.platform.Engine):
                 msgbox_parent = self._dialog
                 msgbox_title = "Nuke"
                 msgbox_text = [
-                    "The ShotGrid user session has expired.",
-                    "To continue using ShotGrid in Nuke, please restart Nuke.",
+                    "The Flow Production Tracking user session has expired.",
+                    "To continue using Flow Production Tracking in Nuke, please "
+                    "restart Nuke.",
                 ]
                 msgbox_buttons = self._QtGui.QMessageBox.Ok
 
@@ -332,7 +334,7 @@ class NukeEngine(sgtk.platform.Engine):
         Called when all apps have initialized.
         """
         # Figure out what our menu will be named.
-        menu_name = "ShotGrid"
+        menu_name = "Flow Production Tracking"
         if self.get_setting("use_sgtk_as_menu_name", False):
             menu_name = "Sgtk"
 
@@ -351,7 +353,7 @@ class NukeEngine(sgtk.platform.Engine):
         else:
             self.post_app_init_nuke(menu_name)
 
-    def post_app_init_studio(self, menu_name="ShotGrid"):
+    def post_app_init_studio(self, menu_name="Flow Production Tracking"):
         """
         The Nuke Studio specific portion of the engine's post-init process.
 
@@ -398,7 +400,7 @@ class NukeEngine(sgtk.platform.Engine):
         """
         pass
 
-    def post_app_init_hiero(self, menu_name="ShotGrid"):
+    def post_app_init_hiero(self, menu_name="Flow Production Tracking"):
         """
         The Hiero-specific portion of the engine's post-init process.
 
@@ -425,7 +427,7 @@ class NukeEngine(sgtk.platform.Engine):
                 self._on_project_load_callback,
             )
 
-    def post_app_init_nuke(self, menu_name="ShotGrid"):
+    def post_app_init_nuke(self, menu_name="Flow Production Tracking"):
         """
         The Nuke-specific portion of the engine's post-init process.
 
@@ -707,11 +709,11 @@ class NukeEngine(sgtk.platform.Engine):
                 hiero.core.log.debug(msg)
         else:
             if record.levelno >= logging.CRITICAL:
-                nuke.critical("SG Critical: %s" % msg)
+                nuke.critical("PTR Critical: %s" % msg)
             elif record.levelno >= logging.ERROR:
-                nuke.error("SG Error: %s" % msg)
+                nuke.error("PTR Error: %s" % msg)
             elif record.levelno >= logging.WARNING:
-                nuke.warning("SG Warning: %s" % msg)
+                nuke.warning("PTR Warning: %s" % msg)
 
         # Sends the message to the script editor.
         self.async_execute_in_main_thread(print, msg)
@@ -958,7 +960,7 @@ class NukeEngine(sgtk.platform.Engine):
     def _on_project_load_callback(self, event):
         """
         Callback executed after project load in Hiero and Nuke Studio. This
-        triggers an attempt to change the SGTK context to that of the newly
+        triggers an attempt to change the PTR context to that of the newly
         opened project file.
 
         :param event:   The event object from Hiero/NS.
@@ -1046,8 +1048,8 @@ class NukeEngine(sgtk.platform.Engine):
         for x in supported_entity_types:
             nuke.removeFavoriteDir("Tank Current %s" % x)
         nuke.removeFavoriteDir("Tank Current Work")
-        nuke.removeFavoriteDir("SG Current Project")
-        nuke.removeFavoriteDir("SG Current Work")
+        nuke.removeFavoriteDir("PTR Current Project")
+        nuke.removeFavoriteDir("PTR Current Work")
 
         # Add favorties for current project root(s).
         proj = self.context.project

@@ -116,8 +116,8 @@ def __launch_sgtk(base_config, plugin_id, bundle_cache):
         # credentials.
         user = sgtk.authentication.ShotgunAuthenticator().get_user()
     except sgtk.authentication.AuthenticationCancelled:
-        # TODO: show a "SG > Login" menu in nuke
-        sgtk_logger.info("SG login was cancelled by the user.")
+        # TODO: show a "PTR > Login" menu in nuke
+        sgtk_logger.info("PTR login was cancelled by the user.")
         return
 
     # Create a boostrap manager for the logged in user with the plug-in

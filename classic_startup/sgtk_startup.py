@@ -26,7 +26,7 @@ def bootstrap_sgtk():
 
 def _clean_env():
     """
-    Cleans up SGTK related environment variables.
+    Cleans up PTR related environment variables.
     """
     # We don't clean up the TANK_CONTEXT or TANK_ENGINE a these get reset with the current context
     # and used if a new Nuke session is spawned from this one.
@@ -42,11 +42,13 @@ def _setup_sgtk(output_handle):
     try:
         import sgtk
     except Exception as e:
-        output_handle("ShotGrid: Could not import sgtk! Disabling: %s" % str(e))
+        output_handle(
+            "Flow Production Tracking: Could not import sgtk! Disabling: %s" % str(e)
+        )
         return
 
     if not "TANK_ENGINE" in os.environ:
-        output_handle("ShotGrid: Unable to determine engine to start!")
+        output_handle("Flow Production Tracking: Unable to determine engine to start!")
         return
 
     engine_name = os.environ.get("TANK_ENGINE")
@@ -54,15 +56,15 @@ def _setup_sgtk(output_handle):
         context = sgtk.context.deserialize(os.environ.get("TANK_CONTEXT"))
     except Exception as e:
         output_handle(
-            "ShotGrid: Could not create context! "
-            "SG Toolkit will be disabled. Details: %s" % str(e)
+            "Flow Production Tracking: Could not create context! "
+            "Flow Production Tracking Toolkit will be disabled. Details: %s" % str(e)
         )
         return
 
     try:
         sgtk.platform.start_engine(engine_name, context.sgtk, context)
     except Exception as e:
-        output_handle("ShotGrid: Could not start engine: %s" % str(e))
+        output_handle("Flow Production Tracking: Could not start engine: %s" % str(e))
         return
 
 

@@ -75,7 +75,7 @@ class BaseMenuGenerator(object):
         """
         (exc_type, exc_value, exc_traceback) = sys.exc_info()
         msg = (
-            "Message: SG encountered a problem starting the Engine.\n"
+            "Message: PTR encountered a problem starting the Engine.\n"
             "Exception: %s - %s\n"
             "Traceback (most recent call last): %s"
             % (exc_type, exc_value, "\n".join(traceback.format_tb(exc_traceback)))
@@ -91,8 +91,8 @@ class BaseMenuGenerator(object):
                         disabled.
         """
         msg = (
-            "SG integration is currently disabled because the file you "
-            "have opened is not recognized. SG cannot "
+            "PTR integration is currently disabled because the file you "
+            "have opened is not recognized. PTR cannot "
             "determine which Context the currently-open file belongs to. "
             "In order to enable Toolkit integration, try opening another "
             "file. <br><br><i>Details:</i> %s" % details
@@ -174,7 +174,7 @@ class HieroMenuGenerator(BaseMenuGenerator):
 
     def _create_hiero_menu(self, add_commands=True, commands=None):
         """
-        Creates the "ShotGrid" menu in Hiero.
+        Creates the "Flow Production Tracking" menu in Hiero.
 
         :param bool add_commands: If True, menu commands will be added to the
             newly-created menu. If False, the menu will be created, but no
@@ -191,7 +191,7 @@ class HieroMenuGenerator(BaseMenuGenerator):
 
         from sgtk.platform.qt import QtGui
 
-        self._menu_handle = QtGui.QMenu("ShotGrid")
+        self._menu_handle = QtGui.QMenu("Flow Production Tracking")
         help = hiero.ui.findMenuAction("Cache")
         menuBar = hiero.ui.menuBar()
         menuBar.insertMenu(help, self._menu_handle)
@@ -296,7 +296,7 @@ class HieroMenuGenerator(BaseMenuGenerator):
 
     def create_menu(self, add_commands=True):
         """
-        Creates the "ShotGrid" menu in Hiero.
+        Creates the "Flow Production Tracking" menu in Hiero.
 
         :param add_commands:    If True, menu commands will be added to
                                 the newly-created menu. If False, the menu
@@ -309,7 +309,7 @@ class HieroMenuGenerator(BaseMenuGenerator):
 
     def destroy_menu(self):
         """
-        Destroys the "ShotGrid" menu.
+        Destroys the "Flow Production Tracking" menu.
         """
         import hiero
 
@@ -338,7 +338,7 @@ class HieroMenuGenerator(BaseMenuGenerator):
     def eventHandler(self, event):
         """
         The engine's Hiero-specific event handler. This is called by Hiero when
-        events are triggered, which then handles running SGTK-specific event
+        events are triggered, which then handles running PTR-specific event
         behaviors.
 
         :param event:   The Hiero event object that was triggered.
@@ -354,7 +354,7 @@ class HieroMenuGenerator(BaseMenuGenerator):
             return
 
         event.menu.addSeparator()
-        menu = event.menu.addAction("ShotGrid")
+        menu = event.menu.addAction("Flow Production Tracking")
         menu.setEnabled(False)
 
         for cmd in cmds:
@@ -393,7 +393,7 @@ class HieroMenuGenerator(BaseMenuGenerator):
 
         # create the menu object
         ctx_menu = self._menu_handle.addMenu(ctx_name)
-        action = ctx_menu.addAction("Jump to ShotGrid")
+        action = ctx_menu.addAction("Jump to Flow Production Tracking")
         action.triggered.connect(self._jump_to_sg)
 
         if ctx.filesystem_locations:
@@ -534,7 +534,7 @@ class NukeMenuGenerator(BaseMenuGenerator):
 
     def create_menu(self, add_commands=True):
         """
-        Creates the "ShotGrid" menu in Nuke.
+        Creates the "Flow Production Tracking" menu in Nuke.
 
         :param add_commands:    If True, menu commands will be added to
                                 the newly-created menu. If False, the menu
@@ -617,7 +617,7 @@ class NukeMenuGenerator(BaseMenuGenerator):
             if cmd.type == "panel":
                 # First make sure the Shotgun pane menu exists.
                 pane_menu = nuke.menu("Pane").addMenu(
-                    "ShotGrid",
+                    "Flow Production Tracking",
                     icon=self._shotgun_logo,
                 )
                 # Now set up the callback.
@@ -681,7 +681,7 @@ class NukeMenuGenerator(BaseMenuGenerator):
 
         # Create the menu object.
         ctx_menu = menu_handle.addMenu(ctx_name, icon=self._shotgun_logo_blue)
-        ctx_menu.addCommand("Jump to ShotGrid", self._jump_to_sg)
+        ctx_menu.addCommand("Jump to Flow Production Tracking", self._jump_to_sg)
         if ctx.filesystem_locations:
             ctx_menu.addCommand("Jump to File System", self._jump_to_fs)
         ctx_menu.addSeparator()
@@ -844,7 +844,7 @@ class HieroAppCommand(BaseAppCommand):
         """
         Initializes a new AppCommand object.
 
-        :param engine:  The SGTK engine controlling the session.
+        :param engine:  The PTR engine controlling the session.
         :param name:    The name of the command.
         :command_dict:  A dict containing the information necessary to
                         register a command with Hiero's menu manager. This
