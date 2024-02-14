@@ -60,7 +60,7 @@ def __create_tank_disabled_menu(details):
         cmd = lambda d=details: __show_tank_disabled_message(d)
         sg_menu.addCommand("Toolkit is disabled.", cmd)
     else:
-        msg = "The Flow Production Tracking Toolkit is disabled: %s" % details
+        msg = "The Flow Production Tracking is disabled: %s" % details
         logger.error(msg)
         nuke.error(msg)
 
@@ -88,7 +88,7 @@ def __create_tank_error_menu():
 
         sg_menu.addCommand("[PTR Error - Click for details]", cmd)
     else:
-        msg = "The Flow Production Tracking Toolkit caught an error: %s" % message
+        msg = "The Flow Production Tracking caught an error: %s" % message
         logger.error(msg)
         nuke.error(msg)
 

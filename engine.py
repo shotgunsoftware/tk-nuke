@@ -179,7 +179,7 @@ class NukeEngine(sgtk.platform.Engine):
         if nuke_version[0] > 14 or (nuke_version[0] == 14 and nuke_version[1] > 1):
             # This is an untested version of Nuke.
             msg = (
-                "The Flow Production Tracking Toolkit has not yet been fully tested "
+                "The Flow Production Tracking has not yet been fully tested "
                 "with Nuke %d.%dv%d. You can continue to use the Toolkit but you may "
                 "experience bugs or instability. Please report any issues to our support "
                 "team via %s"
@@ -196,7 +196,7 @@ class NukeEngine(sgtk.platform.Engine):
                 >= self.get_setting("compatibility_dialog_min_version", 11)
                 and not self.hiero_enabled
             ):
-                nuke.message("Warning - Flow Production Tracking Toolkit!\n\n%s" % msg)
+                nuke.message("Warning - Flow Production Tracking!\n\n%s" % msg)
 
             # Log the warning.
             self.logger.warning(msg)

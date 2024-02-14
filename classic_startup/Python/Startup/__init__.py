@@ -64,7 +64,7 @@ def _setup_sgtk():
     except Exception as e:
         hiero.core.log.error(
             "Flow Production Tracking: Could not create context! "
-            "Flow Production Tracking Toolkit will be disabled. Details: %s" % str(e)
+            "Flow Production Tracking will be disabled. Details: %s" % str(e)
         )
         return
 
