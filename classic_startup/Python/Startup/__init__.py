@@ -13,7 +13,7 @@ import os
 
 def bootstrap_sgtk():
     """
-    Bootstraps SGTK to Nuke Studio or Hiero.
+    Bootstraps PTR to Nuke Studio or Hiero.
     """
     import hiero.core
 
@@ -30,7 +30,7 @@ def bootstrap_sgtk():
 
 def _clean_env():
     """
-    Cleans up SGTK related environment variables.
+    Cleans up PTR related environment variables.
     """
     for var in ["TANK_ENGINE", "TANK_CONTEXT", "TANK_FILE_TO_OPEN"]:
         if var in os.environ:
@@ -47,11 +47,15 @@ def _setup_sgtk():
     try:
         import tank
     except Exception as e:
-        hiero.core.log.error("ShotGrid: Could not import sgtk! Disabling: %s" % str(e))
+        hiero.core.log.error(
+            "Flow Production Tracking: Could not import sgtk! Disabling: %s" % str(e)
+        )
         return
 
     if not "TANK_ENGINE" in os.environ:
-        hiero.core.log.error("ShotGrid: Unable to determine engine to start!")
+        hiero.core.log.error(
+            "Flow Production Tracking: Unable to determine engine to start!"
+        )
         return
 
     engine_name = os.environ.get("TANK_ENGINE")
@@ -59,15 +63,17 @@ def _setup_sgtk():
         context = tank.context.deserialize(os.environ.get("TANK_CONTEXT"))
     except Exception as e:
         hiero.core.log.error(
-            "ShotGrid: Could not create context! "
-            "SG Toolkit will be disabled. Details: %s" % str(e)
+            "Flow Production Tracking: Could not create context! "
+            "Flow Production Tracking will be disabled. Details: %s" % str(e)
         )
         return
 
     try:
         engine = tank.platform.start_engine(engine_name, context.tank, context)
     except Exception as e:
-        hiero.core.log.error("ShotGrid: Could not start engine: %s" % str(e))
+        hiero.core.log.error(
+            "Flow Production Tracking: Could not start engine: %s" % str(e)
+        )
         return
 
 

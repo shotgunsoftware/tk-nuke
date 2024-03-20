@@ -40,10 +40,10 @@ def __show_tank_disabled_message(details):
     Message when user clicks the tank is disabled menu
     """
     msg = (
-        "SG integration is currently disabled because the file you "
-        "have opened is not recognized. SG cannot "
+        "PTR integration is currently disabled because the file you "
+        "have opened is not recognized. PTR cannot "
         "determine which Context the currently open file belongs to. "
-        "In order to enable the SG functionality, try opening another "
+        "In order to enable the PTR functionality, try opening another "
         "file. <br><br><i>Details:</i> %s" % details
     )
     nuke.message(msg)
@@ -55,12 +55,12 @@ def __create_tank_disabled_menu(details):
     """
     if nuke.env.get("gui"):
         nuke_menu = nuke.menu("Nuke")
-        sg_menu = nuke_menu.addMenu("ShotGrid")
+        sg_menu = nuke_menu.addMenu("Flow Production Tracking")
         sg_menu.clearMenu()
         cmd = lambda d=details: __show_tank_disabled_message(d)
         sg_menu.addCommand("Toolkit is disabled.", cmd)
     else:
-        msg = "The SG Pipeline Toolkit is disabled: %s" % details
+        msg = "The Flow Production Tracking is disabled: %s" % details
         logger.error(msg)
         nuke.error(msg)
 
@@ -72,7 +72,7 @@ def __create_tank_error_menu():
     """
     (exc_type, exc_value, exc_traceback) = sys.exc_info()
     message = ""
-    message += "SG encountered a problem starting the Engine. "
+    message += "PTR encountered a problem starting the Engine. "
     message += "Please contact us via %s\n\n" % sgtk.support_url
     message += "Exception: %s - %s\n" % (exc_type, exc_value)
     message += "Traceback (most recent call last):\n"
@@ -80,15 +80,15 @@ def __create_tank_error_menu():
 
     if nuke.env.get("gui"):
         nuke_menu = nuke.menu("Nuke")
-        sg_menu = nuke_menu.addMenu("ShotGrid")
+        sg_menu = nuke_menu.addMenu("Flow Production Tracking")
         sg_menu.clearMenu()
 
         def cmd(m=message):
             nuke.message(m)
 
-        sg_menu.addCommand("[SG Error - Click for details]", cmd)
+        sg_menu.addCommand("[PTR Error - Click for details]", cmd)
     else:
-        msg = "The SG Pipeline Toolkit caught an error: %s" % message
+        msg = "The Flow Production Tracking caught an error: %s" % message
         logger.error(msg)
         nuke.error(msg)
 
@@ -131,7 +131,7 @@ def __sgtk_on_save_callback():
     file_name = nuke.root().name()
 
     try:
-        logger.debug("SGTK Callback: addOnScriptSave('%s')" % file_name)
+        logger.debug("PTR Callback: addOnScriptSave('%s')" % file_name)
         # this file could be in another project altogether, so create a new Tank
         # API instance.
         try:
@@ -168,7 +168,7 @@ def sgtk_on_load_callback():
     interrupts the normal workflows in Nuke.
     """
     try:
-        logger.debug("SGTK Callback: addOnScriptLoad")
+        logger.debug("PTR Callback: addOnScriptLoad")
         # If we have opened a file then we should check if automatic
         # context switching is enabled and change if possible
         engine = sgtk.platform.current_engine()

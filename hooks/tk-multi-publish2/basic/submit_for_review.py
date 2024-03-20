@@ -47,10 +47,10 @@ class NukeSubmitForReviewPlugin(HookBaseClass):
         review_url = "https://help.autodesk.com/view/SGSUB/ENU/?guid=SG_Supervisor_Artist_sa_review_approval_sa_review_workflow_html"
 
         return """<p>
-        Submits a movie file to ShotGrid for review. An entry will be
-        created in ShotGrid which will include a reference to the movie file's current
-        path on disk. Other users will be able to access the file via
-        the <b><a href='%s'>review app</a></b> on the ShotGrid website.</p>
+        Submits a movie file to Flow Production Tracking for review. An entry will be
+        created in Flow Production Tracking which will include a reference to the movie file's
+        current path on disk. Other users will be able to access the file via
+        the <b><a href='%s'>review app</a></b> on the Flow Production Tracking website.</p>
         """ % (
             review_url
         )
@@ -259,7 +259,7 @@ class NukeSubmitForReviewPlugin(HookBaseClass):
                 extra={
                     "action_show_in_shotgun": {
                         "label": "Show Version",
-                        "tooltip": "Reveal the version in ShotGrid.",
+                        "tooltip": "Reveal the version in Flow Production Tracking.",
                         "entity": version,
                     }
                 },
