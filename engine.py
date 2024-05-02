@@ -152,6 +152,8 @@ class NukeEngine(sgtk.platform.Engine):
 
         self.logger.debug("%s: Initializing...", self)
 
+        MAX_VERSION = (15, 0)  # untested above this so display a warning
+
         import tk_nuke
 
         tk_nuke.tank_ensure_callbacks_registered(engine=self)
@@ -176,7 +178,9 @@ class NukeEngine(sgtk.platform.Engine):
             return
 
         # Versions > 14.0 have not yet been tested so show a message to that effect.
-        if nuke_version[0] > 14 or (nuke_version[0] == 14 and nuke_version[1] > 1):
+        if nuke_version[0] > MAX_VERSION[0] or (
+            nuke_version[0] == MAX_VERSION[0] and nuke_version[1] > MAX_VERSION[1]
+        ):
             # This is an untested version of Nuke.
             msg = (
                 "The Flow Production Tracking has not yet been fully tested "
