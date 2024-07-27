@@ -16,9 +16,13 @@ import nuke
 import os
 import unicodedata
 import traceback
-from tank_vendor import six
 import nukescripts.openurl
 import nukescripts
+
+try:
+    from tank_vendor import sgutils
+except ImportError:
+    from tank_vendor import six as sgutils
 
 # -----------------------------------------------------------------------------
 
@@ -824,8 +828,8 @@ class BaseAppCommand(object):
         if self.app:
             doc_url = self.app.documentation_url
             # Deal with nuke's inability to handle unicode.
-            if type(doc_url) == six.text_type:
-                doc_url = six.ensure_str(
+            if type(doc_url) == str:
+                doc_url = sgutils.ensure_str(
                     unicodedata.normalize("NFKD", doc_url), "ascii", "ignore"
                 )
             return doc_url
