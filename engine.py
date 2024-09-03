@@ -370,7 +370,9 @@ class NukeEngine(sgtk.platform.Engine):
             from hiero.core import env as hiero_env
 
             # Create the menu!
-            self._menu_generator = tk_nuke.NukeStudioMenuGenerator(self, self._menu_name)
+            self._menu_generator = tk_nuke.NukeStudioMenuGenerator(
+                self, self._menu_name
+            )
             self._menu_generator.create_menu()
 
             # No context switching in plugin mode.
@@ -457,7 +459,7 @@ class NukeEngine(sgtk.platform.Engine):
             # part of saved layouts, nuke will look through
             # a global list of registered panels, try to locate
             # the one it needs and then run the callback.
-            for (panel_id, panel_dict) in self.panels.items():
+            for panel_id, panel_dict in self.panels.items():
                 nukescripts.panels.registerPanel(
                     panel_id,
                     panel_dict["callback"],
@@ -538,7 +540,7 @@ class NukeEngine(sgtk.platform.Engine):
     def _run_commands_at_startup(self):
         # Build a dictionary mapping app instance names to dictionaries of commands they registered with the engine.
         app_instance_commands = {}
-        for (command_name, value) in self.commands.items():
+        for command_name, value in self.commands.items():
             app_instance = value["properties"].get("app")
             if app_instance:
                 # Add entry 'command name: command function' to the command dictionary of this app instance.
@@ -550,7 +552,6 @@ class NukeEngine(sgtk.platform.Engine):
         commands_to_run = []
         # Run the series of app instance commands listed in the 'run_at_startup' setting.
         for app_setting_dict in self.get_setting("run_at_startup", []):
-
             app_instance_name = app_setting_dict["app_instance"]
             # Menu name of the command to run or '' to run all commands of the given app instance.
             setting_command_name = app_setting_dict["name"]
@@ -567,7 +568,7 @@ class NukeEngine(sgtk.platform.Engine):
             else:
                 if not setting_command_name:
                     # Run all commands of the given app instance.
-                    for (command_name, command_function) in command_dict.items():
+                    for command_name, command_function in command_dict.items():
                         self.logger.debug(
                             "%s startup running app '%s' command '%s'.",
                             self.name,
@@ -861,7 +862,6 @@ class NukeEngine(sgtk.platform.Engine):
         import hiero
 
         for p in hiero.core.projects():
-
             # In Nuke 11 and greater the Project.projectRoot and Project.setProjectRoot methods
             # have been deprecated in favour of Project.exportRootDirectory and
             # Project.setProjectDirectory.
