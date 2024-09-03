@@ -223,6 +223,11 @@ class NukeEngine(sgtk.platform.Engine):
                 "context: %s" % self.context
             )
 
+        # Figure out what our menu will be named.
+        self._menu_name = "Flow Production Tracking"
+        if self.get_setting("use_short_menu_name", False):
+            self._menu_name = "FPTR"
+
         # Do our mode-specific initializations.
         if self.hiero_enabled:
             self.pre_app_init_hiero()
@@ -337,31 +342,25 @@ class NukeEngine(sgtk.platform.Engine):
         """
         Called when all apps have initialized.
         """
-        # Figure out what our menu will be named.
-        menu_name = "Flow Production Tracking"
-        if self.get_setting("use_sgtk_as_menu_name", False):
-            menu_name = "Sgtk"
 
         # We have some mode-specific initialization to do.
         if self.hiero_enabled:
-            self.post_app_init_hiero(menu_name)
+            self.post_app_init_hiero()
         elif self.studio_enabled:
-            self.post_app_init_studio(menu_name)
+            self.post_app_init_studio()
 
             # We want to run the Nuke init, as well, to load up
             # any gizmos, but we don't want it to be part of the
             # post_app_init_studio method, since we'll also need
             # to call just the gizmo stuff on context changes and
             # not the other Nuke Studio-related init stuff.
-            self.post_app_init_nuke(menu_name)
+            self.post_app_init_nuke()
         else:
-            self.post_app_init_nuke(menu_name)
+            self.post_app_init_nuke()
 
-    def post_app_init_studio(self, menu_name="Flow Production Tracking"):
+    def post_app_init_studio(self):
         """
         The Nuke Studio specific portion of the engine's post-init process.
-
-        :param menu_name:   The label/name of the menu to be created.
         """
         if self.has_ui:
             # Note! not using the import as this confuses Nuke's callback system
@@ -371,7 +370,9 @@ class NukeEngine(sgtk.platform.Engine):
             from hiero.core import env as hiero_env
 
             # Create the menu!
-            self._menu_generator = tk_nuke.NukeStudioMenuGenerator(self, menu_name)
+            self._menu_generator = tk_nuke.NukeStudioMenuGenerator(
+                self, self._menu_name
+            )
             self._menu_generator.create_menu()
 
             # No context switching in plugin mode.
@@ -404,11 +405,9 @@ class NukeEngine(sgtk.platform.Engine):
         """
         pass
 
-    def post_app_init_hiero(self, menu_name="Flow Production Tracking"):
+    def post_app_init_hiero(self):
         """
         The Hiero-specific portion of the engine's post-init process.
-
-        :param menu_name:   The label/name of the menu to be created.
         """
         if self.has_ui:
             # Note! not using the import as this confuses Nuke's callback system
@@ -418,7 +417,7 @@ class NukeEngine(sgtk.platform.Engine):
             from hiero.core import env as hiero_env
 
             # Create the menu!
-            self._menu_generator = tk_nuke.HieroMenuGenerator(self, menu_name)
+            self._menu_generator = tk_nuke.HieroMenuGenerator(self, self._menu_name)
             self._menu_generator.create_menu()
 
             hiero.core.events.registerInterest(
@@ -431,11 +430,9 @@ class NukeEngine(sgtk.platform.Engine):
                 self._on_project_load_callback,
             )
 
-    def post_app_init_nuke(self, menu_name="Flow Production Tracking"):
+    def post_app_init_nuke(self):
         """
         The Nuke-specific portion of the engine's post-init process.
-
-        :param menu_name:   The label/name of the menu to be created.
         """
 
         if self.has_ui and not self.studio_enabled:
@@ -449,7 +446,7 @@ class NukeEngine(sgtk.platform.Engine):
             # existed. This is to prevent a crash on close in Nuke 11 that occurs
             # after a context change is triggered.
             self._previous_generators.append(self._menu_generator)
-            self._menu_generator = tk_nuke.NukeMenuGenerator(self, menu_name)
+            self._menu_generator = tk_nuke.NukeMenuGenerator(self, self._menu_name)
             self._menu_generator.create_menu()
 
             # Initialize favourite dirs in the file open/file save dialogs
@@ -462,7 +459,7 @@ class NukeEngine(sgtk.platform.Engine):
             # part of saved layouts, nuke will look through
             # a global list of registered panels, try to locate
             # the one it needs and then run the callback.
-            for (panel_id, panel_dict) in self.panels.items():
+            for panel_id, panel_dict in self.panels.items():
                 nukescripts.panels.registerPanel(
                     panel_id,
                     panel_dict["callback"],
@@ -543,7 +540,7 @@ class NukeEngine(sgtk.platform.Engine):
     def _run_commands_at_startup(self):
         # Build a dictionary mapping app instance names to dictionaries of commands they registered with the engine.
         app_instance_commands = {}
-        for (command_name, value) in self.commands.items():
+        for command_name, value in self.commands.items():
             app_instance = value["properties"].get("app")
             if app_instance:
                 # Add entry 'command name: command function' to the command dictionary of this app instance.
@@ -555,7 +552,6 @@ class NukeEngine(sgtk.platform.Engine):
         commands_to_run = []
         # Run the series of app instance commands listed in the 'run_at_startup' setting.
         for app_setting_dict in self.get_setting("run_at_startup", []):
-
             app_instance_name = app_setting_dict["app_instance"]
             # Menu name of the command to run or '' to run all commands of the given app instance.
             setting_command_name = app_setting_dict["name"]
@@ -572,7 +568,7 @@ class NukeEngine(sgtk.platform.Engine):
             else:
                 if not setting_command_name:
                     # Run all commands of the given app instance.
-                    for (command_name, command_function) in command_dict.items():
+                    for command_name, command_function in command_dict.items():
                         self.logger.debug(
                             "%s startup running app '%s' command '%s'.",
                             self.name,
@@ -866,7 +862,6 @@ class NukeEngine(sgtk.platform.Engine):
         import hiero
 
         for p in hiero.core.projects():
-
             # In Nuke 11 and greater the Project.projectRoot and Project.setProjectRoot methods
             # have been deprecated in favour of Project.exportRootDirectory and
             # Project.setProjectDirectory.

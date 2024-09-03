@@ -146,9 +146,9 @@ configuration:
                 name: { type: str }
                 app_instance: { type: str }
 
-    use_sgtk_as_menu_name:
+    use_short_menu_name:
         type: bool
-        description: Optionally choose to use 'Sgtk' as the primary menu name instead of 'Flow Production Tracking'
+        description: Optionally choose to use "FPTR" as the primary menu name instead of "Flow Production Tracking"
         default_value: false
 
     compatibility_dialog_min_version:
