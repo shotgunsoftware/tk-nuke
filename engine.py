@@ -152,7 +152,7 @@ class NukeEngine(sgtk.platform.Engine):
 
         self.logger.debug("%s: Initializing...", self)
 
-        MAX_VERSION = (15, 0)  # untested above this so display a warning
+        MAX_VERSION = (15, 1)  # untested above this so display a warning
 
         import tk_nuke
 
