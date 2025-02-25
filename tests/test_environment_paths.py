@@ -8,8 +8,6 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
-from __future__ import with_statement
-from __future__ import print_function
 import os
 import sys
 
@@ -35,7 +33,7 @@ class TestEnvironmentPaths(TankTestBase):
         """
         Prepares the environment for unit tests.
         """
-        super(TestEnvironmentPaths, self).setUp()
+        super().setUp()
 
         # Add an environment variable that will allow the Toolkit environment to pick up the
         # engine's code.

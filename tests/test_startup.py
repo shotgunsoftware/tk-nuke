@@ -8,14 +8,11 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
-from __future__ import with_statement
-from __future__ import print_function
 import os
 import sys
 
 from tank_test.tank_test_base import TankTestBase
 from tank_test.tank_test_base import setUpModule  # noqa
-from tank_vendor import six
 
 import sgtk
 
@@ -114,7 +111,7 @@ class TestStartup(TankTestBase):
         """
         Prepares the environment for unit tests.
         """
-        super(TestStartup, self).setUp()
+        super().setUp()
 
         # Add an environment variable that will allow the Toolkit environment to pick up the
         # engine's code.
@@ -272,12 +269,8 @@ class TestStartup(TankTestBase):
                 with mock.patch("glob._iterdir", wraps=self._glob_wrapper39):
                     yield
 
-            elif six.PY3:
-                with mock.patch("glob._iterdir", wraps=self._glob_wrapper):
-                    yield
-
             else:
-                with mock.patch("os.listdir", wraps=self._os_listdir_wrapper):
+                with mock.patch("glob._iterdir", wraps=self._glob_wrapper):
                     yield
         else:
             yield

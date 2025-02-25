@@ -217,7 +217,7 @@ class NukeLauncher(SoftwareLauncher):
         if version.product not in self._get_products_from_version(version.version):
             return False, "Toolkit does not support '%s'." % version.product
 
-        return super(NukeLauncher, self)._is_supported(version)
+        return super()._is_supported(version)
 
     @property
     def minimum_supported_version(self):
