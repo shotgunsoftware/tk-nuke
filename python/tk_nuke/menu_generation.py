@@ -216,7 +216,7 @@ class HieroMenuGenerator(BaseMenuGenerator):
 
         # Now enumerate all items and create menu objects for them.
         menu_items = []
-        for (cmd_name, cmd_details) in commands.items():
+        for cmd_name, cmd_details in commands.items():
             menu_items.append(HieroAppCommand(self.engine, cmd_name, cmd_details))
 
         # Now add favourites.
@@ -239,13 +239,13 @@ class HieroMenuGenerator(BaseMenuGenerator):
         }
 
         remove = set()
-        for (key, apps) in self._context_menus_to_apps.items():
+        for key, apps in self._context_menus_to_apps.items():
             items = self.engine.get_setting(key)
             for item in items:
                 app_instance_name = item["app_instance"]
                 menu_name = item["name"]
                 # Scan through all menu items.
-                for (i, cmd) in enumerate(menu_items):
+                for i, cmd in enumerate(menu_items):
                     if (
                         cmd.app_instance_name == app_instance_name
                         and cmd.name == menu_name
@@ -483,7 +483,7 @@ class NukeStudioMenuGenerator(HieroMenuGenerator):
         if not add_commands:
             return
 
-        for (cmd_name, cmd_details) in node_commands.items():
+        for cmd_name, cmd_details in node_commands.items():
             cmd = NukeAppCommand(self.engine, cmd_name, cmd_details)
 
             # Get icon if specified - default to sgtk icon if not specified.
@@ -568,7 +568,7 @@ class NukeMenuGenerator(BaseMenuGenerator):
 
         # Now enumerate all items and create menu objects for them.
         menu_items = []
-        for (cmd_name, cmd_details) in self.engine.commands.items():
+        for cmd_name, cmd_details in self.engine.commands.items():
             menu_items.append(NukeAppCommand(self.engine, cmd_name, cmd_details))
 
         # Sort the list of commands in name order.
@@ -754,7 +754,7 @@ class BaseAppCommand(object):
             self._app_name = None
         self._app_instance_name = None
         if self._app:
-            for (app_instance_name, app_instance_obj) in engine.apps.items():
+            for app_instance_name, app_instance_obj in engine.apps.items():
                 if self._app and self._app == app_instance_obj:
                     self._app_instance_name = app_instance_name
 

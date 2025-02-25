@@ -310,9 +310,9 @@ class NukeSessionPublishPlugin(HookBaseClass):
         item.properties["path"] = path
 
         # add dependencies for the base class to register when publishing
-        item.properties[
-            "publish_dependencies"
-        ] = _nuke_find_additional_script_dependencies()
+        item.properties["publish_dependencies"] = (
+            _nuke_find_additional_script_dependencies()
+        )
 
         # let the base class register the publish
         super().publish(settings, item)
