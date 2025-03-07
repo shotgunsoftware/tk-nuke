@@ -123,7 +123,7 @@ class ClassicStudioContextSwitcher(object):
         # The test is made by comparing the name of the functions.
         # see: http://docs.thefoundry.co.uk/nuke/90/pythondevguide/callbacks.html
         for nodeClass_category in registrar.values():
-            for (function, args, kwargs, nodeClass) in nodeClass_category:
+            for function, args, kwargs, nodeClass in nodeClass_category:
                 if func.__name__ == function.__name__:
                     return True
         return False
