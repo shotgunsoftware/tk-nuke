@@ -368,12 +368,12 @@ class NukeSessionCollector(HookBaseClass):
             # doesn't fall back to zero config path parsing
             item.properties["publish_name"] = publish_name
             item.properties["publish_version"] = version_number
-            item.properties[
-                "publish_template"
-            ] = sg_writenode_app.get_node_publish_template(node)
-            item.properties[
-                "work_template"
-            ] = sg_writenode_app.get_node_render_template(node)
+            item.properties["publish_template"] = (
+                sg_writenode_app.get_node_publish_template(node)
+            )
+            item.properties["work_template"] = (
+                sg_writenode_app.get_node_render_template(node)
+            )
             item.properties["color_space"] = self._get_node_colorspace(node)
             item.properties["first_frame"] = first_frame
             item.properties["last_frame"] = last_frame

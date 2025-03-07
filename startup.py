@@ -120,11 +120,11 @@ class NukeLauncher(SoftwareLauncher):
         executable_templates = self.EXECUTABLE_MATCH_TEMPLATES.get(
             "darwin"
             if sgtk.util.is_macos()
-            else "win32"
-            if sgtk.util.is_windows()
-            else "linux2"
-            if sgtk.util.is_linux()
-            else []
+            else (
+                "win32"
+                if sgtk.util.is_windows()
+                else "linux2" if sgtk.util.is_linux() else []
+            )
         )
 
         # Certain platforms have more than one location for installed software
