@@ -48,7 +48,7 @@ class NukeSessionCollector(HookBaseClass):
         """
 
         # grab any base class settings
-        collector_settings = super(NukeSessionCollector, self).settings or {}
+        collector_settings = super().settings or {}
 
         # settings specific to this collector
         nuke_session_settings = {
@@ -270,7 +270,7 @@ class NukeSessionCollector(HookBaseClass):
                 self.logger.info("Processing %s node: %s" % (node_type, node.name()))
 
                 # file exists, let the basic collector handle it
-                item = super(NukeSessionCollector, self)._collect_file(
+                item = super()._collect_file(
                     parent_item, file_path, frame_sequence=True
                 )
 
@@ -309,7 +309,7 @@ class NukeSessionCollector(HookBaseClass):
 
             # some files rendered, use first frame to get some publish item info
             path = rendered_files[0]
-            item_info = super(NukeSessionCollector, self)._get_item_info(path)
+            item_info = super()._get_item_info(path)
 
             # item_info will be for the single file. we'll update the type and
             # display to represent a sequence. This is the same pattern used by

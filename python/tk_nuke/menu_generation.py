@@ -172,7 +172,7 @@ class HieroMenuGenerator(BaseMenuGenerator):
         :type engine: :class:`sgtk.platform.Engine`
         :param menu_name: The name of the menu to be created.
         """
-        super(HieroMenuGenerator, self).__init__(engine, menu_name)
+        super().__init__(engine, menu_name)
         self._menu_handle = None
         self._context_menus_to_apps = dict()
 
@@ -533,7 +533,7 @@ class NukeMenuGenerator(BaseMenuGenerator):
         :type engine: :class:`sgtk.platform.Engine`
         :param menu_name: The name of the menu to be created.
         """
-        super(NukeMenuGenerator, self).__init__(engine, menu_name)
+        super().__init__(engine, menu_name)
         self._dialogs = []
 
     def create_menu(self, add_commands=True):
@@ -855,7 +855,7 @@ class HieroAppCommand(BaseAppCommand):
                         includes a properties dict as well as a callback
                         in the form of a callable object.
         """
-        super(HieroAppCommand, self).__init__(engine, name, command_dict)
+        super().__init__(engine, name, command_dict)
         self._requires_selection = False
         self._sender = None
         self._event_type = None
@@ -974,7 +974,7 @@ class NukeAppCommand(BaseAppCommand):
     """
 
     def __init__(self, *args, **kwargs):
-        super(NukeAppCommand, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self._original_callback = self._callback
         self.callback = self._non_pane_menu_callback_wrapper
 
