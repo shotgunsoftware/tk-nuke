@@ -16,7 +16,7 @@ from tank_test.tank_test_base import setUpModule  # noqa
 
 import sgtk
 
-import mock
+from unittest import mock
 import contextlib
 
 

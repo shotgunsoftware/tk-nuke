@@ -9,14 +9,11 @@
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 import os
-import sys
-
-from tank_test.tank_test_base import TankTestBase, setUpModule, temp_env_var
+import tempfile
+from unittest import mock
 
 import sgtk
-import mock
-import tempfile
-
+from tank_test.tank_test_base import TankTestBase, setUpModule, temp_env_var
 
 repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 print("tk-nuke repository root found at %s." % repo_root)
