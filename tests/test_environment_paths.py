@@ -14,7 +14,7 @@ import sys
 from tank_test.tank_test_base import TankTestBase, setUpModule, temp_env_var
 
 import sgtk
-import mock
+import unittest.mock
 import tempfile
 
 
