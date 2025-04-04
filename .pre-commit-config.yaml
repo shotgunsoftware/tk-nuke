@@ -9,8 +9,13 @@
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 # Styles the code properly.
+
+default_language_version:
+    python: python3
+
 # Exclude the UI files, as they are auto-generated.
 exclude: "ui\/.*py$|httplib.py|urllib2.py"
+
 # List of super useful formatters.
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -18,7 +23,6 @@ repos:
     hooks:
     # Ensures the code is has the correct syntax.
     - id: check-ast
-      language_version: python3
     # Ensures a file name will resolve on all platform.
     - id: check-case-conflict
     # Checks files with the execute bit set have shebangs.
@@ -36,4 +40,3 @@ repos:
     rev: 25.1.0
     hooks:
     - id: black
-      language_version: python3
