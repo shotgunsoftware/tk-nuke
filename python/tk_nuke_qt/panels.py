@@ -305,27 +305,23 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
         """
         # close child widget
         self.toolkit_widget.close()
+
         # delete this widget and all children
-        if nuke.env.get("NukeVersionMajor") >= 11:
-            # We don't seem to be able to deleteLater safely in Nuke 11, which
-            # is a PySide2/Qt5 app. My guess is that deleteLater is more "efficient"
-            # than it was in Qt4, and as a result, the deleteLater actually seems
-            # to delete RIGHT NOW. That plays havoc with the shutdown routines in
-            # some of our lower-level objects from the qtwidgets and shotgunutils
-            # frameworks. The result was that we ended up with dangling Python objects
-            # that have had their C++ object deleted by Qt before we're done with
-            # them in Python.
-            #
-            # However, we do need to get this widget out of the way, because there's
-            # logic that looks up existing stuff by object name and activates, which
-            # prevents us from opening up multiple, concurrent panel apps. We can
-            # just rename the widget, and let Qt/Python decide when to delete it.
-            self.toolkit_widget.setObjectName("%s.CLOSED" % self.objectName())
-        else:
-            # This was safe in Nuke versions previous to 11.x, so
-            # we can let Qt delete the widget hierarchy as soon as
-            # it has a free cycle.
-            self.deleteLater()
+        # We don't seem to be able to deleteLater safely in Nuke 11, which
+        # is a PySide2/Qt5 app. My guess is that deleteLater is more "efficient"
+        # than it was in Qt4, and as a result, the deleteLater actually seems
+        # to delete RIGHT NOW. That plays havoc with the shutdown routines in
+        # some of our lower-level objects from the qtwidgets and shotgunutils
+        # frameworks. The result was that we ended up with dangling Python objects
+        # that have had their C++ object deleted by Qt before we're done with
+        # them in Python.
+        #
+        # However, we do need to get this widget out of the way, because there's
+        # logic that looks up existing stuff by object name and activates, which
+        # prevents us from opening up multiple, concurrent panel apps. We can
+        # just rename the widget, and let Qt/Python decide when to delete it.
+        self.toolkit_widget.setObjectName("%s.CLOSED" % self.objectName())
+
         # okay to close dialog
         event.accept()
 

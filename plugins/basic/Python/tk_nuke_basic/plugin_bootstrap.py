@@ -244,17 +244,13 @@ class NukeBootstraper(object):
         """
         Starts the bootstrap process.
         """
-        # Nuke doesn't like us starting a thread while it is still initializing. Nuke 7 is fine, so
-        # is Nuke Studio 10. However, Nuke 10 wants us to wait. nuke.executeInMainThread or
-        # nukescripts.utils.executeDeferred don't seem to help, so we wait for the first node to be
-        # created. As for Nuke Studio 9? It doesn't like the asynchronous bootstrap, so we'll have
-        # to start synchronously.
-        if nuke.env.get("studio") and nuke.env.get("NukeVersionMajor") < 10:
-            self._toolkit_mgr.bootstrap_engine(
-                os.environ.get("SHOTGUN_ENGINE", "tk-nuke"), self._entity
-            )
-        else:
-            nuke.addOnCreate(self._bootstrap)
+        # Nuke doesn't like us starting a thread while it is still initializing.
+        # However, Nuke 10 wants us to wait. nuke.executeInMainThread or
+        # nukescripts.utils.executeDeferred don't seem to help, so we wait for
+        # the first node to be created.
+        # Also, as for Nuke Studio 9?, it doesn't like the asynchronous
+        # bootstrap, so we'll have to start synchronously.
+        nuke.addOnCreate(self._bootstrap)
 
     def _bootstrap(self):
         """
