@@ -8,11 +8,18 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
-import sgtk
-import nuke
-import os
-import nukescripts
 import logging
+import os
+import re
+
+import nuke
+import nukescripts
+import sgtk
+
+# Nuke versions compatibility constants
+VERSION_OLDEST_COMPATIBLE = 13
+VERSION_OLDEST_SUPPORTED = 14
+VERSION_NEWEST_SUPPORTED = 16
 
 
 class NukeEngine(sgtk.platform.Engine):
@@ -151,16 +158,15 @@ class NukeEngine(sgtk.platform.Engine):
 
         self.logger.debug("%s: Initializing...", self)
 
-        MAX_VERSION = (16, 9)  # untested above this so display a warning
-
         import tk_nuke
 
         tk_nuke.tank_ensure_callbacks_registered(engine=self)
 
         # We need to check to make sure that we are using one of the
-        # supported versions of Nuke. Right now that is anything between
-        # 6.3v5 and 9.0v*. For versions higher than what we know we
-        # support we'll simply warn and continue. For older versions
+        # supported versions of Nuke.
+        # For versions higher than what we know we
+        # support we'll simply warn and continue.
+        # For older versions
         # we will have to bail out, as we know they won't work properly.
         nuke_version = (
             nuke.env.get("NukeVersionMajor"),
@@ -168,38 +174,79 @@ class NukeEngine(sgtk.platform.Engine):
             nuke.env.get("NukeVersionRelease"),
         )
 
-        msg = "Nuke 13.0v1 is the minimum comptabile version!"
-        if nuke_version[0] < 13:
-            self.logger.error(msg)
-            return
+        url_doc_supported_versions = "https://help.autodesk.com/view/SGDEV/ENU/?guid=SGD_si_integrations_engine_supported_versions_html"
+        compatibility_warning_msg = None
+        show_warning_dlg = (
+            self.has_ui
+            and "TANK_NUKE_ENGINE_INIT_NAME" not in os.environ
+            and not self.hiero_enabled
+        )
 
-        # Versions > 14.0 have not yet been tested so show a message to that effect.
-        if nuke_version[0] > MAX_VERSION[0] or (
-            nuke_version[0] == MAX_VERSION[0] and nuke_version[1] > MAX_VERSION[1]
-        ):
+        if nuke_version[0] < VERSION_OLDEST_COMPATIBLE:
+            raise sgtk.TankError(
+                "Flow Production Tracking is no longer compatible with Nuke "
+                f"versions older than {VERSION_OLDEST_COMPATIBLE}.\n"
+                "For information regarding support engine versions, please "
+                f"visit this page: {url_doc_supported_versions}"
+            )
+        elif nuke_version[0] < VERSION_OLDEST_SUPPORTED:
+            # Older than the oldest supported version
+
+            compatibility_warning_msg = (
+                "Flow Production Tracking no longer supports Nuke versions "
+                f"older than {VERSION_OLDEST_SUPPORTED}.\n"
+                "You can continue to use Toolkit but you may experience bugs "
+                "or instabilities.\n\n"
+                "For information regarding support engine versions, please "
+                "visit this page: {url_doc_supported_versions}"
+            )
+        elif nuke_version[0] < VERSION_NEWEST_SUPPORTED:
+            # Within the range of supported versions
+            self.logger.debug(
+                f"Running Nuke version {self.version_tuple2str(nuke_version)}"
+            )
+        else:
+            # Newer than the newest supported version
             # This is an untested version of Nuke.
-            msg = (
+            compatibility_warning_msg = (
                 "The Flow Production Tracking has not yet been fully tested "
-                "with Nuke %d.%dv%d. You can continue to use the Toolkit but you may "
-                "experience bugs or instability. Please report any issues to our support "
-                "team via %s"
-                % (nuke_version[0], nuke_version[1], nuke_version[2], sgtk.support_url)
+                f"with Nuke {self.version_tuple2str(nuke_version)}.\n"
+                "You can continue to use the Toolkit but you may experience "
+                "bugs or instabilities.\n\n"
+                "Please report any issues to: {support_url}"
             )
 
-            # Show nuke message if in UI mode, this is the first time the engine has been started
-            # and the warning dialog isn't overridden by the config. Note that nuke.message isn't
-            # available in Hiero, so we have to skip this there.
-            if (
-                self.has_ui
-                and "TANK_NUKE_ENGINE_INIT_NAME" not in os.environ
-                and nuke_version[0]
-                >= self.get_setting("compatibility_dialog_min_version", 11)
-                and not self.hiero_enabled
-            ):
-                nuke.message("Warning - Flow Production Tracking!\n\n%s" % msg)
+            show_warning_dlg = show_warning_dlg and (
+                nuke_version[0] >= self.get_setting("compatibility_dialog_min_version")
+            )
+
+        if compatibility_warning_msg:
+            # Show nuke message if in UI mode, this is the first time the engine
+            # has been started and the warning dialog isn't overridden by the
+            # config.
+            # Note that nuke.message isn't available in Hiero, so we have to
+            # skip this there.
+            if show_warning_dlg:
+                nuke.message(
+                    "Warning - Flow Production Tracking Compatibility!\n\n{msg}".format(
+                        msg=compatibility_warning_msg.format(
+                            support_url='<a href="{u}">{u}</a>'.format(
+                                u=sgtk.support_url
+                            ),
+                            url_doc_supported_versions='<a href="{u}">{u}</a>'.format(
+                                u=url_doc_supported_versions,
+                            ),
+                        )
+                    )
+                )
 
             # Log the warning.
-            self.logger.warning(msg)
+            self.logger.warning(
+                re.sub("\\n+", " ", compatibility_warning_msg).format(
+                    support_url=sgtk.support_url,
+                    url_doc_supported_versions=url_doc_supported_versions,
+                )
+            )
 
         # Make sure we are not running Nuke PLE or Non-Commercial!
         if nuke.env.get("ple"):
@@ -478,9 +525,7 @@ class NukeEngine(sgtk.platform.Engine):
                 # (for example if you do file->open or file->new)
                 sgtk.util.append_path_to_env_var("NUKE_PATH", app_gizmo_folder)
 
-        # Nuke Studio 9 really doesn't like us running commands at startup, so don't.
-        if not (nuke.env.get("NukeVersionMajor") == 9 and nuke.env.get("studio")):
-            self._run_commands_at_startup()
+        self._run_commands_at_startup()
 
     @property
     def host_info(self):
@@ -783,10 +828,9 @@ class NukeEngine(sgtk.platform.Engine):
                 if existing_pane:
                     break
 
-            if existing_pane is None and nuke.env.get("NukeVersionMajor") < 9:
+            if existing_pane is None:
                 # Couldn't find anything to parent next to!
-                # Nuke 9 will automatically handle this situation
-                # but older versions will not show the UI!
+                # Nuke will automatically handle this situation.
                 # Tell the user that they need to have the property
                 # pane present in the UI.
                 nuke.message(
@@ -849,6 +893,10 @@ class NukeEngine(sgtk.platform.Engine):
     #####################################################################################
     # General Utilities
 
+    @classmethod
+    def version_tuple2str(cls, version_tuple):
+        return "{}.{}v{}".format(*version_tuple)
+
     def set_project_root(self, event):
         """
         Ensure any new projects get the project root or default startup
@@ -861,33 +909,20 @@ class NukeEngine(sgtk.platform.Engine):
         import hiero
 
         for p in hiero.core.projects():
-            # In Nuke 11 and greater the Project.projectRoot and Project.setProjectRoot methods
-            # have been deprecated in favour of Project.exportRootDirectory and
-            # Project.setProjectDirectory.
-            if nuke.env.get("NukeVersionMajor") >= 11 and not p.exportRootDirectory():
+            if p.exportRootDirectory():
                 self.logger.debug(
                     "Setting exportRootDirectory on %s to: %s",
                     p.name(),
                     self.sgtk.project_path,
                 )
                 p.setProjectDirectory(self.sgtk.project_path)
-            elif nuke.env.get("NukeVersionMajor") <= 10 and not p.projectRoot():
-                self.logger.debug(
-                    "Setting projectRoot on %s to: %s", p.name(), self.sgtk.project_path
-                )
-                p.setProjectRoot(self.sgtk.project_path)
 
     def _get_dialog_parent(self):
         """
         Return the QWidget parent for all dialogs created through
         show_dialog and show_modal.
         """
-        # See https://github.com/shotgunsoftware/tk-nuke/commit/35ca540d152cc5357dc7e347b5efc728a3a89f4a
-        # for more info. There have been instability issues with nuke 7 causing
-        # various crashes, so window parenting on Nuke versions above 6 is
-        # currently disabled.
-        if nuke.env.get("NukeVersionMajor") == 7:
-            return None
+
         return super()._get_dialog_parent()
 
     def _handle_studio_selection_change(self, event):
@@ -1010,15 +1045,9 @@ class NukeEngine(sgtk.platform.Engine):
         :return: dict
         """
 
-        nuke_version = (
-            nuke.env.get("NukeVersionMajor"),
-            nuke.env.get("NukeVersionMinor"),
-            nuke.env.get("NukeVersionRelease"),
-        )
-
         # Disable the importing of the web engine widgets submodule from PySide2
         # if this is a Windows environment. Failing to do so will cause Nuke to freeze on startup.
-        if nuke_version[0] > 10 and sgtk.util.is_windows():
+        if sgtk.util.is_windows():
             self.logger.debug(
                 "Nuke 11+ on Windows can deadlock if QtWebEngineWidgets "
                 "is imported. Setting SHOTGUN_SKIP_QTWEBENGINEWIDGETS_IMPORT=1..."
