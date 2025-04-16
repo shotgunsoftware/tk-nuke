@@ -1,8 +1,8 @@
 # Toolkit Engine for Nuke
 
-![Supported Nuke versions](https://img.shields.io/badge/Nuke-16_%7C_15_%7C_14-blue.svg?logo=nuke)
-[![Supported VFX Platform](https://img.shields.io/badge/VFX_Platform-2025_%7C_2024_%7C_2023_%7C_2022-blue.svg)](http://www.vfxplatform.com/)
-[![Supported Python versions](https://img.shields.io/badge/Python-3.11_%7C_3.10_%7C_3.9-blue.svg?logo=python)](https://www.python.org/)
+![Supported Nuke versions](https://img.shields.io/badge/Nuke-16_|_15_|_14-blue.svg?logo=nuke "Supported Nuke versions")
+[![Supported VFX Platform](https://img.shields.io/badge/VFX_Platform-2025_|_2024_|_2023_|_2022-blue.svg)](http://www.vfxplatform.com/ "Supported VFX Platform")
+[![Supported Python versions](https://img.shields.io/badge/Python-3.11_%7C_3.10_%7C_3.9-blue.svg?logo=python)](https://www.python.org/ "Supported Python versions")
 
 [![Build Status](https://dev.azure.com/shotgun-ecosystem/Toolkit/_apis/build/status/Engines/tk-nuke?branchName=master)](https://dev.azure.com/shotgun-ecosystem/Toolkit/_build/latest?definitionId=83&branchName=master)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
