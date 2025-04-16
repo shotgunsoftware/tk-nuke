@@ -151,7 +151,7 @@ class NukeEngine(sgtk.platform.Engine):
 
         self.logger.debug("%s: Initializing...", self)
 
-        MAX_VERSION = (15, 1)  # untested above this so display a warning
+        MAX_VERSION = (16, 9)  # untested above this so display a warning
 
         import tk_nuke
 
@@ -168,11 +168,8 @@ class NukeEngine(sgtk.platform.Engine):
             nuke.env.get("NukeVersionRelease"),
         )
 
-        msg = "Nuke 7.0v10 is the minimum version supported!"
-        if nuke_version[0] < 7:
-            self.logger.error(msg)
-            return
-        elif nuke_version[0] == 7 and nuke_version[1] == 0 and nuke_version[2] < 10:
+        msg = "Nuke 13.0v1 is the minimum comptabile version!"
+        if nuke_version[0] < 13:
             self.logger.error(msg)
             return
 
