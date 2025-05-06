@@ -217,7 +217,10 @@ class NukeEngine(sgtk.platform.Engine):
             )
 
             show_warning_dlg = show_warning_dlg and (
-                nuke_version[0] >= self.get_setting("compatibility_dialog_min_version")
+                nuke_version[0] >= self.get_setting(
+                    "compatibility_dialog_min_version",
+                    default=VERSION_NEWEST_SUPPORTED,
+                )
             )
 
         if compatibility_warning_msg:
