@@ -286,11 +286,8 @@ For information regarding support engine versions, please visit this page:
                 self.has_ui
                 and "TANK_NUKE_ENGINE_INIT_NAME" not in os.environ
                 and nuke_version[0]
-                >= self.get_setting(
-                    "compatibility_dialog_min_version",
-                )
+                >= self.get_setting("compatibility_dialog_min_version")
             ):
-                self.logger.info(f"Issue warning")
                 sgtk.platform.qt.QtGui.QMessageBox.warning(
                     # Use QMessageBox instead of nuke.message because:
                     # - nuke.message is not available in Hiero
