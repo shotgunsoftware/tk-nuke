@@ -8,18 +8,17 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
-import logging
-import os
-import re
-
-import nuke
-import nukescripts
 import sgtk
+import nuke
+import os
+import nukescripts
+import logging
+
 
 # Nuke versions compatibility constants
-VERSION_OLDEST_COMPATIBLE = 13
-VERSION_OLDEST_SUPPORTED = 14
-VERSION_NEWEST_SUPPORTED = 16
+VERSION_OLDEST_COMPATIBLE = (13, 0, 1)
+VERSION_OLDEST_SUPPORTED = (14, 0, 0)
+VERSION_NEWEST_SUPPORTED = (16, 0, 0)
 # Caution: make sure compatibility_dialog_min_version default value in info.yml
 # is equal to VERSION_NEWEST_SUPPORTED
 
@@ -164,12 +163,12 @@ class NukeEngine(sgtk.platform.Engine):
 
         tk_nuke.tank_ensure_callbacks_registered(engine=self)
 
-        # We need to check to make sure that we are using one of the
-        # supported versions of Nuke.
-        # For versions higher than what we know we
-        # support we'll simply warn and continue.
-        # For older versions
-        # we will have to bail out, as we know they won't work properly.
+        # We need to check to make sure that we are using one of the supported
+        # versions of Nuke.
+        # For versions higher than what we know we support we'll simply warn and
+        # continue.
+        # For older versions we will have to bail out, as we know they won't
+        # work properly.
         nuke_version = (
             nuke.env.get("NukeVersionMajor"),
             nuke.env.get("NukeVersionMinor"),
@@ -178,7 +177,7 @@ class NukeEngine(sgtk.platform.Engine):
 
         url_doc_supported_versions = "https://help.autodesk.com/view/SGDEV/ENU/?guid=SGD_si_integrations_engine_supported_versions_html"
 
-        if nuke_version[0] < VERSION_OLDEST_COMPATIBLE:
+        if nuke_version < VERSION_OLDEST_COMPATIBLE:
             # Older than the oldest compatible version
             message = """
 Flow Production Tracking is no longer compatible with {product} versions older
@@ -197,7 +196,7 @@ For information regarding support engine versions, please visit this page:
                         # Overall, this is a better user experience
                         None,  # parent
                         "Error - Flow Production Tracking Compatibility!".ljust(
-                            # Note, title is padded to try to ensure dialog isn't insanely narrow!
+                            # Padding to try to prevent the dialog being insanely narrow
                             70
                         ),
                         message.replace(
@@ -209,36 +208,30 @@ For information regarding support engine versions, please visit this page:
                             url_doc_supported_versions='<a href="{u}">{u}</a>'.format(
                                 u=url_doc_supported_versions,
                             ),
-                            version=self.version_tuple2str(
-                                (VERSION_OLDEST_COMPATIBLE, 0, 0)
-                            ),
+                            version=self.version_str(VERSION_OLDEST_COMPATIBLE),
                         ),
                     )
                 except:
-                    # We probably won't be able to rely on the warning dialog,
-                    # because older than 2022 ships Python 2. And older
-                    # versions come with Qt4.
-                    # So, we raise an exception cases with an error message that
-                    # will hopefully make sense for the user.
+                    # It is unlikely that the above message will go through
+                    # on old versions of Nuke (Python2, Qt4, ...).
+                    # But there is nothing more we can do here.
                     pass
 
             raise sgtk.TankError(
                 message.format(
                     product="Nuke",
                     url_doc_supported_versions=url_doc_supported_versions,
-                    version=self.version_tuple2str((VERSION_OLDEST_COMPATIBLE, 0, 0)),
+                    version=self.version_str(VERSION_OLDEST_COMPATIBLE),
                 )
             )
 
-        elif nuke_version[0] < VERSION_OLDEST_SUPPORTED:
+        elif nuke_version < VERSION_OLDEST_SUPPORTED:
             # Older than the oldest supported version
             self.logger.warning(
                 "Flow Production Tracking no longer supports {product} "
                 "versions older than {version}".format(
                     product="Nuke",
-                    version=self.version_tuple2str(
-                        (VERSION_OLDEST_SUPPORTED, 0, 0),
-                    ),
+                    version=self.version_str(VERSION_OLDEST_SUPPORTED),
                 )
             )
 
@@ -250,7 +243,7 @@ For information regarding support engine versions, please visit this page:
                     # Overall, this is a better user experience
                     None,  # parent
                     "Warning - Flow Production Tracking Compatibility!".ljust(
-                        # Note, title is padded to try to ensure dialog isn't insanely narrow!
+                        # Padding to try to prevent the dialog being insanely narrow
                         70
                     ),
                     """
@@ -271,17 +264,13 @@ For information regarding support engine versions, please visit this page:
                         url_doc_supported_versions='<a href="{u}">{u}</a>'.format(
                             u=url_doc_supported_versions,
                         ),
-                        version=self.version_tuple2str(
-                            (VERSION_OLDEST_SUPPORTED, 0, 0)
-                        ),
+                        version=self.version_str(VERSION_OLDEST_SUPPORTED),
                     ),
                 )
 
-        elif nuke_version[0] < VERSION_NEWEST_SUPPORTED:
+        elif nuke_version < VERSION_NEWEST_SUPPORTED:
             # Within the range of supported versions
-            self.logger.debug(
-                f"Running Nuke version {self.version_tuple2str(nuke_version)}"
-            )
+            self.logger.debug(f"Running Nuke version {self.version_str(nuke_version)}")
         else:
             # Newer than the newest supported version
             # This is an untested version of Nuke.
@@ -289,7 +278,7 @@ For information regarding support engine versions, please visit this page:
                 "Flow Production Tracking has not yet been fully tested with "
                 "{product} version {version}.".format(
                     product="Nuke",
-                    version=self.version_tuple2str(nuke_version),
+                    version=self.version_str(nuke_version),
                 )
             )
 
@@ -309,7 +298,7 @@ For information regarding support engine versions, please visit this page:
                     # Overall, this is a better user experience
                     None,  # parent
                     "Warning - Flow Production Tracking Compatibility!".ljust(
-                        # Note, title is padded to try to ensure dialog isn't insanely narrow!
+                        # Padding to try to prevent the dialog being insanely narrow
                         70
                     ),
                     """
@@ -330,7 +319,7 @@ Please report any issues to:
                         support_url='<a href="{u}">{u}</a>'.format(
                             u=sgtk.support_url,
                         ),
-                        version=self.version_tuple2str(nuke_version),
+                        version=self.version_str(nuke_version),
                     ),
                 )
 
@@ -611,7 +600,9 @@ Please report any issues to:
                 # (for example if you do file->open or file->new)
                 sgtk.util.append_path_to_env_var("NUKE_PATH", app_gizmo_folder)
 
-        self._run_commands_at_startup()
+        # Nuke Studio 9 really doesn't like us running commands at startup, so don't.
+        if not (nuke.env.get("NukeVersionMajor") == 9 and nuke.env.get("studio")):
+            self._run_commands_at_startup()
 
     @property
     def host_info(self):
@@ -914,9 +905,10 @@ Please report any issues to:
                 if existing_pane:
                     break
 
-            if existing_pane is None:
+            if existing_pane is None and nuke.env.get("NukeVersionMajor") < 9:
                 # Couldn't find anything to parent next to!
-                # Nuke will automatically handle this situation.
+                # Nuke 9 will automatically handle this situation
+                # but older versions will not show the UI!
                 # Tell the user that they need to have the property
                 # pane present in the UI.
                 nuke.message(
@@ -980,7 +972,7 @@ Please report any issues to:
     # General Utilities
 
     @classmethod
-    def version_tuple2str(cls, version_tuple):
+    def version_str(cls, version_tuple):
         return "{}.{}v{}".format(*version_tuple)
 
     def set_project_root(self, event):
@@ -995,20 +987,33 @@ Please report any issues to:
         import hiero
 
         for p in hiero.core.projects():
-            if p.exportRootDirectory():
+            # In Nuke 11 and greater the Project.projectRoot and Project.setProjectRoot methods
+            # have been deprecated in favour of Project.exportRootDirectory and
+            # Project.setProjectDirectory.
+            if nuke.env.get("NukeVersionMajor") >= 11 and not p.exportRootDirectory():
                 self.logger.debug(
                     "Setting exportRootDirectory on %s to: %s",
                     p.name(),
                     self.sgtk.project_path,
                 )
                 p.setProjectDirectory(self.sgtk.project_path)
+            elif nuke.env.get("NukeVersionMajor") <= 10 and not p.projectRoot():
+                self.logger.debug(
+                    "Setting projectRoot on %s to: %s", p.name(), self.sgtk.project_path
+                )
+                p.setProjectRoot(self.sgtk.project_path)
 
     def _get_dialog_parent(self):
         """
         Return the QWidget parent for all dialogs created through
         show_dialog and show_modal.
         """
-
+        # See https://github.com/shotgunsoftware/tk-nuke/commit/35ca540d152cc5357dc7e347b5efc728a3a89f4a
+        # for more info. There have been instability issues with nuke 7 causing
+        # various crashes, so window parenting on Nuke versions above 6 is
+        # currently disabled.
+        if nuke.env.get("NukeVersionMajor") == 7:
+            return None
         return super()._get_dialog_parent()
 
     def _handle_studio_selection_change(self, event):
@@ -1131,9 +1136,15 @@ Please report any issues to:
         :return: dict
         """
 
+        nuke_version = (
+            nuke.env.get("NukeVersionMajor"),
+            nuke.env.get("NukeVersionMinor"),
+            nuke.env.get("NukeVersionRelease"),
+        )
+
         # Disable the importing of the web engine widgets submodule from PySide2
         # if this is a Windows environment. Failing to do so will cause Nuke to freeze on startup.
-        if sgtk.util.is_windows():
+        if nuke_version[0] > 10 and sgtk.util.is_windows():
             self.logger.debug(
                 "Nuke 11+ on Windows can deadlock if QtWebEngineWidgets "
                 "is imported. Setting SHOTGUN_SKIP_QTWEBENGINEWIDGETS_IMPORT=1..."

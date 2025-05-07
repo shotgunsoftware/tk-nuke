@@ -15,7 +15,7 @@ import pprint
 from sgtk.platform import SoftwareLauncher, SoftwareVersion, LaunchInformation
 
 # Nuke versions compatibility constants
-VERSION_OLDEST_COMPATIBLE = 13
+VERSION_OLDEST_COMPATIBLE = (13, 0, 1)
 
 
 class NukeLauncher(SoftwareLauncher):
@@ -227,7 +227,7 @@ class NukeLauncher(SoftwareLauncher):
         """
         Minimum supported version by this launcher.
         """
-        return "{}.{}v{}".format(VERSION_OLDEST_COMPATIBLE, 0, 1)
+        return "{}.{}v{}".format(*VERSION_OLDEST_COMPATIBLE)
 
     def prepare_launch(self, exec_path, args, file_to_open=None):
         """
