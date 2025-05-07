@@ -222,13 +222,13 @@ For information regarding support engine versions, please visit this page:
                     # will hopefully make sense for the user.
                     pass
 
-            raise sgtk.TankError(message.format(
+            raise sgtk.TankError(
+                message.format(
                     product="Nuke",
                     url_doc_supported_versions=url_doc_supported_versions,
-                    version=self.version_tuple2str(
-                        (VERSION_OLDEST_COMPATIBLE, 0, 0)
-                    ),
-                ))
+                    version=self.version_tuple2str((VERSION_OLDEST_COMPATIBLE, 0, 0)),
+                )
+            )
 
         elif nuke_version[0] < VERSION_OLDEST_SUPPORTED:
             # Older than the oldest supported version
@@ -293,15 +293,11 @@ For information regarding support engine versions, please visit this page:
                 )
             )
 
-
-            self.logger.info(f"has_ui: {self.has_ui}")
-            self.logger.info(f"TANK_NUKE_ENGINE_INIT_NAME: {'TANK_NUKE_ENGINE_INIT_NAME' not in os.environ}")
-            self.logger.info(f"nuke_version[0]: {nuke_version[0]}")
-            self.logger.info(f"compatibility_dialog_min_version: {self.get_setting('compatibility_dialog_min_version')  }")
             if (
                 self.has_ui
                 and "TANK_NUKE_ENGINE_INIT_NAME" not in os.environ
-                and nuke_version[0] >= self.get_setting(
+                and nuke_version[0]
+                >= self.get_setting(
                     "compatibility_dialog_min_version",
                 )
             ):
