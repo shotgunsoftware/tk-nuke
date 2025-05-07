@@ -481,9 +481,7 @@ class NukeEngine(sgtk.platform.Engine):
                 # (for example if you do file->open or file->new)
                 sgtk.util.append_path_to_env_var("NUKE_PATH", app_gizmo_folder)
 
-        # Nuke Studio 9 really doesn't like us running commands at startup, so don't.
-        if not (nuke.env.get("NukeVersionMajor") == 9 and nuke.env.get("studio")):
-            self._run_commands_at_startup()
+        self._run_commands_at_startup()
 
     @property
     def host_info(self):
@@ -786,10 +784,9 @@ class NukeEngine(sgtk.platform.Engine):
                 if existing_pane:
                     break
 
-            if existing_pane is None and nuke.env.get("NukeVersionMajor") < 9:
+            if existing_pane is None:
                 # Couldn't find anything to parent next to!
-                # Nuke 9 will automatically handle this situation
-                # but older versions will not show the UI!
+                # Nuke will automatically handle this situation.
                 # Tell the user that they need to have the property
                 # pane present in the UI.
                 nuke.message(
@@ -864,34 +861,13 @@ class NukeEngine(sgtk.platform.Engine):
         import hiero
 
         for p in hiero.core.projects():
-            # In Nuke 11 and greater the Project.projectRoot and Project.setProjectRoot methods
-            # have been deprecated in favour of Project.exportRootDirectory and
-            # Project.setProjectDirectory.
-            if nuke.env.get("NukeVersionMajor") >= 11 and not p.exportRootDirectory():
+            if not p.exportRootDirectory():
                 self.logger.debug(
                     "Setting exportRootDirectory on %s to: %s",
                     p.name(),
                     self.sgtk.project_path,
                 )
                 p.setProjectDirectory(self.sgtk.project_path)
-            elif nuke.env.get("NukeVersionMajor") <= 10 and not p.projectRoot():
-                self.logger.debug(
-                    "Setting projectRoot on %s to: %s", p.name(), self.sgtk.project_path
-                )
-                p.setProjectRoot(self.sgtk.project_path)
-
-    def _get_dialog_parent(self):
-        """
-        Return the QWidget parent for all dialogs created through
-        show_dialog and show_modal.
-        """
-        # See https://github.com/shotgunsoftware/tk-nuke/commit/35ca540d152cc5357dc7e347b5efc728a3a89f4a
-        # for more info. There have been instability issues with nuke 7 causing
-        # various crashes, so window parenting on Nuke versions above 6 is
-        # currently disabled.
-        if nuke.env.get("NukeVersionMajor") == 7:
-            return None
-        return super()._get_dialog_parent()
 
     def _handle_studio_selection_change(self, event):
         """
@@ -1013,17 +989,11 @@ class NukeEngine(sgtk.platform.Engine):
         :return: dict
         """
 
-        nuke_version = (
-            nuke.env.get("NukeVersionMajor"),
-            nuke.env.get("NukeVersionMinor"),
-            nuke.env.get("NukeVersionRelease"),
-        )
-
         # Disable the importing of the web engine widgets submodule from PySide2
         # if this is a Windows environment. Failing to do so will cause Nuke to freeze on startup.
-        if nuke_version[0] > 10 and sgtk.util.is_windows():
+        if sgtk.util.is_windows():
             self.logger.debug(
-                "Nuke 11+ on Windows can deadlock if QtWebEngineWidgets "
+                "Nuke 11+ on Windows can deadlock if QtWebEngineWidgets " # TODO
                 "is imported. Setting SHOTGUN_SKIP_QTWEBENGINEWIDGETS_IMPORT=1..."
             )
             os.environ["SHOTGUN_SKIP_QTWEBENGINEWIDGETS_IMPORT"] = "1"
