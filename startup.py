@@ -224,7 +224,7 @@ class NukeLauncher(SoftwareLauncher):
         """
         Minimum supported version by this launcher.
         """
-        return "7.0v10"
+        return "13.0v1"
 
     def prepare_launch(self, exec_path, args, file_to_open=None):
         """
