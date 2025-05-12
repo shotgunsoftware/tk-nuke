@@ -211,7 +211,7 @@ For information regarding support engine versions, please visit this page:
                             version=self.version_str(VERSION_OLDEST_COMPATIBLE),
                         ),
                     )
-                except:
+                except:  # nosec B110
                     # It is unlikely that the above message will go through
                     # on old versions of Nuke (Python2, Qt4, ...).
                     # But there is nothing more we can do here.
