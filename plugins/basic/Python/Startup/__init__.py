@@ -16,7 +16,7 @@ It launches the plugin's bootstrap process by reusing the one for Nuke.
 import uuid
 import os
 
-import importlib_wrapper
+from . import importlib_wrapper
 
 
 def startup():
