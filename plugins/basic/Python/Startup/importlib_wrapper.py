@@ -14,7 +14,9 @@ def load_source(modname: str, filename: str) -> ModuleType:
     loader = importlib.machinery.SourceFileLoader(modname, filename)
     spec = importlib.util.spec_from_file_location(modname, filename, loader=loader)
     if spec is None:
-        raise RuntimeError(f"Failed to load module '{modname}' from file '{filename}'. The spec could not be created.")
+        raise RuntimeError(
+            f"Failed to load module '{modname}' from file '{filename}'. The spec could not be created."
+        )
     module = importlib.util.module_from_spec(spec)
     # The module is always executed and not cached in sys.modules.
     # Uncomment the following line to cache the module.
