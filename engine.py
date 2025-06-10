@@ -15,6 +15,14 @@ import nukescripts
 import logging
 
 
+# Nuke versions compatibility constants
+VERSION_OLDEST_COMPATIBLE = (13, 0, 1)
+VERSION_OLDEST_SUPPORTED = (14, 0, 0)
+VERSION_NEWEST_SUPPORTED = (16, 0, 99)
+# Caution: make sure compatibility_dialog_min_version default value in info.yml
+# is equal to VERSION_NEWEST_SUPPORTED
+
+
 class NukeEngine(sgtk.platform.Engine):
     """
     An engine that supports Nuke 6.3v5+, Hiero 9.0+, and Nuke Studio 9.0+
@@ -151,55 +159,177 @@ class NukeEngine(sgtk.platform.Engine):
 
         self.logger.debug("%s: Initializing...", self)
 
-        MAX_VERSION = (16, 9)  # untested above this so display a warning
-
         import tk_nuke
 
         tk_nuke.tank_ensure_callbacks_registered(engine=self)
 
-        # We need to check to make sure that we are using one of the
-        # supported versions of Nuke. Right now that is anything between
-        # 6.3v5 and 9.0v*. For versions higher than what we know we
-        # support we'll simply warn and continue. For older versions
-        # we will have to bail out, as we know they won't work properly.
+        # We need to check to make sure that we are using one of the supported
+        # versions of Nuke.
+        # For versions higher than what we know we support we'll simply warn and
+        # continue.
+        # For older versions we will have to bail out, as we know they won't
+        # work properly.
         nuke_version = (
             nuke.env.get("NukeVersionMajor"),
             nuke.env.get("NukeVersionMinor"),
             nuke.env.get("NukeVersionRelease"),
         )
 
-        msg = "Nuke 13.0v1 is the minimum comptabile version!"
-        if nuke_version[0] < 13:
-            self.logger.error(msg)
-            return
+        url_doc_supported_versions = "https://help.autodesk.com/view/SGDEV/ENU/?guid=SGD_si_integrations_engine_supported_versions_html"
 
-        # Versions > 14.0 have not yet been tested so show a message to that effect.
-        if nuke_version[0] > MAX_VERSION[0] or (
-            nuke_version[0] == MAX_VERSION[0] and nuke_version[1] > MAX_VERSION[1]
-        ):
-            # This is an untested version of Nuke.
-            msg = (
-                "The Flow Production Tracking has not yet been fully tested "
-                "with Nuke %d.%dv%d. You can continue to use the Toolkit but you may "
-                "experience bugs or instability. Please report any issues to our support "
-                "team via %s"
-                % (nuke_version[0], nuke_version[1], nuke_version[2], sgtk.support_url)
+        if nuke_version < VERSION_OLDEST_COMPATIBLE:
+            # Older than the oldest compatible version
+            message = """
+Flow Production Tracking is no longer compatible with {product} versions older
+than {version}.
+
+For information regarding support engine versions, please visit this page:
+{url_doc_supported_versions}
+            """.strip()
+
+            if self.has_ui:
+                try:
+                    sgtk.platform.qt.QtGui.QMessageBox.critical(
+                        # Use QMessageBox instead of nuke.message because:
+                        # - nuke.message is not available in Hiero
+                        # - nuke.message doesn't allow to set the title
+                        # Overall, this is a better user experience
+                        None,  # parent
+                        "Error - Flow Production Tracking Compatibility!".ljust(
+                            # Padding to try to prevent the dialog being insanely narrow
+                            70
+                        ),
+                        message.replace(
+                            # Presence of \n breaks the Rich Text Format
+                            "\n",
+                            "<br>",
+                        ).format(
+                            product="Nuke",
+                            url_doc_supported_versions='<a style="color: {color}" href="{u}">{u}</a>'.format(
+                                u=url_doc_supported_versions,
+                                color=sgtk.platform.constants.SG_STYLESHEET_CONSTANTS.get(
+                                    "SG_HIGHLIGHT_COLOR",
+                                    "#18A7E3",
+                                ),
+                            ),
+                            version=self.version_str(VERSION_OLDEST_COMPATIBLE),
+                        ),
+                    )
+                except:  # nosec B110
+                    # It is unlikely that the above message will go through
+                    # on old versions of Nuke (Python2, Qt4, ...).
+                    # But there is nothing more we can do here.
+                    pass
+
+            raise sgtk.TankError(
+                message.format(
+                    product="Nuke",
+                    url_doc_supported_versions=url_doc_supported_versions,
+                    version=self.version_str(VERSION_OLDEST_COMPATIBLE),
+                )
             )
 
-            # Show nuke message if in UI mode, this is the first time the engine has been started
-            # and the warning dialog isn't overridden by the config. Note that nuke.message isn't
-            # available in Hiero, so we have to skip this there.
+        elif nuke_version < VERSION_OLDEST_SUPPORTED:
+            # Older than the oldest supported version
+            self.logger.warning(
+                "Flow Production Tracking no longer supports {product} "
+                "versions older than {version}".format(
+                    product="Nuke",
+                    version=self.version_str(VERSION_OLDEST_SUPPORTED),
+                )
+            )
+
+            if self.has_ui:
+                sgtk.platform.qt.QtGui.QMessageBox.warning(
+                    # Use QMessageBox instead of nuke.message because:
+                    # - nuke.message is not available in Hiero
+                    # - nuke.message doesn't allow to set the title
+                    # Overall, this is a better user experience
+                    None,  # parent
+                    "Warning - Flow Production Tracking Compatibility!".ljust(
+                        # Padding to try to prevent the dialog being insanely narrow
+                        70
+                    ),
+                    """
+Flow Production Tracking no longer supports {product} versions older than
+{version}.
+You can continue to use Toolkit but you may experience bugs or instabilities.
+
+For information regarding support engine versions, please visit this page:
+{url_doc_supported_versions}
+                    """.strip()
+                    .replace(
+                        # Presence of \n breaks the Rich Text Format
+                        "\n",
+                        "<br>",
+                    )
+                    .format(
+                        product="Nuke",
+                        url_doc_supported_versions='<a style="color: {color}" href="{u}">{u}</a>'.format(
+                            u=url_doc_supported_versions,
+                            color=sgtk.platform.constants.SG_STYLESHEET_CONSTANTS.get(
+                                "SG_HIGHLIGHT_COLOR",
+                                "#18A7E3",
+                            ),
+                        ),
+                        version=self.version_str(VERSION_OLDEST_SUPPORTED),
+                    ),
+                )
+
+        elif nuke_version <= VERSION_NEWEST_SUPPORTED:
+            # Within the range of supported versions
+            self.logger.debug(f"Running Nuke version {self.version_str(nuke_version)}")
+
+        else:  # Newer than the newest supported version (untested)
+            self.logger.warning(
+                "Flow Production Tracking has not yet been fully tested with "
+                "{product} version {version}.".format(
+                    product="Nuke",
+                    version=self.version_str(nuke_version),
+                )
+            )
+
             if (
                 self.has_ui
                 and "TANK_NUKE_ENGINE_INIT_NAME" not in os.environ
                 and nuke_version[0]
-                >= self.get_setting("compatibility_dialog_min_version", 11)
-                and not self.hiero_enabled
+                >= self.get_setting("compatibility_dialog_min_version")
             ):
-                nuke.message("Warning - Flow Production Tracking!\n\n%s" % msg)
+                sgtk.platform.qt.QtGui.QMessageBox.warning(
+                    # Use QMessageBox instead of nuke.message because:
+                    # - nuke.message is not available in Hiero
+                    # - nuke.message doesn't allow to set the title
+                    # Overall, this is a better user experience
+                    None,  # parent
+                    "Warning - Flow Production Tracking Compatibility!".ljust(
+                        # Padding to try to prevent the dialog being insanely narrow
+                        70
+                    ),
+                    """
+Flow Production Tracking has not yet been fully tested with {product} version
+{version}.
+You can continue to use Toolkit but you may experience bugs or instabilities.
 
-            # Log the warning.
-            self.logger.warning(msg)
+Please report any issues to:
+{support_url}
+                    """.strip()
+                    .replace(
+                        # Presence of \n breaks the Rich Text Format
+                        "\n",
+                        "<br>",
+                    )
+                    .format(
+                        product="Nuke",
+                        support_url='<a style="color: {color}" href="{u}">{u}</a>'.format(
+                            u=sgtk.support_url,
+                            color=sgtk.platform.constants.SG_STYLESHEET_CONSTANTS.get(
+                                "SG_HIGHLIGHT_COLOR",
+                                "#18A7E3",
+                            ),
+                        ),
+                        version=self.version_str(nuke_version),
+                    ),
+                )
 
         # Make sure we are not running Nuke PLE or Non-Commercial!
         if nuke.env.get("ple"):
@@ -848,6 +978,10 @@ class NukeEngine(sgtk.platform.Engine):
 
     #####################################################################################
     # General Utilities
+
+    @classmethod
+    def version_str(cls, version_tuple):
+        return "{}.{}v{}".format(*version_tuple)
 
     def set_project_root(self, event):
         """
