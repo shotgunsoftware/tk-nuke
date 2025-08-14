@@ -393,9 +393,9 @@ Please report any issues to:
         To avoid Nuke crash, a monkeypatch of on_dialog_closed is required,
         here the user is warned about restarted nuke is needed to continue.
         """
-        sgtk.authentication.sso_saml2.core.sso_saml2_core.SsoSaml2Core.on_dialog_closed = (
-            self._on_dialog_closed_monkeypatch
-        )
+        from sgtk.authentication.sso_saml2.core.sso_saml2_core import SsoSaml2Core
+
+        SsoSaml2Core.on_dialog_closed = self._on_dialog_closed_monkeypatch
 
     @staticmethod
     def _on_dialog_closed_monkeypatch(self, result):
