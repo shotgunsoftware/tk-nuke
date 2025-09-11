@@ -1,6 +1,6 @@
 # Running the test suite
 
-Have tk-core in the same directory of tk-nuke. 
+Have tk-core in the same directory of tk-nuke.
 Then you just need to execute this on tk-nuke directory:
 
 ```bash
