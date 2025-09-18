@@ -13,9 +13,10 @@ This file is being imported by Nuke Studio automatically because it is in the HI
 It launches the plugin's bootstrap process by reusing the one for Nuke.
 """
 
-import imp
 import uuid
 import os
+
+from . import importlib_wrapper
 
 
 def startup():
@@ -25,7 +26,7 @@ def startup():
     startup_root_path = os.path.dirname(__file__)
     module = None
     try:
-        module = imp.load_source(
+        module = importlib_wrapper.load_source(
             uuid.uuid4().hex,
             os.path.normpath(os.path.join(startup_root_path, "..", "..", "menu.py")),
         )

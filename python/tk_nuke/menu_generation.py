@@ -19,11 +19,6 @@ import traceback
 import nukescripts.openurl
 import nukescripts
 
-try:
-    from tank_vendor import sgutils
-except ImportError:
-    from tank_vendor import six as sgutils
-
 # -----------------------------------------------------------------------------
 
 
@@ -829,8 +824,11 @@ class BaseAppCommand(object):
             doc_url = self.app.documentation_url
             # Deal with nuke's inability to handle unicode.
             if type(doc_url) == str:
-                doc_url = sgutils.ensure_str(
-                    unicodedata.normalize("NFKD", doc_url), "ascii", "ignore"
+                doc_url = unicodedata.normalize("NFKD", doc_url)
+                doc_url = (
+                    doc_url.decode("ascii", "ignore")
+                    if isinstance(doc_url, bytes)
+                    else str(doc_url)
                 )
             return doc_url
         return None
