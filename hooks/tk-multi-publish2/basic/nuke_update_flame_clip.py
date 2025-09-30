@@ -546,7 +546,7 @@ class UpdateFlameClipPlugin(HookBaseClass):
             # paths are written out on linux form regardless of the operating system
             # currently running.
             publish_path_flame = publish_template.apply_fields(
-                render_path_fields, "linux2"
+                render_path_fields, "linux"
             )
 
         # open up and update our xml file
