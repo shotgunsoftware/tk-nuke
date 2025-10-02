@@ -70,7 +70,7 @@ class NukeLauncher(SoftwareLauncher):
             # C:/Program Files/Nuke10.0v5/Nuke10.0.exe
             r"C:\Program Files\Nuke{version}\Nuke{major_minor_version}.exe",
         ],
-        "linux2": [
+        "linux": [
             # /usr/local/Nuke10.0v5/Nuke10.0
             "/usr/local/Nuke{version}/Nuke{major_minor_version}",
             # /home/<username>/Nuke10.0v5/Nuke10.0
@@ -126,7 +126,7 @@ class NukeLauncher(SoftwareLauncher):
             else (
                 "win32"
                 if sgtk.util.is_windows()
-                else "linux2" if sgtk.util.is_linux() else []
+                else "linux" if sgtk.util.is_linux() else []
             )
         )
 
