@@ -159,6 +159,13 @@ configuration:
                         value to the current major version + 1."
         default_value:  16
 
+    display_min_supported_version_warning_dialog:
+        type:           bool
+        description:    "Controls whether a warning should display if the nuke version is below the minimum supported,
+                        but above the minimum required, version. Defaults to True. Set to False to disable the GUI 
+                        warning so this doesn't interrupt the loading of the application."
+        default_value:  True
+
 # the Shotgun fields that this engine needs in order to operate correctly
 requires_shotgun_fields:
 
