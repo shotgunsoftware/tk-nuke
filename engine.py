@@ -10,6 +10,7 @@
 
 import sgtk
 import nuke
+import sys
 import os
 import nukescripts
 import logging
@@ -385,84 +386,6 @@ Please report any issues to:
         # Used in classic_startup/sgtk_startup.py, and plugins/basic/Python/tk_nuke_basic/plugin_bootstrap.py
         os.environ["TANK_ENGINE"] = self.instance_name
         os.environ["TANK_CONTEXT"] = sgtk.context.serialize(self.context)
-
-        """
-        https://jira.autodesk.com/browse/SG-25374
-        Weblogin does not show up in Nuke 11 and makes Nuke 12 and 13 to crash
-
-        To avoid Nuke crash, a monkeypatch of on_dialog_closed is required,
-        here the user is warned about restarted nuke is needed to continue.
-        """
-        sgtk.authentication.sso_saml2.core.sso_saml2_core.SsoSaml2Core.on_dialog_closed = (
-            self._on_dialog_closed_monkeypatch
-        )
-
-    @staticmethod
-    def _on_dialog_closed_monkeypatch(self, result):
-        """
-        Called whenever the dialog is dismissed.
-
-        This can be the result of a callback, a timeout or user interaction.
-
-        :param result: Qt result following the closing of the dialog.
-                       QtGui.QDialog.Accepted or QtGui.QDialog.Rejected
-        """
-        self._logger.debug("SSO dialog closed")
-        # pylint: disable=invalid-name
-        QtGui = self._QtGui  # noqa
-
-        if self.is_handling_event():
-            if result == QtGui.QDialog.Rejected and self._session.cookies != "":
-                # We got here because of a timeout attempting a GUI-less login.
-                # Let's clear the cookies, and force the use of the GUI.
-                self._session.cookies = ""
-                # Let's have another go, without any cookies this time !
-                # This will force the GUI to be shown to the user.
-                self._logger.debug(
-                    "Unable to login/renew claims automatically, presenting GUI "
-                    "to user"
-                )
-                """
-                https://jira.autodesk.com/browse/SG-25374
-                Weblogin does not show up in Nuke 11 and makes Nuke 12 and
-                13 to crash
-                """
-                base_dir = os.path.dirname(os.path.abspath(__file__))
-
-                msgbox_icon = os.path.join(base_dir, "resources", "alert_icon.png")
-                msgbox_parent = self._dialog
-                msgbox_title = "Nuke"
-                msgbox_text = [
-                    "The Flow Production Tracking user session has expired.",
-                    "To continue using Flow Production Tracking in Nuke, please "
-                    "restart Nuke.",
-                ]
-                msgbox_buttons = self._QtGui.QMessageBox.Ok
-
-                msgbox = self._QtGui.QMessageBox(msgbox_parent)
-                msgbox.setWindowTitle(msgbox_title)
-                msgbox.setText("\n\n".join(msgbox_text))
-                msgbox.setStandardButtons(msgbox_buttons)
-                msgbox.setIconPixmap(self._QtGui.QPixmap(msgbox_icon))
-                msgbox.activateWindow()  # for Windows
-                msgbox.raise_()  # for MacOS
-                msgbox.exec_()
-
-                status = QtGui.QDialog.Rejected
-                self._logger.warn("Skipping web login dialog for Nuke DCC.")
-                self._login_status = self._login_status or status
-            else:
-                self.resolve_event()
-        else:
-            # Should we get a rejected dialog, then we have had a timeout.
-            if result == QtGui.QDialog.Rejected:
-                # @FIXME: Figure out exactly what to do when we have a timeout.
-                self._logger.warn(
-                    "Our QDialog got canceled outside of an event handling"
-                )
-
-        # Clear the web page
-        self._view.page().mainFrame().load("about:blank")
 
     def post_app_init(self):
         """
