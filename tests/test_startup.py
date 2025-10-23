@@ -341,50 +341,73 @@ class TestStartup(TankTestBase):
         """
         self._test_nuke([], "10.0v5")
 
-    @skip(
-        "Skipping Nuke versions below 10 due to issues on string comparison because of distutils removal."
-    )
     def test_nuke9(self):
         """
         Ensures we are returning the right variants for Nuke 9.
         """
-        self._test_nuke([], "9.0v8")
+        self._test_nuke(
+            [
+                'NukeAssist 9.0v8',
+                'NukeX 9.0v8',
+                'NukeStudio 9.0v8',
+                'Nuke 9.0v8'
+            ],
+            "9.0v8"
+        )
 
-    @skip(
-        "Skipping Nuke versions below 10 due to issues on string comparison because of distutils removal."
-    )
     def test_nuke8(self):
         """
         Ensures we are returning the right variants for Nuke 8.
         """
-        self._test_nuke([], "8.0v4")
+        self._test_nuke(
+            [
+                'Nuke 8.0v4',
+                'NukeX 8.0v4',
+                'NukeAssist 8.0v4',
+            ],
+            "8.0v4"
+        )
 
-    @skip(
-        "Skipping Nuke versions below 10 due to issues on string comparison because of distutils removal."
-    )
     def test_nuke7(self):
         """
         Ensures we are returning the right variants for Nuke 7.
         """
-        self._test_nuke([], "7.0v10")
+        self._test_nuke(
+            [
+                'NukeAssist 7.0v10',
+                'Nuke 7.0v10',
+                'NukeX 7.0v10'
+            ],
+            "7.0v10"
+        )
 
-    @skip(
-        "Skipping Nuke versions below 10 due to issues on string comparison because of distutils removal."
-    )
     def test_nuke7_9(self):
         """
         Ensures we are returning the right variants for Nuke 7.
         """
-        self._test_nuke([], "7.0v9")
+        self._test_nuke(
+            [
+                # 'Nuke 7.0v9',
+                # 'NukeStudio 7.0v9',
+                # 'NukeAssist 7.0v9',
+                # 'NukeX 7.0v9',
+            ],
+            "7.0v9"
+        )
 
-    @skip(
-        "Skipping Nuke versions below 10 due to issues on string comparison because of distutils removal."
-    )
     def test_nuke6(self):
         """
         Ensures that Nuke 6 or lower are not returned as they are not supported.
         """
-        self._test_nuke([], "6.3v6")
+        self._test_nuke(
+            [
+                'NukeAssist 6.3v6',
+                'Nuke 6.3v6',
+                'NukeStudio 6.3v6',
+                'NukeX 6.3v6'
+            ],
+            "6.3v6"
+        )
 
     @contextlib.contextmanager
     def _mock_folder_listing(self):
@@ -637,6 +660,8 @@ class TestStartup(TankTestBase):
 
         expected_variations = set(expected_variations)
         found_variations = set(x.display_name for x in software_versions)
+        print("found_variations: ", found_variations)
+        print("expected_variations: ", expected_variations)
         self.assertSetEqual(found_variations, expected_variations)
         # It is possible that due to a bug, the sets are the same, but the number of elements are not, so make sure
         # we built the set with the right number of arguments in the first place.
