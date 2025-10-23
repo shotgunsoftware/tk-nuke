@@ -652,8 +652,6 @@ class TestStartup(TankTestBase):
 
         expected_variations = set(expected_variations)
         found_variations = set(x.display_name for x in software_versions)
-        print("found_variations: ", found_variations)
-        print("expected_variations: ", expected_variations)
         self.assertSetEqual(found_variations, expected_variations)
         # It is possible that due to a bug, the sets are the same, but the number of elements are not, so make sure
         # we built the set with the right number of arguments in the first place.
