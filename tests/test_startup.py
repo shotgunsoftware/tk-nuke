@@ -385,15 +385,7 @@ class TestStartup(TankTestBase):
         """
         Ensures we are returning the right variants for Nuke 7.
         """
-        self._test_nuke(
-            [
-                # 'Nuke 7.0v9',
-                # 'NukeStudio 7.0v9',
-                # 'NukeAssist 7.0v9',
-                # 'NukeX 7.0v9',
-            ],
-            "7.0v9"
-        )
+        self._test_nuke([], "7.0v9")
 
     def test_nuke6(self):
         """
