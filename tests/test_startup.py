@@ -346,13 +346,8 @@ class TestStartup(TankTestBase):
         Ensures we are returning the right variants for Nuke 9.
         """
         self._test_nuke(
-            [
-                'NukeAssist 9.0v8',
-                'NukeX 9.0v8',
-                'NukeStudio 9.0v8',
-                'Nuke 9.0v8'
-            ],
-            "9.0v8"
+            ["NukeAssist 9.0v8", "NukeX 9.0v8", "NukeStudio 9.0v8", "Nuke 9.0v8"],
+            "9.0v8",
         )
 
     def test_nuke8(self):
@@ -361,25 +356,18 @@ class TestStartup(TankTestBase):
         """
         self._test_nuke(
             [
-                'Nuke 8.0v4',
-                'NukeX 8.0v4',
-                'NukeAssist 8.0v4',
+                "Nuke 8.0v4",
+                "NukeX 8.0v4",
+                "NukeAssist 8.0v4",
             ],
-            "8.0v4"
+            "8.0v4",
         )
 
     def test_nuke7(self):
         """
         Ensures we are returning the right variants for Nuke 7.
         """
-        self._test_nuke(
-            [
-                'NukeAssist 7.0v10',
-                'Nuke 7.0v10',
-                'NukeX 7.0v10'
-            ],
-            "7.0v10"
-        )
+        self._test_nuke(["NukeAssist 7.0v10", "Nuke 7.0v10", "NukeX 7.0v10"], "7.0v10")
 
     def test_nuke7_9(self):
         """
@@ -392,13 +380,8 @@ class TestStartup(TankTestBase):
         Ensures that Nuke 6 or lower are not returned as they are not supported.
         """
         self._test_nuke(
-            [
-                'NukeAssist 6.3v6',
-                'Nuke 6.3v6',
-                'NukeStudio 6.3v6',
-                'NukeX 6.3v6'
-            ],
-            "6.3v6"
+            ["NukeAssist 6.3v6", "Nuke 6.3v6", "NukeStudio 6.3v6", "NukeX 6.3v6"],
+            "6.3v6",
         )
 
     @contextlib.contextmanager
