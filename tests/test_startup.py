@@ -380,7 +380,7 @@ class TestStartup(TankTestBase):
         Ensures that Nuke 6 or lower are not returned as they are not supported.
         """
         self._test_nuke(
-            ["NukeAssist 6.3v6", "Nuke 6.3v6", "NukeStudio 6.3v6", "NukeX 6.3v6"],
+            ["NukeAssist 6.3v6", "Nuke 6.3v6", "NukeX 6.3v6"],
             "6.3v6",
         )
 

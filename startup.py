@@ -38,8 +38,8 @@ class NukeLauncher(SoftwareLauncher):
         "major_minor_version": r"[\d.]+",
     }
 
-    # Templates for all the display names of the products supported by Nuke 7 and 8.
-    NUKE_7_8_PRODUCTS = [
+    # Templates for all the display names of the products supported by Nuke 6, 7 and 8.
+    NUKE_6_7_8_PRODUCTS = [
         "Nuke",
         "NukeX",
         "NukeAssist",
@@ -203,8 +203,8 @@ class NukeLauncher(SoftwareLauncher):
         """
         # As of Nuke 6, Nuke versions formatting is <Major>.<Minor>v<patch>.
         # This will grab the major version.
-        if version.split(".", 1)[0] in ["7", "8"]:
-            return self.NUKE_7_8_PRODUCTS
+        if version.split(".", 1)[0] in ["6", "7", "8"]:
+            return self.NUKE_6_7_8_PRODUCTS
         else:
             return self.NUKE_9_OR_HIGHER_PRODUCTS
 
