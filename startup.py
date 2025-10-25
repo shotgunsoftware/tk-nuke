@@ -38,7 +38,7 @@ class NukeLauncher(SoftwareLauncher):
         "major_minor_version": r"[\d.]+",
     }
 
-    # Templates for all the display names of the products supported by Nuke 6, 7 and 8.
+    # Templates for all the display names of the products supported by Nuke 7 and 8.
     NUKE_7_8_PRODUCTS = [
         "Nuke",
         "NukeX",

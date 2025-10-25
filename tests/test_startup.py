@@ -116,6 +116,18 @@ class TestStartup(TankTestBase):
                 "NukeAssist8.0v4.app",
                 "NukeX8.0v4.app",
             ],
+             "Nuke7.0v10": [
+                "Nuke7.0v10 PLE.app",
+                "Nuke7.0v10.app",
+                "NukeAssist7.0v10.app",
+                "NukeX7.0v10.app",
+            ],
+            "Nuke7.0v9": [
+                "Nuke7.0v9 PLE.app",
+                "Nuke7.0v9.app",
+                "NukeAssist7.0v9.app",
+                "NukeX7.0v9.app",
+            ],
             "Nuke6.3v6": [
                 "Nuke6.3v6 PLE",
                 "Nuke6.3v6.app",
