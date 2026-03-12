@@ -15,7 +15,6 @@ import os
 import nukescripts
 import logging
 
-
 # Nuke versions compatibility constants
 VERSION_OLDEST_COMPATIBLE = (13, 0, 1)
 VERSION_OLDEST_SUPPORTED = (14, 0, 8)
@@ -89,7 +88,7 @@ class NukeEngine(sgtk.platform.Engine):
     """
 
     # Define the different areas where menu events can occur in Hiero.
-    (HIERO_BIN_AREA, HIERO_SPREADSHEET_AREA, HIERO_TIMELINE_AREA) = range(3)
+    HIERO_BIN_AREA, HIERO_SPREADSHEET_AREA, HIERO_TIMELINE_AREA = range(3)
 
     def __init__(self, *args, **kwargs):
         # For the short term, we will treat Nuke Studio as if it

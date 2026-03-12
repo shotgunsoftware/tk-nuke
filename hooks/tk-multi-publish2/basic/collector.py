@@ -343,7 +343,7 @@ class NukeSessionCollector(HookBaseClass):
             version_number = render_path_fields.get("version")
 
             # use the path basename and nuke writenode name for display
-            (_, filename) = os.path.split(publish_path)
+            _, filename = os.path.split(publish_path)
             display_name = "%s (%s)" % (publish_name, node.name())
 
             # create and populate the item

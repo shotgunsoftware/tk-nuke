@@ -17,6 +17,7 @@ not necessarily fully initialized. Therefore, any modules that require
 QT to be imported should be placed in the tk_nuke_qt module instead
 in order to avoid import errors at startup and context switch.
 """
+
 import os
 import textwrap
 import nuke
@@ -70,7 +71,7 @@ def __create_tank_error_menu():
     Creates a std "error" tank menu and grabs the current context.
     Make sure that this is called from inside an except clause.
     """
-    (exc_type, exc_value, exc_traceback) = sys.exc_info()
+    exc_type, exc_value, exc_traceback = sys.exc_info()
     message = ""
     message += "PTR encountered a problem starting the Engine. "
     message += "Please contact us via %s\n\n" % sgtk.support_url
