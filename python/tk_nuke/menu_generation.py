@@ -72,7 +72,7 @@ class BaseMenuGenerator(object):
         """
         Creates an "error" menu item.
         """
-        (exc_type, exc_value, exc_traceback) = sys.exc_info()
+        exc_type, exc_value, exc_traceback = sys.exc_info()
         msg = (
             "Message: PTR encountered a problem starting the Engine.\n"
             "Exception: %s - %s\n"

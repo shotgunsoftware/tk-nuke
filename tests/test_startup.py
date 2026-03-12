@@ -20,7 +20,6 @@ from unittest import mock
 from unittest import skip
 import contextlib
 
-
 repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 print("tk-nuke repository root found at %s." % repo_root)
 
