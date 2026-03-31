@@ -171,6 +171,7 @@ class TestStartup(TankTestBase):
         "usr": {
             "local": {
                 "Nuke17.0v1": ["Nuke17.0"],
+                "Nuke16.0v1": ["Nuke16.0"],
                 "Nuke15.1v2": ["Nuke15.1"],
                 "Nuke14.0v8": ["Nuke14.0"],
                 "Nuke13.0v9": ["Nuke13.0"],
