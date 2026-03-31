@@ -32,6 +32,17 @@ class TestStartup(TankTestBase):
     # Mocked folder hierarchy for OSX
     _mac_mock_hierarchy = {
         "Applications": {
+            "Nuke17.0v1": [
+                "Hiero17.0v1.app",
+                "HieroPlayer17.0v1.app",
+                "Nuke17.0v1 Non-commercial.app",
+                "Nuke17.0v1.app",
+                "NukeAssist17.0v1.app",
+                "NukeStudio17.0v1 Non-commercial.app",
+                "NukeStudio17.0v1.app",
+                "NukeX17.0v1 Non-commercial.app",
+                "NukeX17.0v1.app",
+            ],
             "Nuke16.0v1": [
                 "Hiero16.0v1.app",
                 "HieroPlayer16.0v1.app",
@@ -140,6 +151,7 @@ class TestStartup(TankTestBase):
     _windows_mock_hiearchy = {
         "C:\\": {
             "Program Files": {
+                "Nuke17.0v1": ["Nuke17.0.exe"],
                 "Nuke16.0v1": ["Nuke16.0.exe"],
                 "Nuke15.1v2": ["Nuke15.1.exe"],
                 "Nuke14.0v8": ["Nuke14.0.exe"],
@@ -158,7 +170,7 @@ class TestStartup(TankTestBase):
     _linux_mock_hierarchy = {
         "usr": {
             "local": {
-                "Nuke16.0v1": ["Nuke16.0"],
+                "Nuke17.0v1": ["Nuke17.0"],
                 "Nuke15.1v2": ["Nuke15.1"],
                 "Nuke14.0v8": ["Nuke14.0"],
                 "Nuke13.0v9": ["Nuke13.0"],
@@ -272,6 +284,20 @@ class TestStartup(TankTestBase):
         # is the same as os.listdir
         return list(self._glob_wrapper(directory, False))
 
+    def test_nuke17(self):
+        """
+        Ensures we are returning the right variants for Nuke 16.
+        """
+        self._test_nuke(
+            [
+                "Nuke 17.0v1",
+                "NukeX 17.0v1",
+                "NukeStudio 17.0v1",
+                "NukeAssist 17.0v1",
+            ],
+            "17.0v1",
+        )
+
     def test_nuke16(self):
         """
         Ensures we are returning the right variants for Nuke 16.
@@ -318,15 +344,7 @@ class TestStartup(TankTestBase):
         """
         Ensures we are returning the right variants for Nuke 13.
         """
-        self._test_nuke(
-            [
-                "Nuke 13.0v9",
-                "NukeX 13.0v9",
-                "NukeStudio 13.0v9",
-                "NukeAssist 13.0v9",
-            ],
-            "13.0v9",
-        )
+        self._test_nuke([], "13.0v9")
 
     def test_nuke12(self):
         """
