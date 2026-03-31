@@ -15,7 +15,7 @@ import pprint
 from sgtk.platform import SoftwareLauncher, SoftwareVersion, LaunchInformation
 
 # Nuke versions compatibility constants
-VERSION_OLDEST_COMPATIBLE = (13, 0, 1)
+VERSION_OLDEST_COMPATIBLE = (14, 0, 1)
 
 
 class NukeLauncher(SoftwareLauncher):
