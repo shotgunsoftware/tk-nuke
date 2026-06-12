@@ -13,7 +13,6 @@ This file is being imported by Nuke automatically because it is in the NUKE_PATH
 It launches the plugin's bootstrap process.
 """
 
-
 import os
 import sys
 

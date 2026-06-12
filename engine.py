@@ -15,11 +15,10 @@ import os
 import nukescripts
 import logging
 
-
 # Nuke versions compatibility constants
-VERSION_OLDEST_COMPATIBLE = (13, 0, 1)
-VERSION_OLDEST_SUPPORTED = (14, 0, 8)
-VERSION_NEWEST_SUPPORTED = (16, 0, 99)
+VERSION_OLDEST_COMPATIBLE = (14, 0, 1)
+VERSION_OLDEST_SUPPORTED = (15, 0, 8)
+VERSION_NEWEST_SUPPORTED = (17, 0, 99)
 # Caution: make sure compatibility_dialog_min_version default value in info.yml
 # is equal to VERSION_NEWEST_SUPPORTED
 
@@ -89,7 +88,7 @@ class NukeEngine(sgtk.platform.Engine):
     """
 
     # Define the different areas where menu events can occur in Hiero.
-    (HIERO_BIN_AREA, HIERO_SPREADSHEET_AREA, HIERO_TIMELINE_AREA) = range(3)
+    HIERO_BIN_AREA, HIERO_SPREADSHEET_AREA, HIERO_TIMELINE_AREA = range(3)
 
     def __init__(self, *args, **kwargs):
         # For the short term, we will treat Nuke Studio as if it
@@ -918,6 +917,11 @@ Please report any issues to:
         """
         import hiero
 
+        # Hiero/Nuke re-evaluates stored knob and export-template strings through TCL,
+        # which strips single backslashes (e.g. "Q:\Project" -> "Q:Project"). Pass the
+        # path with forward slashes so it survives round-tripping on Windows.
+        project_path = self.sgtk.project_path.replace("\\", "/")
+
         for p in hiero.core.projects():
             # In Nuke 11 and greater the Project.projectRoot and Project.setProjectRoot methods
             # have been deprecated in favour of Project.exportRootDirectory and
@@ -926,14 +930,14 @@ Please report any issues to:
                 self.logger.debug(
                     "Setting exportRootDirectory on %s to: %s",
                     p.name(),
-                    self.sgtk.project_path,
+                    project_path,
                 )
-                p.setProjectDirectory(self.sgtk.project_path)
+                p.setProjectDirectory(project_path)
             elif nuke.env.get("NukeVersionMajor") <= 10 and not p.projectRoot():
                 self.logger.debug(
-                    "Setting projectRoot on %s to: %s", p.name(), self.sgtk.project_path
+                    "Setting projectRoot on %s to: %s", p.name(), project_path
                 )
-                p.setProjectRoot(self.sgtk.project_path)
+                p.setProjectRoot(project_path)
 
     def _get_dialog_parent(self):
         """
@@ -1122,6 +1126,10 @@ Please report any issues to:
                 # Remove old directory
                 nuke.removeFavoriteDir(dir_name)
 
+                # Favorites persist to ~/.nuke/folders.nk as a TCL script, which strips
+                # single backslashes on re-evaluation. Use forward slashes on Windows.
+                root_path = root_path.replace("\\", "/")
+
                 # Add new path
                 nuke.addFavoriteDir(
                     dir_name,
@@ -1151,6 +1159,9 @@ Please report any issues to:
             icon_path = favorite.get("icon")
             if not os.path.isfile(icon_path) or not os.path.exists(icon_path):
                 icon_path = sg_logo
+
+            # See note above re: ~/.nuke/folders.nk TCL evaluation.
+            path = path.replace("\\", "/")
 
             nuke.addFavoriteDir(
                 favorite["display_name"],
