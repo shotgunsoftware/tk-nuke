@@ -156,9 +156,51 @@ def __sgtk_on_save_callback():
         # now restart the engine with the new context
         __engine_refresh(new_ctx)
 
+        # Ensure that the sgtk tab and sgtk_context knob exist on the root node.
+        __ensure_sgtk_tab_and_context()
+
+        # save the context into the sgtk_context knob
+        root = nuke.root()
+        if "sgtk_context" in root.knobs():
+            context_knob = root.knob("sgtk_context")
+            context_str = new_ctx.serialize(with_user_credentials=False, use_json=False)
+            context_knob.setValue(context_str)
+            logger.debug("Updated 'sgtk_context' knob with value: %s" % context_str)
+
     except Exception:
         logger.exception("An exception was raised during addOnScriptSave callback.")
         __create_tank_error_menu()
+
+
+def __ensure_sgtk_tab_and_context():
+    """
+    Ensure that the sgtk tab and sgtk_context knob exist on the root node.
+    1. If the "sgtk" tab does not exist, create it.
+    2. If the "sgtk_context" knob does not exist, create it.
+    3. Log actions taken.
+    """
+    logger.debug("Ensuring 'sgtk' tab and 'sgtk_context' knob exist on root node.")
+
+    try:
+        root = nuke.root()
+
+        # Check if the "sgtk" tab exists
+        if "sgtk" not in root.knobs():
+            sgtk_tab = nuke.Tab_Knob("sgtk", "sgtk")
+            root.addKnob(sgtk_tab)
+            logger.debug("Created 'sgtk' tab on root.")
+        else:
+            logger.debug("'sgtk' tab already exists.")
+
+        # Check if the sgtk_context knob exists
+        if "sgtk_context" not in root.knobs():
+            context_knob = nuke.String_Knob("sgtk_context", "ShotGrid Context")
+            root.addKnob(context_knob)
+            logger.debug("Created 'sgtk_context' knob.")
+        else:
+            logger.debug("'sgtk_context' knob already exists.")
+    except Exception as e:
+        logger.exception("Failed to ensure 'sgtk' tab and 'sgtk_context' knob: %s", e)
 
 
 def sgtk_on_load_callback():
@@ -218,7 +260,26 @@ def sgtk_on_load_callback():
             if sgtk.platform.current_engine():
                 curr_ctx = sgtk.platform.current_engine().context
 
-            logger.debug("")
+            logger.debug("Trying to get the context from the root.sgtk_context knob if it exists...")
+            # Try to get the context from the root.sgtk_context knob if it exists
+            root = nuke.root()
+            if "sgtk_context" in root.knobs():
+                context_knob = root.knob("sgtk_context")
+                context_str_serialized = context_knob.value()
+                if context_str_serialized:
+                    logger.debug("Found serialized context in knob: %s" % context_str_serialized)
+                    try:
+                        new_ctx = sgtk.Context.deserialize(context_str_serialized)
+                        logger.debug("Deserialized context from knob: %r" % (new_ctx,))
+                        # Now switch to the context appropriate for the file
+                        __engine_refresh(new_ctx)
+                        return
+                    except Exception as e:
+                        logger.debug(
+                            "Could not deserialize context from knob: %s" % (e,)
+                        )
+
+            logger.debug("Computing new context from file path...")
             new_ctx = tk.context_from_path(file_name, curr_ctx)
             logger.debug("Current context: %r" % (curr_ctx,))
             logger.debug("New context: %r" % (new_ctx,))
@@ -275,3 +336,4 @@ def tank_ensure_callbacks_registered(engine=None):
             nuke.removeOnScriptLoad(sgtk_on_load_callback)
             nuke.removeOnScriptSave(__sgtk_on_save_callback)
             g_tank_callbacks_registered = False
+

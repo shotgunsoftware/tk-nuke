@@ -240,41 +240,42 @@ For information regarding support engine versions, please visit this page:
             )
 
             if self.has_ui:
-                sgtk.platform.qt.QtGui.QMessageBox.warning(
-                    # Use QMessageBox instead of nuke.message because:
-                    # - nuke.message is not available in Hiero
-                    # - nuke.message doesn't allow to set the title
-                    # Overall, this is a better user experience
-                    None,  # parent
-                    "Warning - Flow Production Tracking Compatibility!".ljust(
-                        # Padding to try to prevent the dialog being insanely narrow
-                        70
-                    ),
-                    """
-Flow Production Tracking no longer supports {product} versions older than
-{version}.
-You can continue to use Toolkit but you may experience bugs or instabilities.
-
-For information regarding support engine versions, please visit this page:
-{url_doc_supported_versions}
-                    """.strip()
-                    .replace(
-                        # Presence of \n breaks the Rich Text Format
-                        "\n",
-                        "<br>",
-                    )
-                    .format(
-                        product="Nuke",
-                        url_doc_supported_versions='<a style="color: {color}" href="{u}">{u}</a>'.format(
-                            u=url_doc_supported_versions,
-                            color=sgtk.platform.constants.SG_STYLESHEET_CONSTANTS.get(
-                                "SG_HIGHLIGHT_COLOR",
-                                "#18A7E3",
-                            ),
+                if self.get_setting("display_min_supported_version_warning_dialog"):
+                    sgtk.platform.qt.QtGui.QMessageBox.warning(
+                        # Use QMessageBox instead of nuke.message because:
+                        # - nuke.message is not available in Hiero
+                        # - nuke.message doesn't allow to set the title
+                        # Overall, this is a better user experience
+                        None,  # parent
+                        "Warning - Flow Production Tracking Compatibility!".ljust(
+                            # Padding to try to prevent the dialog being insanely narrow
+                            70
                         ),
-                        version=self.version_str(VERSION_OLDEST_SUPPORTED),
-                    ),
-                )
+                        """
+    Flow Production Tracking no longer supports {product} versions older than
+    {version}.
+    You can continue to use Toolkit but you may experience bugs or instabilities.
+    
+    For information regarding support engine versions, please visit this page:
+    {url_doc_supported_versions}
+                        """.strip()
+                        .replace(
+                            # Presence of \n breaks the Rich Text Format
+                            "\n",
+                            "<br>",
+                        )
+                        .format(
+                            product="Nuke",
+                            url_doc_supported_versions='<a style="color: {color}" href="{u}">{u}</a>'.format(
+                                u=url_doc_supported_versions,
+                                color=sgtk.platform.constants.SG_STYLESHEET_CONSTANTS.get(
+                                    "SG_HIGHLIGHT_COLOR",
+                                    "#18A7E3",
+                                ),
+                            ),
+                            version=self.version_str(VERSION_OLDEST_SUPPORTED),
+                        ),
+                    )
 
         elif nuke_version <= VERSION_NEWEST_SUPPORTED:
             # Within the range of supported versions
