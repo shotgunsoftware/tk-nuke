@@ -336,9 +336,9 @@ class NukeHost(FlowHost):
         Returns:
             True on success.
         """
-        from tank.platform.qt import QtGui as qtg
+        from tank.platform.qt import QtGui
 
-        qtg.QApplication.instance().clipboard().setText(text)
+        QtGui.QApplication.instance().clipboard().setText(text)
         return True
 
     def get_dependency_tree(self, must_exist: bool = True) -> DependencyData:
