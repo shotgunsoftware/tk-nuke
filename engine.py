@@ -406,6 +406,12 @@ Please report any issues to:
         else:
             self.post_app_init_nuke()
 
+        # Instantiate FlowHost if current context is configured with Flow
+        if self.context.flow_project_id:
+            from flowam.host import NukeHost
+            self.logger.info("Instantiating Flow host as NukeHost...")
+            self._flow_host = NukeHost(self.context)
+
     def post_app_init_studio(self):
         """
         The Nuke Studio specific portion of the engine's post-init process.
