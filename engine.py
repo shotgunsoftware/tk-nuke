@@ -408,7 +408,10 @@ Please report any issues to:
 
         # Instantiate FlowHost if current context is configured with Flow
         if self.context.flow_project_id:
+            # NOTE: placing this import at the top of the module causes errors
+            #       so it must be localized
             from flowam.host import NukeHost
+
             self.logger.info("Instantiating Flow host as NukeHost...")
             self._flow_host = NukeHost(self.context)
 
