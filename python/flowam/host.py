@@ -32,7 +32,7 @@ class NukeHost(FlowHost):
 
     logger = LogManager.get_logger("NukeHost")
 
-    #: Desktop application deals with generic workfiles
+    #: The schema name associated with Nuke workfiles
     WORKFILE_TYPE = "type.workfile.nuke"
     #: Nuke native file types
     FILE_TYPES = ["nk"]
@@ -338,8 +338,11 @@ class NukeHost(FlowHost):
         """
         from tank.platform.qt import QtGui
 
-        QtGui.QApplication.instance().clipboard().setText(text)
-        return True
+        app = QtGui.QApplication.instance()
+        if app:
+            app.clipboard().setText(text)
+            return True
+        return False
 
     def get_dependency_tree(self, must_exist: bool = True) -> DependencyData:
         """Return a DependencyData object which is the root of the
