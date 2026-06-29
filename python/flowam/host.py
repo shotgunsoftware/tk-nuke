@@ -82,6 +82,7 @@ class NukeHost(FlowHost):
         # NOTE: Nuke seems inconsistent with setting this flag
         #       automatically, so adding this guardrail to protect
         #       unsaved changes.
+        self.logger.info("Registering global callbacks for NukeHost...")
         nuke.addOnUserCreate(self._set_scene_modified)
         nuke.addKnobChanged(self._set_scene_modified)
         nuke.addOnScriptLoad(self._on_script_load)
@@ -105,6 +106,22 @@ class NukeHost(FlowHost):
         # Add custom Flow integration callbacks for FlowWrite node
         FlowWriteNode.create_callback = _nuke_flow_write_create
         FlowWriteNode.pre_render_callback = _nuke_flow_write_pre_render
+
+    def __del__(self):
+
+        # Deregister callbacks
+        self.logger.info("Unregistering callbacks added by NukeHost...")
+
+        nuke.removeOnUserCreate(self._set_scene_modified)
+        nuke.removeKnobChanged(self._set_scene_modified)
+        nuke.removeOnScriptLoad(self._on_script_load)
+        nuke.removeOnScriptClose(self._on_script_close)
+
+        nuke.removeKnobChanged(FlowWriteNode._on_update_flow_write, nodeClass="Write")
+        nuke.removeBeforeRender(FlowWriteNode._validate_flow_write, nodeClass="Write")
+        nuke.removeBeforeRender(FlowWriteNode._pre_render_flow_write, nodeClass="Write")
+        nuke.removeAfterRender(FlowWriteNode._post_render_flow_write, nodeClass="Write")
+        nuke.removeOnScriptLoad(FlowWriteNode._register_ui_callback)
 
     @trace
     def current_file(self) -> str:
