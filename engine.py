@@ -407,7 +407,7 @@ Please report any issues to:
             self.post_app_init_nuke()
 
         # Instantiate FlowHost if current context is configured with Flow
-        if self.context.flow_project_id:
+        if hasattr(self.context, "flow_project_id") and self.context.flow_project_id:
             # NOTE: placing this import at the top of the module causes errors
             #       so it must be localized
             from flowam.host import NukeHost
