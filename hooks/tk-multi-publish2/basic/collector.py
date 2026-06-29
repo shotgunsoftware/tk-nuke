@@ -12,7 +12,6 @@ import os
 import nuke
 import sgtk
 
-from flowam.flow_write_node.flow_write_node import FlowWriteNode
 
 HookBaseClass = sgtk.get_hook_baseclass()
 
@@ -100,8 +99,10 @@ class NukeSessionCollector(HookBaseClass):
         # run node collection if not in hiero
         if hasattr(engine, "hiero_enabled") and not engine.hiero_enabled:
             self.collect_sg_writenodes(project_item)
-            self.collect_flow_writenodes(project_item)
             self.collect_node_outputs(project_item)
+            if self._in_flow_context():
+                # FlowWrite nodes are only supported in Flow context
+                self.collect_flow_writenodes(project_item)
 
     def collect_current_nuke_session(self, settings, parent_item):
         """
@@ -250,6 +251,8 @@ class NukeSessionCollector(HookBaseClass):
 
         :param parent_item: The parent item for any nodes collected
         """
+        if self._in_flow_context():
+            from flowam.flow_write_node.flow_write_node import FlowWriteNode
 
         # iterate over all the known output types
         for node_type in _NUKE_OUTPUTS:
@@ -262,7 +265,7 @@ class NukeSessionCollector(HookBaseClass):
 
                 # Skip FlowWrite nodes here
                 # We will handle them explicitly in collect_flow_writenodes()
-                if FlowWriteNode.is_flow_write(node):
+                if self._in_flow_context() and FlowWriteNode.is_flow_write(node):
                     continue
 
                 param_name = _NUKE_OUTPUTS[node_type]
@@ -403,6 +406,7 @@ class NukeSessionCollector(HookBaseClass):
 
         :param parent_item:  The parent item for any sg write nodes collected
         """
+        from flowam.flow_write_node.flow_write_node import FlowWriteNode
 
         first_frame = int(nuke.root()["first_frame"].value())
         last_frame = int(nuke.root()["last_frame"].value())
@@ -480,6 +484,10 @@ class NukeSessionCollector(HookBaseClass):
         if cs.startswith("default (") and cs.endswith(")"):
             cs = cs[9:-1]
         return cs
+
+    def _in_flow_context(self) -> bool:
+        """Return True if in a Flow-enabled context."""
+        return hasattr(self.parent.engine.context, "flow_project_id")
 
 
 def _session_path():

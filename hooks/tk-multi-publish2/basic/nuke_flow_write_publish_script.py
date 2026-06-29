@@ -10,7 +10,6 @@
 
 import sgtk
 
-from tank_vendor.flow_integration_sdk.objects import FlowAsset
 
 HookBaseClass = sgtk.get_hook_baseclass()
 
@@ -106,6 +105,8 @@ class NukeFlowWritePublishPlugin(HookBaseClass):
             instances.
         :param item: Item to process
         """
+        from tank_vendor.flow_integration_sdk.objects import FlowAsset
+
         # If there is no asset id associated with item,
         # assume this is a new asset
         first_flow_write_publish = item.properties.get("flow_asset_id") == ""
