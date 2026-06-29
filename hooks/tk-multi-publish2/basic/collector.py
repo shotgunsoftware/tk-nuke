@@ -12,6 +12,7 @@ import os
 import nuke
 import sgtk
 
+
 HookBaseClass = sgtk.get_hook_baseclass()
 
 # A look up of node types to parameters for finding outputs to publish
@@ -99,6 +100,9 @@ class NukeSessionCollector(HookBaseClass):
         if hasattr(engine, "hiero_enabled") and not engine.hiero_enabled:
             self.collect_sg_writenodes(project_item)
             self.collect_node_outputs(project_item)
+            if self._in_flow_context():
+                # FlowWrite nodes are only supported in Flow context
+                self.collect_flow_writenodes(project_item)
 
     def collect_current_nuke_session(self, settings, parent_item):
         """
@@ -247,6 +251,8 @@ class NukeSessionCollector(HookBaseClass):
 
         :param parent_item: The parent item for any nodes collected
         """
+        if self._in_flow_context():
+            from flowam.flow_write_node.flow_write_node import FlowWriteNode
 
         # iterate over all the known output types
         for node_type in _NUKE_OUTPUTS:
@@ -256,6 +262,11 @@ class NukeSessionCollector(HookBaseClass):
 
             # iterate over each instance
             for node in all_nodes_of_type:
+
+                # Skip FlowWrite nodes here
+                # We will handle them explicitly in collect_flow_writenodes()
+                if self._in_flow_context() and FlowWriteNode.is_flow_write(node):
+                    continue
 
                 param_name = _NUKE_OUTPUTS[node_type]
 
@@ -389,6 +400,74 @@ class NukeSessionCollector(HookBaseClass):
 
             self.logger.info("Collected file: %s" % (publish_path,))
 
+    def collect_flow_writenodes(self, parent_item):
+        """
+        Collect any rendered flow write nodes in the session.
+
+        :param parent_item:  The parent item for any sg write nodes collected
+        """
+        from flowam.flow_write_node.flow_write_node import FlowWriteNode
+
+        first_frame = int(nuke.root()["first_frame"].value())
+        last_frame = int(nuke.root()["last_frame"].value())
+
+        for node in FlowWriteNode.get_flow_write_nodes():
+
+            # see if any frames have been rendered for this write node
+            rendered_files = FlowWriteNode.get_node_render_files(node)
+            if not rendered_files:
+                continue
+
+            # some files rendered, use first frame to get some publish item info
+            path = rendered_files[0]
+            item_info = super()._get_item_info(path)
+
+            # determine whether item is a sequence
+            item_type = item_info["item_type"]
+            type_display = item_info["type_display"]
+            if item_type == "file.image":
+                # check if there is frame padding, if so make it a sequence
+                if node["use_frame_padding"].value():
+                    item_type = f"{item_type}.sequence"
+                    type_display = f"{type_display} Sequence"
+
+            # use the asset name and nuke FlowWrite node name for display
+            publish_name = FlowWriteNode.get_asset_name(node)
+            display_name = "%s (%s)" % (publish_name, node.name())
+
+            # create and populate the item
+            item = parent_item.create_item(item_type, type_display, display_name)
+            item.set_icon_from_path(item_info["icon_path"])
+
+            # if the supplied path is an image, use the path as the thumbnail.
+            item.set_thumbnail_from_path(path)
+
+            # disable thumbnail creation since we get it for free
+            item.thumbnail_enabled = False
+
+            # store the nuke writenode on the item as well. this can be used by
+            # secondary publish plugins
+            item.properties["flow_write_node"] = node
+            item.properties["is_nuke_flow_write"] = True
+            item.properties["flow_asset_id"] = node["asset_id"].value()
+            item.properties["flow_asset_name"] = node["asset_name"].value()
+            item.properties["flow_parent_id"] = node["source_asset_id"].value()
+
+            # all we know about the file is its path. set the path in its
+            # properties for the plugins to use for processing.
+            item.properties["path"] = path
+
+            # include an indicator that this is an image sequence and the known
+            # file that belongs to this sequence
+            item.properties["sequence_paths"] = rendered_files
+            item.properties["first_frame"] = first_frame
+            item.properties["last_frame"] = last_frame
+
+            # disable context change because it is not relevant to FlowWrite renders
+            item.context_change_allowed = False
+
+            self.logger.info(f"Collected file: {path}")
+
     def _get_node_colorspace(self, node):
         """
         Get the colorspace for the specified nuke node
@@ -405,6 +484,10 @@ class NukeSessionCollector(HookBaseClass):
         if cs.startswith("default (") and cs.endswith(")"):
             cs = cs[9:-1]
         return cs
+
+    def _in_flow_context(self) -> bool:
+        """Return True if in a Flow-enabled context."""
+        return hasattr(self.parent.engine.context, "flow_project_id")
 
 
 def _session_path():
