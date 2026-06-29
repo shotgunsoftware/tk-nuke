@@ -418,15 +418,14 @@ class NukeSessionCollector(HookBaseClass):
             path = rendered_files[0]
             item_info = super()._get_item_info(path)
 
-            # item_info will be for the single file. we'll update the type and
-            # display to represent a sequence. This is the same pattern used by
-            # the base collector for image sequences. We're not using the base
-            # collector to create the publish item though since we already have
-            # the sequence path, template knowledge provided by the
-            # tk-nuke-writenode app. The base collector makes some "zero config"
-            # assupmtions about the path that we don't need to make here.
-            item_type = "%s.sequence" % (item_info["item_type"],)
-            type_display = "%s Sequence" % (item_info["type_display"],)
+            # determine whether item is a sequence
+            item_type = item_info["item_type"]
+            type_display = item_info["type_display"]
+            if item_type == "file.image":
+                # check if there is frame padding, if so make it a sequence
+                if node["use_frame_padding"].value():
+                    item_type = f"{item_type}.sequence"
+                    type_display = f"{type_display} Sequence"
 
             # use the asset name and nuke FlowWrite node name for display
             publish_name = FlowWriteNode.get_asset_name(node)
@@ -463,7 +462,7 @@ class NukeSessionCollector(HookBaseClass):
             # disable context change because it is not relevant to FlowWrite renders
             item.context_change_allowed = False
 
-            self.logger.info("Collected file: %s" % (path,))
+            self.logger.info(f"Collected file: {path}")
 
     def _get_node_colorspace(self, node):
         """

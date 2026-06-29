@@ -27,8 +27,12 @@ class NukeFlowWritePublishPlugin(HookBaseClass):
         ["maya.*", "file.maya"]
         """
 
-        # TODO: adjust to handle movie files
-        return ["file.image.sequence"]  # matches what collect_flow_writenodes() creates
+        # matches what collect_flow_writenodes() creates
+        return [
+            "file.image",
+            "file.image.sequence",
+            "file.video",
+        ]
 
     def accept(self, settings, item):
         """
