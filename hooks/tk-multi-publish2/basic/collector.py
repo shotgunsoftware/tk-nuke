@@ -487,7 +487,7 @@ class NukeSessionCollector(HookBaseClass):
 
     def _in_flow_context(self) -> bool:
         """Return True if in a Flow-enabled context."""
-        return hasattr(self.parent.engine.context, "flow_project_id")
+        return getattr(self.parent.engine.context, "flow_project_id", None) is not None
 
 
 def _session_path():

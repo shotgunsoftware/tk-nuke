@@ -13,8 +13,6 @@ The FlowWrite node is designed to be pipeline/integration agnostic.
 This modules contains the callbacks that support our specific Flow integration.
 """
 
-from __future__ import annotations  # needed for python 3.9 support
-
 import os
 import nuke
 

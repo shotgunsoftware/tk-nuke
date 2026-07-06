@@ -12,8 +12,6 @@
 FlowWrite node definition for Nuke.
 """
 
-from __future__ import annotations  # needed for python 3.9 support
-
 import nuke
 
 from tank import LogManager
