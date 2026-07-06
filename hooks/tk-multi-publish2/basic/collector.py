@@ -12,7 +12,6 @@ import os
 import nuke
 import sgtk
 
-
 HookBaseClass = sgtk.get_hook_baseclass()
 
 # A look up of node types to parameters for finding outputs to publish

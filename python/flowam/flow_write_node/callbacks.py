@@ -24,7 +24,6 @@ from tank_vendor.flow_integration_sdk import storage
 from tank_vendor.flow_integration_sdk.exceptions import FlowError
 from tank_vendor.flow_integration_sdk.objects import FlowAsset
 
-
 logger = LogManager.get_logger(__name__)
 
 
