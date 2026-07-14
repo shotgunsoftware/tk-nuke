@@ -21,6 +21,11 @@ from tank_vendor.flow_integration_sdk.utils import (
     fileext,
     trace,
 )
+from .flow_write_node.flow_write_node import FlowWriteNode
+from .flow_write_node.callbacks import (
+    _nuke_flow_write_create,
+    _nuke_flow_write_pre_render,
+)
 
 import nuke
 
@@ -77,10 +82,46 @@ class NukeHost(FlowHost):
         # NOTE: Nuke seems inconsistent with setting this flag
         #       automatically, so adding this guardrail to protect
         #       unsaved changes.
+        self.logger.info("Registering global callbacks for NukeHost...")
         nuke.addOnUserCreate(self._set_scene_modified)
         nuke.addKnobChanged(self._set_scene_modified)
         nuke.addOnScriptLoad(self._on_script_load)
         nuke.addOnScriptClose(self._on_script_close)
+
+        # Add FlowWrite node to toolbar
+        self.logger.info("Adding toolbar commands...")
+        nuke.toolbar("Nodes").addCommand(
+            "Flow/FlowWrite",
+            FlowWriteNode,  # callback to instantiate a write node
+            icon="Write.png",
+        )
+
+        self.logger.info("Registering global callbacks for Write nodes...")
+        nuke.addKnobChanged(FlowWriteNode._on_update_flow_write, nodeClass="Write")
+        nuke.addBeforeRender(FlowWriteNode._validate_flow_write, nodeClass="Write")
+        nuke.addBeforeRender(FlowWriteNode._pre_render_flow_write, nodeClass="Write")
+        nuke.addAfterRender(FlowWriteNode._post_render_flow_write, nodeClass="Write")
+        nuke.addOnScriptLoad(FlowWriteNode._register_ui_callback)
+
+        # Add custom Flow integration callbacks for FlowWrite node
+        FlowWriteNode.create_callback = _nuke_flow_write_create
+        FlowWriteNode.pre_render_callback = _nuke_flow_write_pre_render
+
+    def __del__(self):
+
+        # Deregister callbacks
+        self.logger.info("Unregistering callbacks added by NukeHost...")
+
+        nuke.removeOnUserCreate(self._set_scene_modified)
+        nuke.removeKnobChanged(self._set_scene_modified)
+        nuke.removeOnScriptLoad(self._on_script_load)
+        nuke.removeOnScriptClose(self._on_script_close)
+
+        nuke.removeKnobChanged(FlowWriteNode._on_update_flow_write, nodeClass="Write")
+        nuke.removeBeforeRender(FlowWriteNode._validate_flow_write, nodeClass="Write")
+        nuke.removeBeforeRender(FlowWriteNode._pre_render_flow_write, nodeClass="Write")
+        nuke.removeAfterRender(FlowWriteNode._post_render_flow_write, nodeClass="Write")
+        nuke.removeOnScriptLoad(FlowWriteNode._register_ui_callback)
 
     @trace
     def current_file(self) -> str:
