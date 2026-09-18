@@ -1,6 +1,6 @@
 # Toolkit Engine for Nuke
 
-![Supported Nuke versions: 15.0v1 - 17.0v1](https://img.shields.io/badge/Nuke-14.0v16_--_16.0v1-blue.svg?logo=nuke "Supported Nuke versions")
+![Supported Nuke versions: 15.0v1 - 17.0v1](https://img.shields.io/badge/Nuke-15.0v1_--_17.0v1-blue.svg?logo=nuke "Supported Nuke versions")
 [![Supported VFX Platform: CY2022 - CY2026](https://img.shields.io/badge/VFX_Reference_Platform-CY2022_|_CY2023_|_CY2024_|_CY2025_|_CY2026-blue)](http://www.vfxplatform.com/ "Supported VFX Reference Platform versions")
 [![Supported Python versions: 3.9, 3.10, 3.11, 3.13](https://img.shields.io/badge/Python-3.9_|_3.10_|_3.11_|_3.13-blue?logo=python&logoColor=f5f5f5)](https://www.python.org/ "Supported Python versions")
 
