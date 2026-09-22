@@ -413,7 +413,7 @@ Please report any issues to:
             from flowam.host import NukeHost
 
             self.logger.info("Instantiating Flow host as NukeHost...")
-            self._flow_host = NukeHost(self.context)
+            self._flow_host = NukeHost()
 
     def post_app_init_studio(self):
         """
