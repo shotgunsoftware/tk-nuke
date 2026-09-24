@@ -51,6 +51,7 @@ class NukeLauncher(SoftwareLauncher):
         "NukeAssist",
         "NukeStudio",
         "NukeX",
+        "Hiero",
     ]
 
     # This dictionary defines a list of executable template strings for each
@@ -112,6 +113,40 @@ class NukeLauncher(SoftwareLauncher):
 
         return softwares
 
+    def _scan_software_entities(self):
+        filters = [
+            ['sg_status_list', 'is', 'act'],
+            ['engine', 'in', ['tk-nuke', 'tk-hiero', 'tk-nukestudio']],
+            {
+                'filter_operator': 'any',
+                'filters': [
+                    ['sg_mac_template', 'is_not', None],
+                    ['sg_linux_template', 'is_not', None],
+                    ['sg_windows_template', 'is_not', None],
+                ]
+            }
+        ]
+        os_template = {'win32': 'sg_windows_template',
+                       'linux2': 'sg_linux_template',
+                       'darwin': 'sg_mac_template'}
+        fields = ['sg_mac_template',
+                  'sg_linux_template',
+                  'sg_windows_template']
+        results = self.shotgun.find("Software", filters, fields)
+
+        templ_list = []
+        for result in results:
+            if result.get(os_template[sys.platform]):
+                try:
+                    templ_list.extend(result.get(
+                        os_template[sys.platform]).split('\n'))
+                except AttributeError as e:
+                    self.logger.error(
+                        'AttributeError on template \'{}\': {}'.format(result.get('code'), e))
+                    pass
+
+        return templ_list
+
     def _find_software(self):
         """
         Finds all Nuke software on disk.
@@ -131,15 +166,18 @@ class NukeLauncher(SoftwareLauncher):
         )
 
         # Certain platforms have more than one location for installed software
-        for template in executable_templates:
-            self.logger.debug("Processing template %s.", template)
-            # Extract all products from that executable.
-            for executable, tokens in self._glob_and_match(
-                template, self.COMPONENT_REGEX_LOOKUP
-            ):
-                self.logger.debug("Processing %s with tokens %s", executable, tokens)
-                for sw in self._extract_products_from_path(executable, tokens):
-                    yield sw
+        match_templates = executable_templates
+        match_templates.extend(self._scan_software_entities())
+
+        for template in match_templates:
+            if template is not None:
+                self.logger.debug("Processing template %s.", template)
+                # Extract all products from that executable.
+                for executable, tokens in self._glob_and_match(template, self.COMPONENT_REGEX_LOOKUP):
+                    self.logger.debug(
+                        "Processing %s with tokens %s", executable, tokens)
+                    for sw in self._extract_products_from_path(executable, tokens):
+                        yield sw
 
     def _extract_products_from_path(self, executable_path, match):
         """
@@ -270,7 +308,8 @@ class NukeLauncher(SoftwareLauncher):
             required_env["TANK_CONTEXT"] = sgtk.Context.serialize(self.context)
             required_env["TANK_ENGINE"] = self.engine_name
 
-        self.logger.debug("Launch environment: %s", pprint.pformat(required_env))
+        self.logger.debug("Launch environment: %s",
+                          pprint.pformat(required_env))
         self.logger.debug("Launch arguments: %s", required_args)
 
         return LaunchInformation(exec_path, required_args, required_env)
@@ -319,7 +358,8 @@ class NukeLauncher(SoftwareLauncher):
             plugin_path = os.path.join(self.disk_location, "plugins", plugin_name)
 
             if os.path.exists(plugin_path):
-                self.logger.debug("Plugin '%s' found at '%s'", plugin_name, plugin_path)
+                self.logger.debug("Plugin '%s' found at '%s'",
+                                  plugin_name, plugin_path)
                 startup_paths.append(plugin_path)
             else:
                 self.logger.warning(
