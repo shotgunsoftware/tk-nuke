@@ -484,12 +484,13 @@ class NukeStudioMenuGenerator(HieroMenuGenerator):
             # Get icon if specified - default to sgtk icon if not specified.
             icon = cmd.properties.get("icon", self._shotgun_logo)
             command_context = cmd.properties.get("context")
+            hotkey = cmd.properties.get("hotkey")
 
             # If the app recorded a context that it wants the command to be associated
             # with, we need to check it against the current engine context. If they
             # don't match then we don't add it.
             if command_context is None or command_context is self.engine.context:
-                node_menu_handle.addCommand(cmd.name, cmd.callback, icon=icon)
+                node_menu_handle.addCommand(cmd.name, cmd.callback, hotkey, icon=icon)
 
     def create_disabled_menu(self, cmd_name, msg):
         """
@@ -593,12 +594,13 @@ class NukeMenuGenerator(BaseMenuGenerator):
                 # Get icon if specified - default to sgtk icon if not specified.
                 icon = cmd.properties.get("icon", self._shotgun_logo)
                 command_context = cmd.properties.get("context")
+                hotkey = cmd.properties.get("hotkey")
 
                 # If the app recorded a context that it wants the command to be associated
                 # with, we need to check it against the current engine context. If they
                 # don't match then we don't add it.
                 if command_context is None or command_context is self.engine.context:
-                    node_menu_handle.addCommand(cmd.name, cmd.callback, icon=icon)
+                    node_menu_handle.addCommand(cmd.name, cmd.callback, hotkey, icon=icon)
             elif cmd.type == "context_menu":
                 cmd.add_command_to_menu(self._context_menu)
             else:
@@ -1034,10 +1036,7 @@ class NukeAppCommand(BaseAppCommand):
         # NOTE: setting the new callback lambda on the object to resolve
         # a crash on close happening in Nuke 11. Likely a GC issue, and having
         # the callable associated with an object resolves it.
-        if hotkey:
-            menu.addCommand(self.name, self.callback, hotkey, icon=icon)
-        else:
-            menu.addCommand(self.name, self.callback, icon=icon)
+        menu.addCommand(self.name, self.callback, hotkey, icon=icon)
 
 
 # -----------------------------------------------------------------------------
