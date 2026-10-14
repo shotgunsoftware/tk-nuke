@@ -71,11 +71,11 @@ class NukeHost(FlowHost):
         "tiff",
     ]
 
-    def __init__(self, context):
+    def __init__(self):
 
         self.logger.info("Doing NukeHost initialization...")
 
-        super().__init__(context)
+        super().__init__()
 
         # Detect user modifications in scene and explicitly
         # set the modified flag on scene
