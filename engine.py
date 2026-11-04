@@ -12,6 +12,7 @@ import sgtk
 import nuke
 import sys
 import os
+import time
 import nukescripts
 import logging
 
@@ -89,6 +90,11 @@ class NukeEngine(sgtk.platform.Engine):
 
     # Define the different areas where menu events can occur in Hiero.
     HIERO_BIN_AREA, HIERO_SPREADSHEET_AREA, HIERO_TIMELINE_AREA = range(3)
+
+    # How long, in milliseconds, to wait between checks that panel threads have
+    # stopped when Nuke quits, and how long, in seconds, to wait for all of them.
+    _QUIT_THREAD_POLL_INTERVAL = 50
+    _QUIT_THREAD_TIMEOUT = 2.0
 
     def __init__(self, *args, **kwargs):
         # For the short term, we will treat Nuke Studio as if it
@@ -415,6 +421,12 @@ Please report any issues to:
             self.logger.info("Instantiating Flow host as NukeHost...")
             self._flow_host = NukeHost()
 
+        if self.has_ui:
+            # Shut down Toolkit panels when Nuke quits, see _on_last_window_closed.
+            sgtk.platform.qt.QtGui.QApplication.instance().lastWindowClosed.connect(
+                self._on_last_window_closed
+            )
+
     def post_app_init_studio(self):
         """
         The Nuke Studio specific portion of the engine's post-init process.
@@ -692,6 +704,13 @@ Please report any issues to:
         if self.has_ui:
             self._menu_generator.destroy_menu()
 
+            # A context switch creates a new engine, which connects its own handler.
+            app = sgtk.platform.qt.QtGui.QApplication.instance()
+            try:
+                app.lastWindowClosed.disconnect(self._on_last_window_closed)
+            except (RuntimeError, TypeError):
+                pass
+
         if self.hiero_enabled or self.studio_enabled:
             import hiero.core
 
@@ -709,6 +728,68 @@ Please report any issues to:
                     "kSelectionChanged",
                     self._handle_studio_selection_change,
                 )
+
+    def _on_last_window_closed(self):
+        """
+        Close the Toolkit panels docked in Nuke when Nuke quits.
+
+        Panel apps, like the Flow Production Tracking panel, run background
+        ``QThread`` objects that they only stop when the panel is closed. Nuke
+        16 destroys its main window, and the panels docked in it, without
+        emitting ``QApplication.aboutToQuit`` first, so the panels are never
+        closed. Qt 6 aborts when it destroys a ``QThread`` that is still
+        running, and Nuke shows its crash report after quitting.
+
+        ``lastWindowClosed`` is emitted once the main window has closed, after
+        the user has confirmed quitting, and before Nuke destroys any widget.
+        Each panel is closed so its app shuts down as if the user had closed
+        it, then the threads the panels own get a short time to stop, while
+        the Qt event loop is still processed.
+        """
+        import tk_nuke_qt
+
+        QtCore = sgtk.platform.qt.QtCore
+        QtGui = sgtk.platform.qt.QtGui
+
+        panels = [
+            widget
+            for widget in QtGui.QApplication.allWidgets()
+            if isinstance(widget, tk_nuke_qt.ToolkitWidgetWrapper)
+        ]
+        self.logger.debug("Nuke is quitting: closing %d panels.", len(panels))
+
+        threads = []
+        for panel in panels:
+            try:
+                panel.close()
+                if panel.toolkit_widget is not None:
+                    threads.extend(panel.toolkit_widget.findChildren(QtCore.QThread))
+            except Exception:
+                self.logger.exception("Could not close panel %s.", panel)
+
+        # Some threads, like the shotgunutils results dispatcher, call into the
+        # main thread while they stop, so keep processing events while waiting.
+        deadline = time.monotonic() + self._QUIT_THREAD_TIMEOUT
+        running = []
+        for thread in threads:
+            try:
+                while thread.isRunning() and time.monotonic() < deadline:
+                    QtCore.QCoreApplication.processEvents()
+                    thread.wait(self._QUIT_THREAD_POLL_INTERVAL)
+                if thread.isRunning():
+                    running.append(thread)
+            except RuntimeError:
+                # The thread's C++ object was already deleted, so it stopped.
+                pass
+
+        if running:
+            self.logger.warning(
+                "%d panel threads still running after %s seconds, Nuke might "
+                "crash on quit: %s",
+                len(running),
+                self._QUIT_THREAD_TIMEOUT,
+                running,
+            )
 
     def post_context_change(self, old_context, new_context):
         """

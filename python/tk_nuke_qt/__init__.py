@@ -15,4 +15,4 @@ This module contains items that depend on QT being available and
 cannot be imported otherwise.
 """
 
-from .panels import NukePanelWidget
+from .panels import NukePanelWidget, ToolkitWidgetWrapper
