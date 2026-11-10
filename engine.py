@@ -756,7 +756,7 @@ Please report any issues to:
             for widget in QtGui.QApplication.allWidgets()
             if isinstance(widget, tk_nuke_qt.ToolkitWidgetWrapper)
         ]
-        self.logger.debug("Nuke is quitting: closing %d panels.", len(panels))
+        self.logger.debug("Nuke is quitting: closing %d Toolkit panels.", len(panels))
 
         threads = []
         for panel in panels:
