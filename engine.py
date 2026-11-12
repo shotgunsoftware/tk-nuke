@@ -109,6 +109,7 @@ class NukeEngine(sgtk.platform.Engine):
         self._processed_paths = []
         self._processed_environments = []
         self._previous_generators = []
+        self._quit_handled = False
 
         super().__init__(*args, **kwargs)
 
@@ -422,10 +423,10 @@ Please report any issues to:
             self._flow_host = NukeHost()
 
         if self.has_ui:
-            # Shut down Toolkit panels when Nuke quits, see _on_last_window_closed.
-            sgtk.platform.qt.QtGui.QApplication.instance().lastWindowClosed.connect(
-                self._on_last_window_closed
-            )
+            # Shut down Toolkit panels when Nuke quits, see _on_quit.
+            app = sgtk.platform.qt.QtGui.QApplication.instance()
+            app.aboutToQuit.connect(self._on_quit)
+            app.lastWindowClosed.connect(self._on_quit)
 
     def post_app_init_studio(self):
         """
@@ -704,12 +705,13 @@ Please report any issues to:
         if self.has_ui:
             self._menu_generator.destroy_menu()
 
-            # A context switch creates a new engine, which connects its own handler.
+            # A context switch creates a new engine, which connects its own handlers.
             app = sgtk.platform.qt.QtGui.QApplication.instance()
-            try:
-                app.lastWindowClosed.disconnect(self._on_last_window_closed)
-            except (RuntimeError, TypeError):
-                pass
+            for signal in (app.aboutToQuit, app.lastWindowClosed):
+                try:
+                    signal.disconnect(self._on_quit)
+                except (RuntimeError, TypeError):
+                    pass
 
         if self.hiero_enabled or self.studio_enabled:
             import hiero.core
@@ -729,23 +731,31 @@ Please report any issues to:
                     self._handle_studio_selection_change,
                 )
 
-    def _on_last_window_closed(self):
+    def _on_quit(self):
         """
         Close the Toolkit panels docked in Nuke when Nuke quits.
 
         Panel apps, like the Flow Production Tracking panel, run background
-        ``QThread`` objects that they only stop when the panel is closed. Nuke
-        16 destroys its main window, and the panels docked in it, without
-        emitting ``QApplication.aboutToQuit`` first, so the panels are never
-        closed. Qt 6 aborts when it destroys a ``QThread`` that is still
-        running, and Nuke shows its crash report after quitting.
+        ``QThread`` objects that they only stop when the panel is closed. When
+        Nuke 16 quits, it destroys its main window and the panels docked in it
+        without closing them. Qt 6 aborts when it destroys a ``QThread`` that is
+        still running, and Nuke shows its crash report after quitting.
 
-        ``lastWindowClosed`` is emitted once the main window has closed, after
-        the user has confirmed quitting, and before Nuke destroys any widget.
+        Once the user has confirmed quitting, Nuke takes one of two paths, even
+        for the same choice at the save prompt: it either hides its main window,
+        so ``QApplication.lastWindowClosed`` is emitted, or emits
+        ``QApplication.aboutToQuit`` and then destroys the main window straight
+        away. Both signals are connected here, and only the first one to be
+        emitted is handled, before Nuke destroys any widget.
+
         Each panel is closed so its app shuts down as if the user had closed
         it, then the threads the panels own get a short time to stop, while
         the Qt event loop is still processed.
         """
+        if self._quit_handled:
+            return
+        self._quit_handled = True
+
         import tk_nuke_qt
 
         QtCore = sgtk.platform.qt.QtCore
