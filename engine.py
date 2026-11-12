@@ -761,11 +761,21 @@ Please report any issues to:
         QtCore = sgtk.platform.qt.QtCore
         QtGui = sgtk.platform.qt.QtGui
 
-        panels = [
+        # Nuke keeps closed panels around, and when a panel is shown again its
+        # app widget can move to a new panel, so several panels can share one
+        # app widget. Close each app widget once, unless it was already closed.
+        wrappers = [
             widget
             for widget in QtGui.QApplication.allWidgets()
             if isinstance(widget, tk_nuke_qt.ToolkitWidgetWrapper)
         ]
+        handled = [wrapper.toolkit_widget for wrapper in wrappers if wrapper.closed]
+        panels = []
+        for wrapper in wrappers:
+            if any(wrapper.toolkit_widget is widget for widget in handled):
+                continue
+            panels.append(wrapper)
+            handled.append(wrapper.toolkit_widget)
         self.logger.debug("Nuke is quitting: closing %d Toolkit panels.", len(panels))
 
         threads = []
