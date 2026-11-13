@@ -175,6 +175,8 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
         # this will keep the widget around but destroy the nuke tab
         # that it was sitting in.
 
+        # Set once this panel has been closed: Nuke keeps closed panels around.
+        self.closed = False
         self.toolkit_widget = None
 
         widget_name = "%s.widget" % panel_id
@@ -305,6 +307,7 @@ class ToolkitWidgetWrapper(QtGui.QWidget):
         """
         # close child widget
         self.toolkit_widget.close()
+        self.closed = True
         # delete this widget and all children
         if nuke.env.get("NukeVersionMajor") >= 11:
             # We don't seem to be able to deleteLater safely in Nuke 11, which
