@@ -733,13 +733,15 @@ Please report any issues to:
 
     def _on_quit(self):
         """
-        Close the Toolkit panels docked in Nuke when Nuke quits.
+        Close the Toolkit panels and dialogs open in Nuke when Nuke quits.
 
-        Panel apps, like the Flow Production Tracking panel, run background
-        ``QThread`` objects that they only stop when the panel is closed. When
-        Nuke 16 quits, it destroys its main window and the panels docked in it
-        without closing them. Qt 6 aborts when it destroys a ``QThread`` that is
-        still running, and Nuke shows its crash report after quitting.
+        Panel apps, like the Flow Production Tracking panel, and dialog apps,
+        like the Loader and Publish, run background ``QThread`` objects that
+        they only stop when their panel or dialog is closed. When Nuke 16 quits,
+        it destroys its main window, with the panels docked in it and the
+        dialogs parented to it, without closing them. Qt 6 aborts when it
+        destroys a ``QThread`` that is still running, and Nuke shows its crash
+        report after quitting.
 
         Once the user has confirmed quitting, Nuke takes one of two paths, even
         for the same choice at the save prompt: it either hides its main window,
@@ -748,9 +750,9 @@ Please report any issues to:
         away. Both signals are connected here, and only the first one to be
         emitted is handled, before Nuke destroys any widget.
 
-        Each panel is closed so its app shuts down as if the user had closed
-        it, then the threads the panels own get a short time to stop, while
-        the Qt event loop is still processed.
+        Each panel and dialog is closed so its app shuts down as if the user
+        had closed it, then the threads they own get a short time to stop,
+        while the Qt event loop is still processed.
         """
         if self._quit_handled:
             return
@@ -787,6 +789,22 @@ Please report any issues to:
             except Exception:
                 self.logger.exception("Could not close panel %s.", panel)
 
+        # Dialogs created with show_dialog, like the Loader and Publish. Closing
+        # a dialog detaches its app widget, so find the threads beforehand.
+        dialogs = list(self.created_qt_dialogs)
+        self.logger.debug("Nuke is quitting: closing %d Toolkit dialogs.", len(dialogs))
+        for dialog in dialogs:
+            try:
+                dialog_threads = dialog.findChildren(QtCore.QThread)
+            except RuntimeError:
+                # The dialog's C++ object was already deleted, so it's closed.
+                continue
+            try:
+                dialog.close()
+                threads.extend(dialog_threads)
+            except Exception:
+                self.logger.exception("Could not close dialog %s.", dialog)
+
         # Some threads, like the shotgunutils results dispatcher, call into the
         # main thread while they stop, so keep processing events while waiting.
         deadline = time.monotonic() + self._QUIT_THREAD_TIMEOUT
@@ -804,7 +822,7 @@ Please report any issues to:
 
         if running:
             self.logger.warning(
-                "%d panel threads still running after %s seconds, Nuke might "
+                "%d Toolkit threads still running after %s seconds, Nuke might "
                 "crash on quit: %s",
                 len(running),
                 self._QUIT_THREAD_TIMEOUT,
